@@ -9,6 +9,11 @@ import 'package:arena_chain_flutter/screens/player/feature_profile/ui/settings_s
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/my_channel_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/subscriptions_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_leagues/ui/leagues_list_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_friends/ui/add_friend_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/create_tournament_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/booking_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/ticket_screen.dart';
+import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -22,6 +27,10 @@ class AppRoutes {
   static const String myChannel = '/player/channel';
   static const String subscriptions = '/player/subscriptions';
   static const String leagues = '/player/leagues';
+  static const String addFriend = '/player/friends/add';
+  static const String createTournament = '/tournaments/create';
+  static const String tournamentBooking = '/tournaments/booking';
+  static const String tournamentTicket = '/tournaments/ticket';
 
   static Map<String, WidgetBuilder> get routes => {
         splash: (context) => const SplashScreen(),
@@ -42,5 +51,18 @@ class AppRoutes {
           ),
           body: const LeaguesListScreen(),
         ),
+        addFriend: (context) => const AddFriendScreen(),
+        createTournament: (context) => const CreateTournamentScreen(),
+        tournamentBooking: (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as TournamentModel;
+          return BookingScreen(tournament: args);
+        },
+        tournamentTicket: (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return TicketScreen(
+            tournament: args['tournament'] as TournamentModel,
+            ticketCount: args['ticketCount'] as int,
+          );
+        },
       };
 }

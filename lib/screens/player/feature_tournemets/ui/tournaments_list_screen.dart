@@ -1,7 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:arena_chain_flutter/screens/player/feature_tournemets/view_model/tournaments_view_model.dart';
+import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
+import 'package:intl/intl.dart';
 
-class TournamentsListScreen extends StatelessWidget {
+class TournamentsListScreen extends StatefulWidget {
   const TournamentsListScreen({super.key});
+
+  @override
+  State<TournamentsListScreen> createState() => _TournamentsListScreenState();
+}
+
+class _TournamentsListScreenState extends State<TournamentsListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    
+    // Load tournaments when screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TournamentsViewModel>().loadTournaments();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -9,51 +28,48 @@ class TournamentsListScreen extends StatelessWidget {
       children: [
         _buildHeader(context),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            children: [
-              const SizedBox(height: 24),
-              _buildTournamentCard(
-                title: 'Winter Championship 2026',
-                game: 'Valorant',
-                date: 'Feb 15, 2026',
-                prize: '\$50,000',
-                players: '128/128',
-                location: 'Online',
-                isFull: true,
-              ),
-              const SizedBox(height: 16),
-              _buildTournamentCard(
-                title: 'Spring League Masters',
-                game: 'League of Legends',
-                date: 'Mar 1, 2026',
-                prize: '\$25,000',
-                players: '45/64',
-                location: 'Online',
-                isFull: false,
-              ),
-              const SizedBox(height: 16),
-              _buildTournamentCard(
-                title: 'CS2 Pro Invitational',
-                game: 'CS:GO',
-                date: 'Mar 15, 2026',
-                prize: '\$100,000',
-                players: '64/64',
-                location: 'Online',
-                isFull: true,
-              ),
-              const SizedBox(height: 16),
-              _buildTournamentCard(
-                title: 'Apex Legends Championship',
-                game: 'Apex Legends',
-                date: 'Apr 1, 2026',
-                prize: '\$75,000',
-                players: '20/60',
-                location: 'Online',
-                isFull: false,
-              ),
-              const SizedBox(height: 24),
-            ],
+          child: Consumer<TournamentsViewModel>(
+            builder: (context, viewModel, child) {
+              if (viewModel.isLoading) {
+                return const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF00FF00),
+                  ),
+                );
+              }
+
+              if (viewModel.error != null) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Color(0xFFFF0055),
+                        size: 48,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading tournaments',
+                        style: const TextStyle(
+                          color: Color(0xFFFF0055),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        viewModel.error!,
+                        style: const TextStyle(color: Color(0xFF7A86AC)),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return _buildTournamentList(viewModel.officialTournaments);
+            },
           ),
         ),
       ],
@@ -94,34 +110,12 @@ class TournamentsListScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              ElevatedButton.icon(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00FF00),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text(
-                  'Create',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+
             ],
           ),
           const SizedBox(height: 8),
           const Text(
-            'Upcoming competitive events',
+            'Upcoming official tournaments',
             style: TextStyle(
               color: Color(0xFF7A86AC),
               fontSize: 14,
@@ -132,31 +126,64 @@ class TournamentsListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTournamentCard({
-    required String title,
-    required String game,
-    required String date,
-    required String prize,
-    required String players,
-    required String location,
-    required bool isFull,
-  }) {
+  Widget _buildTournamentList(List<TournamentModel> tournaments) {
+    if (tournaments.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(
+              Icons.emoji_events_outlined,
+              color: Color(0xFF7A86AC),
+              size: 64,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'No official tournaments found',
+              style: TextStyle(
+                color: Color(0xFF7A86AC),
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(20),
+      itemCount: tournaments.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 16),
+      itemBuilder: (context, index) {
+        final tournament = tournaments[index];
+        return _buildTournamentCard(tournament);
+      },
+    );
+  }
+
+  Widget _buildTournamentCard(TournamentModel tournament) {
+    final dateFormat = DateFormat('MMM dd, yyyy');
+    final isFull = tournament.participants.length >= tournament.maxTeams;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: const Color(0xFF0F1221),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1A1F36)),
+        border: Border.all(
+          color: const Color(0xFF1A1F36),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header with title and status
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
-                  title,
+                  tournament.name,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -170,28 +197,32 @@ class TournamentsListScreen extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: isFull
-                      ? const Color(0xFFFF0055).withOpacity(0.1)
-                      : const Color(0xFF00FF00).withOpacity(0.1),
+                  color: tournament.type == 'RANKED'
+                      ? const Color(0xFF00FF00).withOpacity(0.1)
+                      : const Color(0xFFFF0055).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: isFull
-                        ? const Color(0xFFFF0055).withOpacity(0.3)
-                        : const Color(0xFF00FF00).withOpacity(0.3),
+                    color: tournament.type == 'RANKED'
+                        ? const Color(0xFF00FF00).withOpacity(0.3)
+                        : const Color(0xFFFF0055).withOpacity(0.3),
                   ),
                 ),
                 child: Text(
-                  isFull ? 'Full' : 'Open',
+                  tournament.type,
                   style: TextStyle(
-                    color: isFull ? const Color(0xFFFF0055) : const Color(0xFF00FF00),
-                    fontSize: 12,
+                    color: tournament.type == 'RANKED'
+                        ? const Color(0xFF00FF00)
+                        : const Color(0xFFFF0055),
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+
+          // Game info (you can enhance this with game name from catalog)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -199,83 +230,88 @@ class TournamentsListScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              game,
+              tournament.gameId, // TODO: Replace with game name from catalog
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
           const SizedBox(height: 16),
+
+          // Details
           Row(
             children: [
               Expanded(
-                child: _buildInfoItem(
+                child: _buildDetailItem(
                   icon: Icons.calendar_today,
                   label: 'Date',
-                  value: date,
+                  value: dateFormat.format(tournament.startDate),
                 ),
               ),
               Expanded(
-                child: _buildInfoItem(
-                  icon: Icons.emoji_events,
+                child: _buildDetailItem(
+                  icon: Icons.monetization_on,
                   label: 'Prize',
-                  value: prize,
+                  value: tournament.prizePool ?? 'TBD',
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: _buildInfoItem(
-                  icon: Icons.people,
+                child: _buildDetailItem(
+                  icon: Icons.groups,
                   label: 'Players',
-                  value: players,
+                  value: '${tournament.participants.length}/${tournament.maxTeams}',
                 ),
               ),
               Expanded(
-                child: _buildInfoItem(
+                child: _buildDetailItem(
                   icon: Icons.location_on,
                   label: 'Location',
-                  value: location,
+                  value: 'Online', // TODO: Add location field if needed
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
+
+            // Registration button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: isFull ? null : () {},
+              onPressed: isFull 
+                  ? null 
+                  : () {
+                      Navigator.pushNamed(
+                        context, 
+                        '/tournaments/booking',
+                        arguments: tournament,
+                      );
+                    },
               style: ElevatedButton.styleFrom(
-                backgroundColor: isFull ? const Color(0xFF1A1F36) : const Color(0xFF00FF00),
-                foregroundColor: isFull ? const Color(0xFF4A5568) : Colors.white,
-                disabledBackgroundColor: const Color(0xFF1A1F36),
-                disabledForegroundColor: const Color(0xFF4A5568),
-                elevation: 0,
+                backgroundColor: isFull 
+                    ? const Color(0xFF1A1F36) 
+                    : const Color(0xFF00FF00),
+                foregroundColor: isFull 
+                    ? const Color(0xFF7A86AC) 
+                    : const Color(0xFF0A0E1A),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                elevation: 0,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    isFull ? 'Registration Full' : 'Register Now',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (!isFull) ...[
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward, size: 16),
-                  ],
-                ],
+              child: Text(
+                isFull ? 'Registration Full' : 'Reserve',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -284,48 +320,37 @@ class TournamentsListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoItem({
+  Widget _buildDetailItem({
     required IconData icon,
     required String label,
     required String value,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1F36),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                icon,
-                color: const Color(0xFF7A86AC),
-                size: 14,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: const Color(0xFF7A86AC), size: 14),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF7A86AC),
+                fontSize: 11,
               ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFF7A86AC),
-                  fontSize: 11,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
             ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

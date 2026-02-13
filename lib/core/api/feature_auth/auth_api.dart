@@ -11,7 +11,7 @@ class AuthApi {
   final TokenStorage _tokenStorage = TokenStorage();
 
   Future<AuthResponse> registerPlayer(RegisterPlayerDto dto) async {
-    final url = Uri.parse('$baseUrl/feature_auth/register/player');
+    final url = Uri.parse('$baseUrl/auth/register/player');
     
     try {
       final response = await http.post(
@@ -38,7 +38,7 @@ class AuthApi {
   }
 
   Future<AuthResponse> login(LoginDto dto) async {
-    final url = Uri.parse('$baseUrl/feature_auth/login');
+    final url = Uri.parse('$baseUrl/auth/login');
 
     try {
       final response = await http.post(

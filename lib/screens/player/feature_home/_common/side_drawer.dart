@@ -176,6 +176,13 @@ class SideDrawer extends StatelessWidget {
               Navigator.pop(context); // Close drawer
               final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
               await authViewModel.logout();
+              if (context.mounted) {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppRoutes.login,
+                  (route) => false,
+                );
+              }
             },
           ),
           const SizedBox(height: 10),

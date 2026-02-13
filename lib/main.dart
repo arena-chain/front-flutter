@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/navigation.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/auth_state.dart';
+import 'package:arena_chain_flutter/screens/player/feature_friends/view_model/friends_view_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_tournemets/view_model/tournaments_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/player_home.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/ui/login_screen.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/ui/splash_screen.dart';
@@ -21,6 +23,16 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(
           create: (_) => AuthViewModel()..checkAuthStatus(),
+        ),
+        ChangeNotifierProxyProvider<AuthViewModel, FriendsViewModel>(
+          create: (context) => FriendsViewModel(currentUserId: ''),
+          update: (context, auth, previous) => 
+            FriendsViewModel(currentUserId: auth.currentUser?.id ?? ''),
+        ),
+        ChangeNotifierProxyProvider<AuthViewModel, TournamentsViewModel>(
+          create: (context) => TournamentsViewModel(currentUserId: ''),
+          update: (context, auth, previous) => 
+            TournamentsViewModel(currentUserId: auth.currentUser?.id ?? ''),
         ),
       ],
       child: MaterialApp(
