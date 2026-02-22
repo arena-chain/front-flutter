@@ -10,6 +10,8 @@ import 'package:arena_chain_flutter/navigation.dart';
 
 import 'package:arena_chain_flutter/screens/player/feature_friends/ui/friends_list_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/side_drawer.dart';
+import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_dialogs.dart';
 
 class PlayerHomeScreen extends StatefulWidget {
   const PlayerHomeScreen({super.key});
@@ -20,6 +22,76 @@ class PlayerHomeScreen extends StatefulWidget {
 
 class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   int _currentIndex = 0;
+
+  // ── Global matchmaking dialog tracking ────────────────────────────────
+  MatchmakingViewModel? _matchmakingVm;
+  bool _isMatchDialogOpen = false;
+  bool _isRoomSheetOpen = false;
+  MatchmakingStatus? _lastHandledStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _matchmakingVm = context.read<MatchmakingViewModel>();
+      _matchmakingVm!.addListener(_onMatchmakingChanged);
+      // Handle current status immediately (state may already be restored)
+      _onMatchmakingChanged();
+    });
+  }
+
+  @override
+  void dispose() {
+    _matchmakingVm?.removeListener(_onMatchmakingChanged);
+    super.dispose();
+  }
+
+  void _onMatchmakingChanged() {
+    if (!mounted) return;
+    final vm = _matchmakingVm;
+    if (vm == null) return;
+
+    final status = vm.status;
+    if (status == _lastHandledStatus) return;
+
+    if (status == MatchmakingStatus.pendingAcceptance && !_isMatchDialogOpen) {
+      _lastHandledStatus = status;
+      _isMatchDialogOpen = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          showMatchAcceptDialog(
+            context: context,
+            vm: vm,
+            onDismissed: () => _isMatchDialogOpen = false,
+          );
+        }
+      });
+    } else if (status == MatchmakingStatus.accepted &&
+        vm.activeGame?.roomInfo != null &&
+        !_isRoomSheetOpen) {
+      _lastHandledStatus = status;
+      _isRoomSheetOpen = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushNamed(context, AppRoutes.gameRoom).then((_) {
+            _isRoomSheetOpen = false;
+          });
+        }
+      });
+    } else if (status == MatchmakingStatus.idle ||
+        status == MatchmakingStatus.searching ||
+        status == MatchmakingStatus.scheduled ||
+        status == MatchmakingStatus.cancelled ||
+        status == MatchmakingStatus.expired ||
+        status == MatchmakingStatus.error) {
+      _lastHandledStatus = status;
+      _isMatchDialogOpen = false;
+      _isRoomSheetOpen = false;
+    } else {
+      _lastHandledStatus = status;
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────
 
   void _onNavTap(int index) {
     setState(() {
@@ -246,6 +318,9 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
+                  onTap: () {
+                    Navigator.pushNamed(context, AppRoutes.matchmaking);
+                  },
                 ),
               ),
               const SizedBox(width: 12),
@@ -285,6 +360,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     required String label,
     required Gradient gradient,
     bool isWide = false,
+    VoidCallback? onTap,
   }) {
     return Container(
       height: isWide ? 100 : 120,
@@ -295,7 +371,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {},
+          onTap: onTap ?? () {},
           borderRadius: BorderRadius.circular(16),
           child: Center(
             child: Column(

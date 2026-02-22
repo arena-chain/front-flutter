@@ -230,7 +230,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
             // Runes & Spells
             _assetCircle('https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/${_runePath(detail.primaryRune)}.png'),
             const SizedBox(width: 8),
-            _assetCircle('https://ddragon.leagueoflegends.com/cdn/14.1.1/img/spell/${_spellName(detail.spells[0])}.png'),
+            _assetCircle('https://ddragon.leagueoflegends.com/cdn/16.4.1/img/spell/${_spellName(detail.spells[0])}.png'),
             const SizedBox(width: 24),
             // Items
             Expanded(
@@ -265,7 +265,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: Image.network(
-        'https://ddragon.leagueoflegends.com/cdn/14.1.1/img/item/$id.png',
+        'https://ddragon.leagueoflegends.com/cdn/16.4.1/img/item/$id.png',
         width: 40,
         height: 40,
         errorBuilder: (_, __, ___) => Container(width: 40, height: 40, color: const Color(0xFF1A1F36)),

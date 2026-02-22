@@ -17,6 +17,8 @@ import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/create_
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/booking_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/ticket_screen.dart';
 import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/game_room_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -37,6 +39,8 @@ class AppRoutes {
   static const String createTournament = '/tournaments/create';
   static const String tournamentBooking = '/tournaments/booking';
   static const String tournamentTicket = '/tournaments/ticket';
+  static const String matchmaking = '/player/matchmaking';
+  static const String gameRoom = '/player/game-room';
 
   static Map<String, WidgetBuilder> get routes => {
         splash: (context) => const SplashScreen(),
@@ -73,5 +77,7 @@ class AppRoutes {
             ticketCount: args['ticketCount'] as int,
           );
         },
+        matchmaking: (context) => const MatchmakingScreen(),
+        gameRoom: (context) => const GameRoomScreen(),
       };
 }

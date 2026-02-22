@@ -6,6 +6,7 @@ import 'package:arena_chain_flutter/core/config/api_config.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/auth_state.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/view_model/friends_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/view_model/tournaments_view_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/player_home.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/ui/login_screen.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/ui/splash_screen.dart';
@@ -34,6 +35,14 @@ class MyApp extends StatelessWidget {
           create: (context) => TournamentsViewModel(currentUserId: ''),
           update: (context, auth, previous) => 
             TournamentsViewModel(currentUserId: auth.currentUser?.id ?? ''),
+        ),
+        ChangeNotifierProxyProvider<AuthViewModel, MatchmakingViewModel>(
+          create: (_) => MatchmakingViewModel(),
+          update: (context, auth, previous) {
+            final vm = previous ?? MatchmakingViewModel();
+            vm.onAuthChanged(auth.authState == AuthState.authenticated);
+            return vm;
+          },
         ),
       ],
       child: MaterialApp(

@@ -167,16 +167,26 @@ class AuthViewModel extends ChangeNotifier {
     await Future.delayed(const Duration(seconds: 3));
 
     try {
-      final isAuthenticated = await _authRepository.isAuthenticated();
+      final hasToken = await _authRepository.isAuthenticated();
       
-      if (isAuthenticated) {
-        _currentUser = await _authRepository.getUser();
-        if (_currentUser != null) {
-          _authState = AuthState.authenticated;
+      if (hasToken) {
+        // Proactively refresh the access token so we start with a
+        // fresh one.  If the refresh token itself is expired (>7 days),
+        // this fails gracefully and we fall through to unauthenticated.
+        final refreshed = await _authRepository.refreshAccessToken();
+
+        if (refreshed) {
+          _currentUser = await _authRepository.getUser();
+          if (_currentUser != null) {
+            _authState = AuthState.authenticated;
+          } else {
+            _authState = AuthState.unauthenticated;
+            await _authRepository.logout();
+          }
         } else {
-          // Token exists but user data missing/corrupted
+          // Refresh failed — refresh token is invalid or expired
           _authState = AuthState.unauthenticated;
-          await _authRepository.logout(); // Clear invalid state
+          await _authRepository.logout();
         }
       } else {
         _authState = AuthState.unauthenticated;

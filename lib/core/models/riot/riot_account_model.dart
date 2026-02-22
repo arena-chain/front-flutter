@@ -108,7 +108,7 @@ class RiotMatchModel {
   }
 
   String get championIconUrl {
-    return 'https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/$championName.png';
+    return 'https://ddragon.leagueoflegends.com/cdn/16.4.1/img/champion/$championName.png';
   }
 
   String get durationString {
@@ -225,6 +225,6 @@ class RiotAccountModel {
 
   String get profileIconUrl {
     // Using Data Dragon CDN for profile icons
-    return 'https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/$profileIconId.png';
+    return 'https://ddragon.leagueoflegends.com/cdn/16.4.1/img/profileicon/$profileIconId.png';
   }
 }

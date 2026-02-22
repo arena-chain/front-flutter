@@ -31,6 +31,14 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
   String? _errorMessage;
   bool _isFetchingTft = false;
 
+  // Account linking state
+  bool _isLinking = false;
+  bool _isVerifying = false;
+  bool _hasLinkedOnce = false;
+  String _linkStatus = 'unlinked'; // unlinked, pending_verification, verified
+  String? _linkMessage;
+  bool _linkSuccess = false;
+
   final List<Map<String, String>> _regions = [
     {'value': 'na1', 'label': 'North America'},
     {'value': 'euw1', 'label': 'Europe West'},
@@ -44,6 +52,39 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
     {'value': 'tr1', 'label': 'Turkey'},
     {'value': 'ru', 'label': 'Russia'},
   ];
+
+  bool _autoFetchTriggered = false;
+  bool _openedFromProfile = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_autoFetchTriggered) {
+      _autoFetchTriggered = true;
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        final gameName = args['gameName'] as String?;
+        final tagLine = args['tagLine'] as String?;
+        final region = args['region'] as String?;
+        final autoFetch = args['autoFetch'] as bool? ?? false;
+
+        if (gameName != null && tagLine != null) {
+          _gameNameController.text = gameName;
+          _tagLineController.text = tagLine;
+          if (region != null && _regions.any((r) => r['value'] == region)) {
+            _selectedRegion = region;
+          }
+          _linkStatus = 'verified';
+          _openedFromProfile = autoFetch;
+          if (autoFetch) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _fetchAccount();
+            });
+          }
+        }
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -143,13 +184,132 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
     );
   }
 
+  Future<void> _linkGameAccount() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLinking = true;
+      _linkMessage = null;
+      _linkSuccess = false;
+    });
+
+    try {
+      final token = await _tokenStorage.getAccessToken();
+      if (token == null) throw Exception('Not authenticated. Please log in again.');
+
+      final result = await _riotApi.linkGameAccount(
+        gameName: _gameNameController.text.trim(),
+        tagLine: _tagLineController.text.trim(),
+        region: _selectedRegion,
+        token: token,
+      );
+
+      setState(() {
+        _isLinking = false;
+        _hasLinkedOnce = true;
+        _linkStatus = result['status'] ?? 'pending_verification';
+        _linkMessage = result['message'] as String?;
+        _linkSuccess = true;
+      });
+    } catch (e) {
+      setState(() {
+        _isLinking = false;
+        _linkMessage = e.toString().replaceAll('Exception: ', '');
+        _linkSuccess = false;
+      });
+    }
+  }
+
+  Future<void> _verifyGameAccount() async {
+    setState(() {
+      _isVerifying = true;
+      _linkMessage = null;
+      _linkSuccess = false;
+    });
+
+    try {
+      final token = await _tokenStorage.getAccessToken();
+      if (token == null) throw Exception('Not authenticated. Please log in again.');
+
+      final result = await _riotApi.verifyGameAccount(token: token);
+
+      final verified = result['verified'] == true;
+      setState(() {
+        _isVerifying = false;
+        _linkMessage = result['message'] as String?;
+        _linkSuccess = verified;
+        if (verified) {
+          _linkStatus = 'verified';
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isVerifying = false;
+        _linkMessage = e.toString().replaceAll('Exception: ', '');
+        _linkSuccess = false;
+      });
+    }
+  }
+
+  bool _isDisconnecting = false;
+
+  Future<void> _disconnectAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1F36),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Disconnect Account', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Are you sure you want to disconnect your Riot account? You can link it again later.',
+          style: TextStyle(color: Color(0xFF7A86AC)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF7A86AC))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Disconnect', style: TextStyle(color: Color(0xFFFF0055))),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isDisconnecting = true);
+
+    try {
+      final token = await _tokenStorage.getAccessToken();
+      if (token == null) throw Exception('Not authenticated.');
+
+      await _riotApi.disconnectAccount(token: token);
+
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isDisconnecting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0A0E1A),
-        title: const Text('My Account', style: TextStyle(color: Colors.white)),
+        title: Text(
+          _openedFromProfile ? 'League of Legends' : 'My Account',
+          style: const TextStyle(color: Colors.white),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -162,153 +322,346 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header
-              const Text(
-                'Link Your League of Legends Account',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Enter your Riot ID to fetch your account information',
-                style: TextStyle(color: Color(0xFF7A86AC), fontSize: 14),
-              ),
-              const SizedBox(height: 24),
-
-              // IGN Input
-              TextFormField(
-                controller: _gameNameController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'In-Game Name (IGN)',
-                  labelStyle: const TextStyle(color: Color(0xFF7A86AC)),
-                  hintText: 'e.g., Faker',
-                  hintStyle: const TextStyle(color: Color(0xFF4A5568)),
-                  filled: true,
-                  fillColor: const Color(0xFF1A1F36),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  prefixIcon: const Icon(Icons.person, color: Color(0xFF7A86AC)),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your IGN';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Tag Input
-              TextFormField(
-                controller: _tagLineController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Tag',
-                  labelStyle: const TextStyle(color: Color(0xFF7A86AC)),
-                  hintText: 'e.g., KR1',
-                  hintStyle: const TextStyle(color: Color(0xFF4A5568)),
-                  filled: true,
-                  fillColor: const Color(0xFF1A1F36),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  prefixIcon: const Icon(Icons.tag, color: Color(0xFF7A86AC)),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your tag';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Region Dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedRegion,
-                style: const TextStyle(color: Colors.white),
-                dropdownColor: const Color(0xFF1A1F36),
-                decoration: InputDecoration(
-                  labelText: 'Server/Region',
-                  labelStyle: const TextStyle(color: Color(0xFF7A86AC)),
-                  filled: true,
-                  fillColor: const Color(0xFF1A1F36),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  prefixIcon: const Icon(Icons.public, color: Color(0xFF7A86AC)),
-                ),
-                items: _regions.map((region) {
-                  return DropdownMenuItem(
-                    value: region['value'],
-                    child: Text(region['label']!),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedRegion = value!;
-                  });
-                },
-              ),
-              const SizedBox(height: 24),
-
-              // Fetch Button
-              ElevatedButton(
-                onPressed: _isLoading ? null : _fetchAccount,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00FF00),
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              if (!_openedFromProfile) ...[
+                // Header
+                const Text(
+                  'Link Your League of Legends Account',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                        ),
-                      )
-                    : const Text(
-                        'Fetch Account Info',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-              ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Enter your Riot ID to fetch your account information',
+                  style: TextStyle(color: Color(0xFF7A86AC), fontSize: 14),
+                ),
+                const SizedBox(height: 24),
 
-              // Error Message
-              if (_errorMessage != null) ...[
+                // IGN Input
+                TextFormField(
+                  controller: _gameNameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'In-Game Name (IGN)',
+                    labelStyle: const TextStyle(color: Color(0xFF7A86AC)),
+                    hintText: 'e.g., Faker',
+                    hintStyle: const TextStyle(color: Color(0xFF4A5568)),
+                    filled: true,
+                    fillColor: const Color(0xFF1A1F36),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                    prefixIcon: const Icon(Icons.person, color: Color(0xFF7A86AC)),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your IGN';
+                    }
+                    return null;
+                  },
+                ),
                 const SizedBox(height: 16),
+
+                // Tag Input
+                TextFormField(
+                  controller: _tagLineController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Tag',
+                    labelStyle: const TextStyle(color: Color(0xFF7A86AC)),
+                    hintText: 'e.g., KR1',
+                    hintStyle: const TextStyle(color: Color(0xFF4A5568)),
+                    filled: true,
+                    fillColor: const Color(0xFF1A1F36),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                    prefixIcon: const Icon(Icons.tag, color: Color(0xFF7A86AC)),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your tag';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Region Dropdown
+                DropdownButtonFormField<String>(
+                  value: _selectedRegion,
+                  style: const TextStyle(color: Colors.white),
+                  dropdownColor: const Color(0xFF1A1F36),
+                  decoration: InputDecoration(
+                    labelText: 'Server/Region',
+                    labelStyle: const TextStyle(color: Color(0xFF7A86AC)),
+                    filled: true,
+                    fillColor: const Color(0xFF1A1F36),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                    prefixIcon: const Icon(Icons.public, color: Color(0xFF7A86AC)),
+                  ),
+                  items: _regions.map((region) {
+                    return DropdownMenuItem(
+                      value: region['value'],
+                      child: Text(region['label']!),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedRegion = value!;
+                    });
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                // Fetch Button
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _fetchAccount,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00FF00),
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                          ),
+                        )
+                      : const Text(
+                          'Fetch Account Info',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                ),
+
+                // Error Message
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+
+              // Loading indicator when opened from profile
+              if (_openedFromProfile && _isLoading && _accountData == null) ...[
+                const SizedBox(height: 40),
+                const Center(
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF00FF00),
+                          strokeWidth: 3,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Loading account data...',
+                        style: TextStyle(color: Color(0xFF7A86AC), fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // Link & Verify Buttons (visible after account data is fetched)
+              if (_accountData != null && _linkStatus != 'verified') ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    // Link Game Account button
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isLinking ? null : _linkGameAccount,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF9800),
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: _isLinking
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                ),
+                              )
+                            : const Text(
+                                'Link Game Account',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Verify Game Account button (grayed out until linked once)
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: (_hasLinkedOnce && !_isVerifying) ? _verifyGameAccount : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _hasLinkedOnce
+                              ? const Color(0xFF00BCD4)
+                              : const Color(0xFF2A2F45),
+                          foregroundColor: _hasLinkedOnce ? Colors.black : const Color(0xFF555E7A),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          disabledBackgroundColor: const Color(0xFF2A2F45),
+                          disabledForegroundColor: const Color(0xFF555E7A),
+                        ),
+                        child: _isVerifying
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                ),
+                              )
+                            : const Text(
+                                'Verify Game Account',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
+              // Link/Verify feedback message
+              if (_linkMessage != null) ...[
+                const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    color: _linkSuccess
+                        ? const Color(0xFF00FF00).withOpacity(0.1)
+                        : const Color(0xFFFF9800).withOpacity(0.1),
+                    border: Border.all(
+                      color: _linkSuccess
+                          ? const Color(0xFF00FF00).withOpacity(0.3)
+                          : const Color(0xFFFF9800).withOpacity(0.3),
+                    ),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red),
+                      Icon(
+                        _linkSuccess ? Icons.check_circle_outline : Icons.info_outline,
+                        color: _linkSuccess ? const Color(0xFF00FF00) : const Color(0xFFFF9800),
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: Colors.red),
+                          _linkMessage!,
+                          style: TextStyle(
+                            color: _linkSuccess ? const Color(0xFF00FF00) : const Color(0xFFFF9800),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
+              ],
+
+              // Verified badge
+              if (_linkStatus == 'verified') ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF00FF00).withOpacity(0.15),
+                        const Color(0xFF1A1F36),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF00FF00).withOpacity(0.3)),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.verified, color: Color(0xFF00FF00), size: 28),
+                      SizedBox(width: 10),
+                      Text(
+                        'Account Verified & Linked',
+                        style: TextStyle(
+                          color: Color(0xFF00FF00),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_openedFromProfile) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isDisconnecting ? null : _disconnectAccount,
+                      icon: _isDisconnecting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFFF0055),
+                              ),
+                            )
+                          : const Icon(Icons.link_off, size: 18),
+                      label: Text(_isDisconnecting ? 'Disconnecting...' : 'Disconnect account'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFFF0055),
+                        side: BorderSide(color: const Color(0xFFFF0055).withOpacity(0.4)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
 
               // Account Info Display
@@ -816,7 +1169,7 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: Image.network(
-                      'https://ddragon.leagueoflegends.com/cdn/14.1.1/img/item/$id.png',
+                      'https://ddragon.leagueoflegends.com/cdn/16.4.1/img/item/$id.png',
                       width: 24,
                       height: 24,
                       errorBuilder: (_, __, ___) => Container(
