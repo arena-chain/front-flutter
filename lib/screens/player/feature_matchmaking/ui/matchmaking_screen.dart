@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:arena_chain_flutter/core/models/feature_matchmaking/ticket_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_dialogs.dart';
 import 'package:arena_chain_flutter/navigation.dart';
 
 class MatchmakingScreen extends StatelessWidget {
@@ -14,8 +16,21 @@ class MatchmakingScreen extends StatelessWidget {
   }
 }
 
-class _MatchmakingScreenBody extends StatelessWidget {
+class _MatchmakingScreenBody extends StatefulWidget {
   const _MatchmakingScreenBody();
+
+  @override
+  State<_MatchmakingScreenBody> createState() => _MatchmakingScreenBodyState();
+}
+
+class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<MatchmakingViewModel>().fetchScheduledTickets();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +114,10 @@ class _MatchmakingScreenBody extends StatelessWidget {
             const SizedBox(height: 16),
             _buildInfoMessage(
                 'Match expired — not all players accepted in time. Try again!'),
+          ],
+          if (vm.scheduledTickets.isNotEmpty) ...[
+            const SizedBox(height: 32),
+            _buildScheduledTicketsList(context, vm),
           ],
         ],
       ),
@@ -416,7 +435,7 @@ class _MatchmakingScreenBody extends StatelessWidget {
     );
   }
 
-  // ── Server selector (renamed from Region) ─────────────────────────────
+  // ── Server selector ───────────────────────────────────────────────────
 
   Widget _buildServerSelector(MatchmakingViewModel vm) {
     return Column(
@@ -469,7 +488,7 @@ class _MatchmakingScreenBody extends StatelessWidget {
     );
   }
 
-  // ── Region selector (country/player region) ───────────────────────────
+  // ── Region selector ───────────────────────────────────────────────────
 
   Widget _buildRegionSelector(MatchmakingViewModel vm) {
     return Column(
@@ -675,11 +694,9 @@ class _MatchmakingScreenBody extends StatelessWidget {
       case MatchmakingStatus.error:
       case MatchmakingStatus.cancelled:
       case MatchmakingStatus.expired:
-        return _buildFindMatchButton(vm);
+        return _buildFindMatchButton(context, vm);
       case MatchmakingStatus.searching:
         return _buildSearchingState(vm);
-      case MatchmakingStatus.scheduled:
-        return _buildScheduledState(vm);
       case MatchmakingStatus.pendingAcceptance:
         return _buildPendingState();
       case MatchmakingStatus.accepted:
@@ -687,7 +704,7 @@ class _MatchmakingScreenBody extends StatelessWidget {
     }
   }
 
-  Widget _buildFindMatchButton(MatchmakingViewModel vm) {
+  Widget _buildFindMatchButton(BuildContext context, MatchmakingViewModel vm) {
     final isScheduled = vm.isScheduleMode && vm.scheduledTime != null;
     final canPress = !vm.isLoading &&
         (!vm.isScheduleMode || vm.scheduledTime != null) &&
@@ -727,7 +744,14 @@ class _MatchmakingScreenBody extends StatelessWidget {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: canPress ? () => vm.startSearch() : null,
+            onPressed: canPress
+                ? () async {
+                    await vm.startSearch();
+                    if (vm.conflictingTicket != null && context.mounted) {
+                      showScheduleConflictDialog(context: context, vm: vm);
+                    }
+                  }
+                : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: isScheduled
                   ? const Color(0xFF00CCFF)
@@ -764,112 +788,6 @@ class _MatchmakingScreenBody extends StatelessWidget {
                       ),
                     ],
                   ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ── Scheduled state ───────────────────────────────────────────────────
-
-  Widget _buildScheduledState(MatchmakingViewModel vm) {
-    final hours = vm.timeRemaining.inHours;
-    final minutes = vm.timeRemaining.inMinutes.remainder(60);
-    final seconds = vm.timeRemaining.inSeconds.remainder(60);
-    final countdownText =
-        '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0F1221),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFF00CCFF).withOpacity(0.4),
-            ),
-          ),
-          child: Column(
-            children: [
-              const Icon(Icons.schedule, color: Color(0xFF00CCFF), size: 40),
-              const SizedBox(height: 12),
-              const Text(
-                'Match Scheduled',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (vm.scheduledTime != null)
-                Text(
-                  DateFormat('EEE, MMM d  ·  HH:mm')
-                      .format(vm.scheduledTime!),
-                  style: const TextStyle(
-                    color: Color(0xFF7A86AC),
-                    fontSize: 14,
-                  ),
-                ),
-              const SizedBox(height: 20),
-              const Text(
-                'Starts in',
-                style: TextStyle(color: Color(0xFF7A86AC), fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                countdownText,
-                style: const TextStyle(
-                  color: Color(0xFF00CCFF),
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  letterSpacing: 4,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00CCFF).withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.info_outline,
-                        color: Color(0xFF00CCFF), size: 16),
-                    SizedBox(width: 6),
-                    Text(
-                      'Matchmaking will start automatically',
-                      style:
-                          TextStyle(color: Color(0xFF00CCFF), fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: OutlinedButton(
-            onPressed: vm.isLoading ? null : () => vm.cancelSearch(),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFFFF4444),
-              side: const BorderSide(color: Color(0xFFFF4444)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Cancel Schedule',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
           ),
         ),
       ],
@@ -1071,6 +989,194 @@ class _MatchmakingScreenBody extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Scheduled tickets list ─────────────────────────────────────────────
+
+  Widget _buildScheduledTicketsList(
+      BuildContext context, MatchmakingViewModel vm) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.schedule, color: Color(0xFF00CCFF), size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Scheduled Games (${vm.scheduledTickets.length})',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...vm.scheduledTickets.map(
+          (ticket) => _buildScheduledTicketCard(context, ticket, vm),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScheduledTicketCard(
+      BuildContext context, TicketModel ticket, MatchmakingViewModel vm) {
+    final timeStr = ticket.scheduledAt != null
+        ? DateFormat('EEE, MMM d  ·  HH:mm').format(ticket.scheduledAt!)
+        : '—';
+
+    String modeLabel;
+    switch (ticket.mode) {
+      case 'CUSTOM_1V1':
+        modeLabel = '1v1';
+        break;
+      case 'CUSTOM_2V2':
+        modeLabel = '2v2';
+        break;
+      case 'CUSTOM_5V5':
+        modeLabel = '5v5';
+        break;
+      default:
+        modeLabel = ticket.mode;
+    }
+
+    final now = DateTime.now();
+    final remaining = ticket.scheduledAt != null
+        ? ticket.scheduledAt!.difference(now)
+        : Duration.zero;
+
+    String countdownText;
+    if (remaining.isNegative) {
+      countdownText = 'Activating...';
+    } else if (remaining.inHours > 0) {
+      countdownText =
+          '${remaining.inHours}h ${remaining.inMinutes.remainder(60)}m';
+    } else {
+      countdownText = '${remaining.inMinutes}m';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F1221),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF00CCFF).withOpacity(0.25),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFF00CCFF).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.event, color: Color(0xFF00CCFF), size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  timeStr,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '$modeLabel  ·  ${ticket.server}  ·  ${ticket.region}',
+                  style: const TextStyle(
+                    color: Color(0xFF7A86AC),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF00CCFF).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              countdownText,
+              style: const TextStyle(
+                color: Color(0xFF00CCFF),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _confirmCancelScheduled(context, ticket, vm),
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF4444).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.close, color: Color(0xFFFF4444), size: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmCancelScheduled(
+      BuildContext context, TicketModel ticket, MatchmakingViewModel vm) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0F1221),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFFF4444), width: 1),
+        ),
+        title: const Text(
+          'Cancel Scheduled Game?',
+          style: TextStyle(color: Colors.white, fontSize: 18),
+        ),
+        content: const Text(
+          'This scheduled match will be removed. You can always schedule a new one.',
+          style: TextStyle(color: Color(0xFF7A86AC), fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Keep',
+              style: TextStyle(color: Color(0xFF7A86AC)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              vm.cancelScheduledTicket(ticket.id);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF4444),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Cancel Game'),
           ),
         ],
       ),

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:arena_chain_flutter/core/models/feature_matchmaking/ticket_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
 
 /// Dialog that lets the player accept or decline a found match.
@@ -262,6 +264,206 @@ void showMatchAcceptDialog({
       },
     ),
   ).then((_) => onDismissed());
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Global helper: show the Room-Code bottom sheet on top of any screen
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Schedule conflict dialog — shown when an instant search conflicts with an
+// upcoming scheduled game within the next 30 minutes.
+// ─────────────────────────────────────────────────────────────────────────────
+
+void showScheduleConflictDialog({
+  required BuildContext context,
+  required MatchmakingViewModel vm,
+}) {
+  final ticket = vm.conflictingTicket;
+  if (ticket == null) return;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    useRootNavigator: true,
+    builder: (ctx) => _ScheduleConflictDialog(
+      ticket: ticket,
+      onCancelAndSearch: () {
+        Navigator.of(ctx, rootNavigator: true).pop();
+        vm.cancelConflictAndSearch();
+      },
+      onWaitForScheduled: () {
+        Navigator.of(ctx, rootNavigator: true).pop();
+        vm.clearConflict();
+      },
+    ),
+  );
+}
+
+class _ScheduleConflictDialog extends StatelessWidget {
+  final TicketModel ticket;
+  final VoidCallback onCancelAndSearch;
+  final VoidCallback onWaitForScheduled;
+
+  const _ScheduleConflictDialog({
+    required this.ticket,
+    required this.onCancelAndSearch,
+    required this.onWaitForScheduled,
+  });
+
+  String get _modeLabel {
+    switch (ticket.mode) {
+      case 'CUSTOM_1V1':
+        return '1v1';
+      case 'CUSTOM_2V2':
+        return '2v2';
+      case 'CUSTOM_5V5':
+        return '5v5';
+      default:
+        return ticket.mode;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final timeStr = ticket.scheduledAt != null
+        ? DateFormat('EEE, MMM d  ·  HH:mm').format(ticket.scheduledAt!)
+        : '—';
+
+    final remaining = ticket.scheduledAt != null
+        ? ticket.scheduledAt!.difference(DateTime.now())
+        : Duration.zero;
+    final mins = remaining.inMinutes;
+
+    return AlertDialog(
+      backgroundColor: const Color(0xFF0F1221),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0xFF00CCFF), width: 1),
+      ),
+      title: const Row(
+        children: [
+          Icon(Icons.schedule, color: Color(0xFF00CCFF)),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Scheduled Game Reminder',
+              style: TextStyle(color: Colors.white, fontSize: 18),
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF00CCFF).withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF00CCFF).withOpacity(0.3),
+              ),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.event, color: Color(0xFF00CCFF), size: 36),
+                const SizedBox(height: 10),
+                Text(
+                  timeStr,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '$_modeLabel  ·  ${ticket.server}',
+                  style: const TextStyle(
+                    color: Color(0xFF7A86AC),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00CCFF).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Starts in ~$mins min',
+                    style: const TextStyle(
+                      color: Color(0xFF00CCFF),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'You have a scheduled game coming up soon.\nWould you like to cancel it and search now, or wait for the scheduled match?',
+            style: TextStyle(color: Color(0xFF7A86AC), fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+      actionsAlignment: MainAxisAlignment.center,
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      actions: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onCancelAndSearch,
+                icon: const Icon(Icons.search, size: 18),
+                label: const Text(
+                  'Cancel Scheduled & Search Now',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00FF00),
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onWaitForScheduled,
+                icon: const Icon(Icons.schedule, size: 18),
+                label: const Text(
+                  'Wait for Scheduled Game',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF00CCFF),
+                  side: const BorderSide(color: Color(0xFF00CCFF)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

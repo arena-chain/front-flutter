@@ -80,7 +80,6 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       });
     } else if (status == MatchmakingStatus.idle ||
         status == MatchmakingStatus.searching ||
-        status == MatchmakingStatus.scheduled ||
         status == MatchmakingStatus.cancelled ||
         status == MatchmakingStatus.expired ||
         status == MatchmakingStatus.error) {

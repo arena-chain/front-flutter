@@ -10,7 +10,6 @@ import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 enum MatchmakingStatus {
   idle,
   searching,
-  scheduled,
   pendingAcceptance,
   accepted,
   cancelled,
@@ -107,7 +106,6 @@ class MatchmakingViewModel extends ChangeNotifier {
   bool _userExplicitlyAccepted = false;
 
   Timer? _pollTimer;
-  Timer? _countdownTimer;
 
   String selectedGame = 'LOL';
   String selectedMode = 'CUSTOM_1V1';
@@ -120,10 +118,20 @@ class MatchmakingViewModel extends ChangeNotifier {
   DateTime? _scheduledTime;
   DateTime? get scheduledTime => _scheduledTime;
 
-  Duration _timeRemaining = Duration.zero;
-  Duration get timeRemaining => _timeRemaining;
+  // ── Scheduled tickets state ────────────────────────────────────────────
+
+  List<TicketModel> _scheduledTickets = [];
+  List<TicketModel> get scheduledTickets => List.unmodifiable(_scheduledTickets);
+
+  Timer? _scheduledPollTimer;
+
+  // ── Schedule conflict state ────────────────────────────────────────────
+
+  TicketModel? _conflictingTicket;
+  TicketModel? get conflictingTicket => _conflictingTicket;
 
   // ── Connected account state ─────────────────────────────────────────
+
   bool _isLoadingLinkStatus = true;
   bool get isLoadingLinkStatus => _isLoadingLinkStatus;
 
@@ -171,7 +179,7 @@ class MatchmakingViewModel extends ChangeNotifier {
       }
 
       _stopPolling();
-      _stopCountdown();
+      _stopScheduledPoll();
       _clearPersistedState();
       _reset();
       _connectedAccount = null;
@@ -268,20 +276,11 @@ class MatchmakingViewModel extends ChangeNotifier {
 
     _isRestoring = true;
     try {
+      await fetchScheduledTickets();
+
       final ticket = await _repository.getActiveTicket();
       if (ticket != null) {
         _ticket = ticket;
-
-        if (ticket.status == 'SCHEDULED') {
-          _status = MatchmakingStatus.scheduled;
-          _scheduledTime = ticket.scheduledAt;
-          _isScheduleMode = true;
-          await _persistState();
-          _startCountdown();
-          notifyListeners();
-          _isRestoring = false;
-          return;
-        }
 
         if (ticket.status == 'SEARCHING') {
           _status = MatchmakingStatus.searching;
@@ -327,6 +326,10 @@ class MatchmakingViewModel extends ChangeNotifier {
         return;
       }
 
+      if (_scheduledTickets.isNotEmpty) {
+        _startScheduledPoll();
+      }
+
       await _clearPersistedState();
     } catch (e) {
       debugPrint('Restore matchmaking state error: $e');
@@ -355,6 +358,71 @@ class MatchmakingViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Scheduled tickets management ───────────────────────────────────────
+
+  Future<void> fetchScheduledTickets() async {
+    try {
+      _scheduledTickets = await _repository.getScheduledTickets();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Fetch scheduled tickets error: $e');
+    }
+  }
+
+  Future<void> cancelScheduledTicket(String ticketId) async {
+    try {
+      await _repository.cancelSearch(ticketId);
+      _scheduledTickets.removeWhere((t) => t.id == ticketId);
+      notifyListeners();
+      if (_scheduledTickets.isEmpty) {
+        _stopScheduledPoll();
+      }
+    } catch (e) {
+      debugPrint('Cancel scheduled ticket error: $e');
+    }
+  }
+
+  // ── Schedule conflict ──────────────────────────────────────────────────
+
+  TicketModel? _findUpcomingConflict() {
+    if (_scheduledTickets.isEmpty) return null;
+    final now = DateTime.now();
+    final thirtyMinLater = now.add(const Duration(minutes: 30));
+    for (final t in _scheduledTickets) {
+      if (t.scheduledAt != null &&
+          t.scheduledAt!.isAfter(now) &&
+          t.scheduledAt!.isBefore(thirtyMinLater)) {
+        return t;
+      }
+    }
+    return null;
+  }
+
+  void clearConflict() {
+    _conflictingTicket = null;
+    notifyListeners();
+  }
+
+  Future<void> cancelConflictAndSearch() async {
+    if (_conflictingTicket == null) return;
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _repository.cancelSearch(_conflictingTicket!.id);
+      _scheduledTickets.removeWhere((t) => t.id == _conflictingTicket!.id);
+      _conflictingTicket = null;
+      _isLoading = false;
+      notifyListeners();
+      await startSearch();
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   // ── Start search ──────────────────────────────────────────────────────
 
   Future<void> startSearch() async {
@@ -363,21 +431,38 @@ class MatchmakingViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final ticket = await _repository.findMatch(
-        game: selectedGame,
-        mode: selectedMode,
-        server: selectedServer,
-        region: selectedPlayerRegion,
-        scheduledAt: _isScheduleMode ? _scheduledTime : null,
-        riotAccountInfo: _connectedAccount?.toMatchmakingPayload(),
-      );
-      _ticket = ticket;
-      await _persistState();
-
       if (_isScheduleMode && _scheduledTime != null) {
-        _status = MatchmakingStatus.scheduled;
-        _startCountdown();
+        await _repository.findMatch(
+          game: selectedGame,
+          mode: selectedMode,
+          server: selectedServer,
+          region: selectedPlayerRegion,
+          scheduledAt: _scheduledTime,
+          riotAccountInfo: _connectedAccount?.toMatchmakingPayload(),
+        );
+        await fetchScheduledTickets();
+        _isScheduleMode = false;
+        _scheduledTime = null;
+        _status = MatchmakingStatus.idle;
+        _startScheduledPoll();
       } else {
+        final conflict = _findUpcomingConflict();
+        if (conflict != null) {
+          _conflictingTicket = conflict;
+          _isLoading = false;
+          notifyListeners();
+          return;
+        }
+
+        final ticket = await _repository.findMatch(
+          game: selectedGame,
+          mode: selectedMode,
+          server: selectedServer,
+          region: selectedPlayerRegion,
+          riotAccountInfo: _connectedAccount?.toMatchmakingPayload(),
+        );
+        _ticket = ticket;
+        await _persistState();
         _status = MatchmakingStatus.searching;
         _startPollingForMatch();
       }
@@ -388,45 +473,6 @@ class MatchmakingViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  // ── Countdown (scheduled matches) ─────────────────────────────────────
-
-  void _startCountdown() {
-    _stopCountdown();
-    _updateTimeRemaining();
-
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _updateTimeRemaining();
-
-      if (_timeRemaining.inSeconds <= 0) {
-        _stopCountdown();
-        _transitionToSearching();
-      }
-
-      notifyListeners();
-    });
-  }
-
-  void _updateTimeRemaining() {
-    if (_scheduledTime == null) {
-      _timeRemaining = Duration.zero;
-      return;
-    }
-    final diff = _scheduledTime!.difference(DateTime.now());
-    _timeRemaining = diff.isNegative ? Duration.zero : diff;
-  }
-
-  void _transitionToSearching() {
-    _status = MatchmakingStatus.searching;
-    _isScheduleMode = false;
-    _startPollingForMatch();
-    notifyListeners();
-  }
-
-  void _stopCountdown() {
-    _countdownTimer?.cancel();
-    _countdownTimer = null;
   }
 
   // ── Cancel search ─────────────────────────────────────────────────────
@@ -440,9 +486,12 @@ class MatchmakingViewModel extends ChangeNotifier {
     try {
       await _repository.cancelSearch(_ticket!.id);
       _stopPolling();
-      _stopCountdown();
       _reset();
       await _clearPersistedState();
+      await fetchScheduledTickets();
+      if (_scheduledTickets.isNotEmpty) {
+        _startScheduledPoll();
+      }
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
@@ -487,6 +536,10 @@ class MatchmakingViewModel extends ChangeNotifier {
       _stopPolling();
       _reset();
       await _clearPersistedState();
+      await fetchScheduledTickets();
+      if (_scheduledTickets.isNotEmpty) {
+        _startScheduledPoll();
+      }
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
@@ -499,6 +552,7 @@ class MatchmakingViewModel extends ChangeNotifier {
 
   void _startPollingForMatch() {
     _stopPolling();
+    _stopScheduledPoll();
     _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
       await _checkForMatch();
     });
@@ -551,6 +605,56 @@ class MatchmakingViewModel extends ChangeNotifier {
     });
   }
 
+  // ── Scheduled tickets background poll ──────────────────────────────────
+
+  void _startScheduledPoll() {
+    _stopScheduledPoll();
+    _scheduledPollTimer =
+        Timer.periodic(const Duration(seconds: 10), (_) async {
+      await _checkScheduledTickets();
+    });
+  }
+
+  void _stopScheduledPoll() {
+    _scheduledPollTimer?.cancel();
+    _scheduledPollTimer = null;
+  }
+
+  Future<void> _checkScheduledTickets() async {
+    if (_status != MatchmakingStatus.idle) return;
+
+    try {
+      await fetchScheduledTickets();
+
+      final activeTicket = await _repository.getActiveTicket();
+      if (activeTicket == null) return;
+
+      if (activeTicket.status == 'MATCHED' && activeTicket.gameId != null) {
+        _ticket = activeTicket;
+        _activeGameId = activeTicket.gameId;
+        _stopScheduledPoll();
+        final game = await _repository.getGame(activeTicket.gameId!);
+        _activeGame = game;
+        _activeGameId = game.id;
+        _updateStatusFromGame(game);
+        await _persistState();
+        notifyListeners();
+        if (_status == MatchmakingStatus.pendingAcceptance) {
+          _startPollingGame(game.id);
+        }
+      } else if (activeTicket.status == 'SEARCHING') {
+        _ticket = activeTicket;
+        _status = MatchmakingStatus.searching;
+        _stopScheduledPoll();
+        await _persistState();
+        _startPollingForMatch();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Scheduled poll error: $e');
+    }
+  }
+
   void _updateStatusFromGame(GameMatchModel game) {
     switch (game.status) {
       case 'PENDING_ACCEPTANCE':
@@ -592,7 +696,7 @@ class MatchmakingViewModel extends ChangeNotifier {
     _userExplicitlyAccepted = false;
     _isScheduleMode = false;
     _scheduledTime = null;
-    _timeRemaining = Duration.zero;
+    _conflictingTicket = null;
   }
 
   Future<void> resetState() async {
@@ -606,16 +710,19 @@ class MatchmakingViewModel extends ChangeNotifier {
     }
 
     _stopPolling();
-    _stopCountdown();
     _reset();
     await _clearPersistedState();
+    await fetchScheduledTickets();
+    if (_scheduledTickets.isNotEmpty) {
+      _startScheduledPoll();
+    }
     notifyListeners();
   }
 
   @override
   void dispose() {
     _stopPolling();
-    _stopCountdown();
+    _stopScheduledPoll();
     super.dispose();
   }
 }

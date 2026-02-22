@@ -108,4 +108,17 @@ class MatchmakingApi {
       throw Exception('Failed to get active game');
     }
   }
+
+  Future<List<TicketModel>> getScheduledTickets() async {
+    final url = Uri.parse('$baseUrl/matchmaking/my-scheduled-tickets');
+    final response = await _client.get(url);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final list = data['tickets'] as List<dynamic>? ?? [];
+      return list.map((t) => TicketModel.fromJson(t as Map<String, dynamic>)).toList();
+    } else {
+      throw Exception('Failed to get scheduled tickets');
+    }
+  }
 }

@@ -85,4 +85,12 @@ class MatchmakingRepository {
       throw Exception('Failed to get active game: $e');
     }
   }
+
+  Future<List<TicketModel>> getScheduledTickets() async {
+    try {
+      return await _api.getScheduledTickets();
+    } catch (e) {
+      throw Exception('Failed to get scheduled tickets: $e');
+    }
+  }
 }
