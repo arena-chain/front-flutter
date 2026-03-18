@@ -177,7 +177,7 @@ class _BookingScreenState extends State<BookingScreen> {
               const SizedBox(height: 16),
               ...widget.tournament.ticketTypes!.map((type) => _buildTicketTypeOption(type)),
               const SizedBox(height: 32),
-            ] else 
+            ] else
               // Fallback if no ticket types defined (e.g. legacy data)
               const Center(
                 child: Text(
@@ -188,7 +188,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
             // Ticket Counter
             const Text(
-              'Select Quantity',
+              'Select Tickets',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -241,8 +241,8 @@ class _BookingScreenState extends State<BookingScreen> {
                     Text(
                       '\$${(_selectedTicketType!.price * _ticketCount).toStringAsFixed(2)}',
                       style: const TextStyle(
-                        color: Colors.white, 
-                        fontSize: 24, 
+                        color: Colors.white,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold
                       ),
                     ),
@@ -254,7 +254,16 @@ class _BookingScreenState extends State<BookingScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isProcessing ? null : _handleBooking,
+                onPressed: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/tournaments/ticket',
+                    arguments: {
+                      'tournament': widget.tournament,
+                      'ticketCount': _ticketCount,
+                    },
+                  );
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00FF00),
                   foregroundColor: Colors.black,

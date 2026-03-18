@@ -54,6 +54,15 @@ class SettingsScreen extends StatelessWidget {
                   // TODO: Navigate to change password
                 },
               ),
+              const SizedBox(height: 12),
+              _buildSettingsTile(
+                icon: Icons.videogame_asset,
+                title: 'My Account',
+                subtitle: 'Link your League of Legends account',
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.myAccount);
+                },
+              ),
               const SizedBox(height: 24),
               const Text(
                 'General',

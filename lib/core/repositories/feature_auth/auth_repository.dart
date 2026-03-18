@@ -1,7 +1,9 @@
 import 'package:arena_chain_flutter/core/api/feature_auth/auth_api.dart';
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
+import 'package:arena_chain_flutter/core/api/authenticated_client.dart';
 import 'package:arena_chain_flutter/core/dto/auth/login_dto.dart';
 import 'package:arena_chain_flutter/core/dto/auth/register_player_dto.dart';
+import 'package:arena_chain_flutter/core/dto/auth/register_team_manager_dto.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/auth_response_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/user_model.dart';
 
@@ -24,6 +26,19 @@ class AuthRepository {
   Future<AuthResponse> registerPlayer(RegisterPlayerDto dto) async {
     try {
       final response = await _authApi.registerPlayer(dto);
+      if (response.user != null) {
+        await _tokenStorage.saveUser(response.user!.toJson());
+      }
+      return response;
+    } catch (e) {
+      throw Exception('Registration failed: ${e.toString()}');
+    }
+  }
+
+  /// Register a new team manager
+  Future<AuthResponse> registerTeamManager(RegisterTeamManagerDto dto) async {
+    try {
+      final response = await _authApi.registerTeamManager(dto);
       if (response.user != null) {
         await _tokenStorage.saveUser(response.user!.toJson());
       }
@@ -71,6 +86,13 @@ class AuthRepository {
     } catch (e) {
       return false;
     }
+  }
+
+  /// Attempt to refresh the access token using the stored refresh token.
+  /// Returns `true` if the token was refreshed successfully.
+  Future<bool> refreshAccessToken() async {
+    final client = AuthenticatedClient();
+    return client.tryRefreshToken();
   }
 
   /// Get the current access token

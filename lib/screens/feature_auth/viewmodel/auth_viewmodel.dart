@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:arena_chain_flutter/core/repositories/feature_auth/auth_repository.dart';
 import 'package:arena_chain_flutter/core/dto/auth/login_dto.dart';
 import 'package:arena_chain_flutter/core/dto/auth/register_player_dto.dart';
+import 'package:arena_chain_flutter/core/dto/auth/register_team_manager_dto.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/auth_state.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/user_model.dart';
 
@@ -51,7 +52,55 @@ class AuthViewModel extends ChangeNotifier {
       // We'll set authenticated state but currentUser will be null
       _authState = AuthState.authenticated;
       _currentUser = response.user;
-      
+
+      notifyListeners();
+    } catch (e) {
+      _setError(_extractErrorMessage(e.toString()));
+      _authState = AuthState.unauthenticated;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Register a new team manager
+  Future<void> registerTeamManager({
+    required String email,
+    required String password,
+    required String nickname,
+    String? organizationName,
+    String? firstName,
+    String? lastName,
+    String? cin,
+    int? age,
+    String? gender,
+    String? description,
+    String? phoneNumber,
+    String? requestTeamId,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final dto = RegisterTeamManagerDto(
+        email: email,
+        password: password,
+        nickname: nickname,
+        organizationName: organizationName,
+        firstName: firstName,
+        lastName: lastName,
+        cin: cin,
+        age: age,
+        gender: gender,
+        description: description,
+        phoneNumber: phoneNumber,
+        requestTeamId: requestTeamId,
+      );
+
+      final response = await _authRepository.registerTeamManager(dto);
+
+      _authState = AuthState.authenticated;
+      _currentUser = response.user;
+
       notifyListeners();
     } catch (e) {
       _setError(_extractErrorMessage(e.toString()));
@@ -119,15 +168,26 @@ class AuthViewModel extends ChangeNotifier {
 
     try {
       final isAuthenticated = await _authRepository.isAuthenticated();
-      
-      if (isAuthenticated) {
-        _currentUser = await _authRepository.getUser();
-        if (_currentUser != null) {
-          _authState = AuthState.authenticated;
+      final hasToken = await _authRepository.isAuthenticated();
+
+      if (hasToken) {
+        // Proactively refresh the access token so we start with a
+        // fresh one.  If the refresh token itself is expired (>7 days),
+        // this fails gracefully and we fall through to unauthenticated.
+        final refreshed = await _authRepository.refreshAccessToken();
+
+        if (refreshed) {
+          _currentUser = await _authRepository.getUser();
+          if (_currentUser != null) {
+            _authState = AuthState.authenticated;
+          } else {
+            _authState = AuthState.unauthenticated;
+            await _authRepository.logout();
+          }
         } else {
-          // Token exists but user data missing/corrupted
+          // Refresh failed — refresh token is invalid or expired
           _authState = AuthState.unauthenticated;
-          await _authRepository.logout(); // Clear invalid state
+          await _authRepository.logout();
         }
       } else {
         _authState = AuthState.unauthenticated;

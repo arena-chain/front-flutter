@@ -92,7 +92,7 @@ class TicketScreen extends StatelessWidget {
                             size: 200.0,
                             backgroundColor: Colors.white,
                           ),
-                        
+
                         const SizedBox(height: 16),
                         Text(
                           '$ticketCount Entry Ticket${ticketCount > 1 ? 's' : ''}',

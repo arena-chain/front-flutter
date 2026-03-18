@@ -32,11 +32,13 @@ class _LoginScreenState extends State<LoginScreen> {
       password: _passwordController.text,
     );
 
-    // Navigate based on user role
+    // Navigate to home if login was successful
     if (mounted && authViewModel.authState == AuthState.authenticated) {
       final role = authViewModel.currentUser?.role ?? '';
       if (role == 'scouter') {
         Navigator.pushReplacementNamed(context, AppRoutes.scouterHome);
+      if (authViewModel.currentUser?.role == 'admin') {
+        Navigator.pushReplacementNamed(context, AppRoutes.adminHome);
       } else {
         Navigator.pushReplacementNamed(context, AppRoutes.playerHome);
       }
@@ -235,6 +237,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, AppRoutes.signupTeamManager);
+                  },
+                  child: const Text(
+                    'Register as Team Manager',
+                    style: TextStyle(
+                      color: Color(0xFF7A86AC),
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
                 ),
                 ],
               ),

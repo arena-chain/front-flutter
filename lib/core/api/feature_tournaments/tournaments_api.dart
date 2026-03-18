@@ -92,7 +92,7 @@ class TournamentsApi {
     print('═══════════════════════════════════════');
     print('🎫 FETCHING TICKETS FOR USER: $userId');
     print('📍 URL: $baseUrl/tickets/my-tickets?userId=$userId');
-    
+
     final response = await http.get(
       Uri.parse('$baseUrl/tickets/my-tickets?userId=$userId'),
       headers: await _getHeaders(),
@@ -104,12 +104,12 @@ class TournamentsApi {
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body);
       print('✅ Number of tickets: ${data.length}');
-      
+
       if (data.isNotEmpty) {
         print('🔍 First ticket raw data:');
         print(data[0]);
       }
-      
+
       try {
         final tickets = data.map((json) {
           print('🎯 Parsing ticket: ${json['_id']}');

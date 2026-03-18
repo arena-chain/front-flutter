@@ -1,10 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:arena_chain_flutter/core/api/riot/riot_api.dart';
+import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
 import 'package:arena_chain_flutter/navigation.dart';
 
-class PlayerProfileScreen extends StatelessWidget {
+class PlayerProfileScreen extends StatefulWidget {
   const PlayerProfileScreen({super.key});
+
+  @override
+  State<PlayerProfileScreen> createState() => _PlayerProfileScreenState();
+}
+
+class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
+  final RiotApi _riotApi = RiotApi();
+  final TokenStorage _tokenStorage = TokenStorage();
+
+  bool _isLoadingLinkStatus = true;
+  String _linkStatus = 'unlinked';
+  String? _riotGameName;
+  String? _riotTagLine;
+  String? _riotRegion;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLinkStatus();
+  }
+
+  Future<void> _checkLinkStatus() async {
+    try {
+      final token = await _tokenStorage.getAccessToken();
+      if (token == null) {
+        if (mounted) setState(() => _isLoadingLinkStatus = false);
+        return;
+      }
+
+      final result = await _riotApi.getLinkStatus(token: token);
+      if (mounted) {
+        setState(() {
+          _linkStatus = result['status'] ?? 'unlinked';
+          _riotGameName = result['riotGameName'];
+          _riotTagLine = result['riotTagLine'];
+          _riotRegion = result['riotRegion'];
+          _isLoadingLinkStatus = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingLinkStatus = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +58,7 @@ class PlayerProfileScreen extends StatelessWidget {
         final user = authViewModel.currentUser;
         final nickname = user?.nickname ?? 'Player';
         final email = user?.email ?? '';
-        final isPro = user?.profile?.isPro ?? false;
+        final isPro = user?.playerProfile?.isPro ?? false;
 
         return Scaffold(
           backgroundColor: const Color(0xFF0A0E1A),
@@ -55,6 +100,8 @@ class PlayerProfileScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 _buildStatsSection(),
                 const SizedBox(height: 24),
+                _buildConnectedGameAccounts(),
+                const SizedBox(height: 24),
                 _buildMyLeagues(),
                 const SizedBox(height: 24),
                 _buildAchievements(),
@@ -64,6 +111,275 @@ class PlayerProfileScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildConnectedGameAccounts() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.sports_esports, color: Color(0xFF00FF00), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Connected Game Accounts',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_isLoadingLinkStatus)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F1221),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF1A1F36)),
+              ),
+              child: const Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF00FF00),
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
+            )
+          else if (_linkStatus == 'verified')
+            _buildLinkedAccountCard()
+          else if (_linkStatus == 'pending_verification')
+            _buildPendingAccountCard()
+          else
+            _buildNoAccountsCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLinkedAccountCard() {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.pushNamed(
+          context,
+          AppRoutes.myAccount,
+          arguments: {
+            'gameName': _riotGameName,
+            'tagLine': _riotTagLine,
+            'region': _riotRegion,
+            'autoFetch': true,
+          },
+        );
+        _checkLinkStatus();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F1221),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF1A1F36)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFC89B3C), width: 2),
+              ),
+              child: const Center(
+                child: Text(
+                  'LoL',
+                  style: TextStyle(
+                    color: Color(0xFFC89B3C),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'League of Legends',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.verified, color: Color(0xFF00FF00), size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_riotGameName ?? ''}#${_riotTagLine ?? ''}',
+                        style: const TextStyle(
+                          color: Color(0xFF7A86AC),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Color(0xFF7A86AC), size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPendingAccountCard() {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.pushNamed(
+          context,
+          AppRoutes.myAccount,
+          arguments: {
+            'gameName': _riotGameName,
+            'tagLine': _riotTagLine,
+            'region': _riotRegion,
+            'autoFetch': false,
+          },
+        );
+        _checkLinkStatus();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F1221),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFF9800).withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFF9800), width: 2),
+              ),
+              child: const Center(
+                child: Text(
+                  'LoL',
+                  style: TextStyle(
+                    color: Color(0xFFFF9800),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'League of Legends',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.pending, color: Colors.orange.shade300, size: 14),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'Pending verification',
+                        style: TextStyle(
+                          color: Color(0xFFFF9800),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Color(0xFF7A86AC), size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoAccountsCard() {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.pushNamed(context, AppRoutes.myAccount);
+        _checkLinkStatus();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F1221),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF1A1F36)),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.link_off, color: Colors.white.withOpacity(0.2), size: 40),
+            const SizedBox(height: 12),
+            const Text(
+              'Connect your game account and fetch its data',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF7A86AC),
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00FF00).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF00FF00)),
+              ),
+              child: const Text(
+                'Connect Now',
+                style: TextStyle(
+                  color: Color(0xFF00FF00),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

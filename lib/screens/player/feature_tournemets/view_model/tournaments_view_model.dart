@@ -2,6 +2,7 @@ import 'package:arena_chain_flutter/core/dto/tournaments/create_tournament_dto.d
 import 'package:arena_chain_flutter/core/models/feature_tournaments/ticket_model.dart';
 
 import 'package:arena_chain_flutter/core/models/feature_friends/friend_user_model.dart';
+import 'package:arena_chain_flutter/core/models/feature_friends/friendship_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_catalog/catalog_model.dart';
 import 'package:arena_chain_flutter/core/repositories/feature_friends/friends_repository.dart';
