@@ -1,0 +1,656 @@
+# Flutter Mobile Ticket Implementation Guide
+
+## Overview
+This guide provides a complete Flutter implementation for tournament ticket booking and history viewing.
+
+## Project Structure
+```
+lib/
+├── models/
+│   ├── ticket.dart
+│   ├── tournament.dart
+│   └── ticket_type.dart
+├── services/
+│   └── ticket_service.dart
+├── screens/
+│   ├── my_tickets_screen.dart
+│   ├── tournament_list_screen.dart
+│   └── ticket_booking_screen.dart
+└── widgets/
+    ├── ticket_card.dart
+    └── qr_code_display.dart
+```
+
+## 1. Data Models
+
+### `lib/models/ticket.dart`
+```dart
+class Ticket {
+  final String id;
+  final String ticketNumber;
+  final String qrCode; // Base64 image
+  final Tournament tournament;
+  final String type;
+  final double price;
+  final String status; // VALID, USED, CANCELLED, EXPIRED
+  final DateTime purchaseDate;
+  final DateTime? usedAt;
+
+  Ticket({
+    required this.id,
+    required this.ticketNumber,
+    required this.qrCode,
+    required this.tournament,
+    required this.type,
+    required this.price,
+    required this.status,
+    required this.purchaseDate,
+    this.usedAt,
+  });
+
+  factory Ticket.fromJson(Map<String, dynamic> json) {
+    return Ticket(
+      id: json['_id'],
+      ticketNumber: json['ticketNumber'],
+      qrCode: json['qrCode'],
+      tournament: Tournament.fromJson(json['tournament']),
+      type: json['type'],
+      price: json['price'].toDouble(),
+      status: json['status'],
+      purchaseDate: DateTime.parse(json['purchaseDate']),
+      usedAt: json['usedAt'] != null ? DateTime.parse(json['usedAt']) : null,
+    );
+  }
+}
+```
+
+### `lib/models/tournament.dart`
+```dart
+class TicketType {
+  final String name;
+  final double price;
+  final int capacity;
+  final String? description;
+
+  TicketType({
+    required this.name,
+    required this.price,
+    required this.capacity,
+    this.description,
+  });
+
+  factory TicketType.fromJson(Map<String, dynamic> json) {
+    return TicketType(
+      name: json['name'],
+      price: json['price'].toDouble(),
+      capacity: json['capacity'],
+      description: json['description'],
+    );
+  }
+}
+
+class Tournament {
+  final String id;
+  final String name;
+  final DateTime startDate;
+  final DateTime endDate;
+  final String? bannerImageUrl;
+  final List<TicketType> ticketTypes;
+
+  Tournament({
+    required this.id,
+    required this.name,
+    required this.startDate,
+    required this.endDate,
+    this.bannerImageUrl,
+    this.ticketTypes = const [],
+  });
+
+  factory Tournament.fromJson(Map<String, dynamic> json) {
+    return Tournament(
+      id: json['_id'],
+      name: json['name'],
+      startDate: DateTime.parse(json['startDate']),
+      endDate: DateTime.parse(json['endDate']),
+      bannerImageUrl: json['bannerImageUrl'],
+      ticketTypes: (json['ticketTypes'] as List?)
+          ?.map((t) => TicketType.fromJson(t))
+          .toList() ?? [],
+    );
+  }
+}
+```
+
+## 2. API Service
+
+### `lib/services/ticket_service.dart`
+```dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../models/ticket.dart';
+import '../models/tournament.dart';
+
+class TicketService {
+  static const String baseUrl = 'http://YOUR_API_URL'; // Replace with your API
+  
+  // Fetch user's ticket history
+  Future<List<Ticket>> getMyTickets(String userId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/tickets/my-tickets?userId=$userId'),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((json) => Ticket.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load tickets');
+    }
+  }
+
+  // Fetch all tournaments
+  Future<List<Tournament>> getTournaments() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/tournements'),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((json) => Tournament.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load tournaments');
+    }
+  }
+
+  // Book a ticket
+  Future<List<Ticket>> bookTicket({
+    required String tournamentId,
+    required String userId,
+    required String type,
+    int quantity = 1,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/tickets'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'tournament': tournamentId,
+        'user': userId,
+        'type': type,
+        'quantity': quantity,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((json) => Ticket.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to book ticket');
+    }
+  }
+}
+```
+
+## 3. Screens
+
+### `lib/screens/my_tickets_screen.dart`
+```dart
+import 'package:flutter/material.dart';
+import '../models/ticket.dart';
+import '../services/ticket_service.dart';
+import '../widgets/ticket_card.dart';
+
+class MyTicketsScreen extends StatefulWidget {
+  final String userId;
+
+  const MyTicketsScreen({Key? key, required this.userId}) : super(key: key);
+
+  @override
+  State<MyTicketsScreen> createState() => _MyTicketsScreenState();
+}
+
+class _MyTicketsScreenState extends State<MyTicketsScreen> {
+  final TicketService _ticketService = TicketService();
+  List<Ticket> _tickets = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTickets();
+  }
+
+  Future<void> _loadTickets() async {
+    try {
+      final tickets = await _ticketService.getMyTickets(widget.userId);
+      setState(() {
+        _tickets = tickets;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Tickets'),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _tickets.isEmpty
+              ? const Center(child: Text('No tickets yet'))
+              : RefreshIndicator(
+                  onRefresh: _loadTickets,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _tickets.length,
+                    itemBuilder: (context, index) {
+                      return TicketCard(ticket: _tickets[index]);
+                    },
+                  ),
+                ),
+    );
+  }
+}
+```
+
+### `lib/screens/tournament_list_screen.dart`
+```dart
+import 'package:flutter/material.dart';
+import '../models/tournament.dart';
+import '../services/ticket_service.dart';
+import 'ticket_booking_screen.dart';
+
+class TournamentListScreen extends StatefulWidget {
+  final String userId;
+
+  const TournamentListScreen({Key? key, required this.userId}) : super(key: key);
+
+  @override
+  State<TournamentListScreen> createState() => _TournamentListScreenState();
+}
+
+class _TournamentListScreenState extends State<TournamentListScreen> {
+  final TicketService _ticketService = TicketService();
+  List<Tournament> _tournaments = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTournaments();
+  }
+
+  Future<void> _loadTournaments() async {
+    try {
+      final tournaments = await _ticketService.getTournaments();
+      setState(() {
+        _tournaments = tournaments;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Tournaments'),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _tournaments.length,
+              itemBuilder: (context, index) {
+                final tournament = _tournaments[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => TicketBookingScreen(
+                            tournament: tournament,
+                            userId: widget.userId,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (tournament.bannerImageUrl != null)
+                          Image.network(
+                            'http://YOUR_API_URL${tournament.bannerImageUrl}',
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                tournament.name,
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${tournament.startDate.toString().split(' ')[0]} - ${tournament.endDate.toString().split(' ')[0]}',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+```
+
+### `lib/screens/ticket_booking_screen.dart`
+```dart
+import 'package:flutter/material.dart';
+import '../models/tournament.dart';
+import '../services/ticket_service.dart';
+
+class TicketBookingScreen extends StatefulWidget {
+  final Tournament tournament;
+  final String userId;
+
+  const TicketBookingScreen({
+    Key? key,
+    required this.tournament,
+    required this.userId,
+  }) : super(key: key);
+
+  @override
+  State<TicketBookingScreen> createState() => _TicketBookingScreenState();
+}
+
+class _TicketBookingScreenState extends State<TicketBookingScreen> {
+  final TicketService _ticketService = TicketService();
+  String? _selectedType;
+  int _quantity = 1;
+  bool _isBooking = false;
+
+  Future<void> _bookTicket() async {
+    if (_selectedType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a ticket type')),
+      );
+      return;
+    }
+
+    setState(() => _isBooking = true);
+
+    try {
+      await _ticketService.bookTicket(
+        tournamentId: widget.tournament.id,
+        userId: widget.userId,
+        type: _selectedType!,
+        quantity: _quantity,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ticket booked successfully!')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isBooking = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.tournament.name),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Select Ticket Type',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            ...widget.tournament.ticketTypes.map((ticketType) {
+              return RadioListTile<String>(
+                title: Text(ticketType.name),
+                subtitle: Text('\$${ticketType.price.toStringAsFixed(2)}'),
+                value: ticketType.name,
+                groupValue: _selectedType,
+                onChanged: (value) {
+                  setState(() => _selectedType = value);
+                },
+              );
+            }).toList(),
+            const SizedBox(height: 24),
+            Text(
+              'Quantity',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.remove),
+                  onPressed: _quantity > 1
+                      ? () => setState(() => _quantity--)
+                      : null,
+                ),
+                Text('$_quantity'),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () => setState(() => _quantity++),
+                ),
+              ],
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isBooking ? null : _bookTicket,
+                child: _isBooking
+                    ? const CircularProgressIndicator()
+                    : const Text('Book Ticket'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+## 4. Widgets
+
+### `lib/widgets/ticket_card.dart`
+```dart
+import 'package:flutter/material.dart';
+import 'dart:convert';
+import '../models/ticket.dart';
+
+class TicketCard extends StatelessWidget {
+  final Ticket ticket;
+
+  const TicketCard({Key? key, required this.ticket}) : super(key: key);
+
+  Color _getStatusColor() {
+    switch (ticket.status) {
+      case 'VALID':
+        return Colors.green;
+      case 'USED':
+        return Colors.grey;
+      case 'CANCELLED':
+        return Colors.red;
+      case 'EXPIRED':
+        return Colors.orange;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    ticket.tournament.name,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    ticket.status,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text('Type: ${ticket.type}'),
+            Text('Price: \$${ticket.price.toStringAsFixed(2)}'),
+            Text('Ticket #: ${ticket.ticketNumber}'),
+            const SizedBox(height: 12),
+            Center(
+              child: Image.memory(
+                base64Decode(ticket.qrCode.split(',')[1]),
+                width: 200,
+                height: 200,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+## 5. Usage Example
+
+### `lib/main.dart`
+```dart
+import 'package:flutter/material.dart';
+import 'screens/my_tickets_screen.dart';
+import 'screens/tournament_list_screen.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Tournament Tickets',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatefulWidget {
+  const HomePage({Key? key}) : super(key: key);
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int _selectedIndex = 0;
+  final String userId = 'USER_ID_HERE'; // Replace with actual user ID
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _selectedIndex == 0
+          ? TournamentListScreen(userId: userId)
+          : MyTicketsScreen(userId: userId),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.event),
+            label: 'Tournaments',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.confirmation_number),
+            label: 'My Tickets',
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+## 6. Dependencies
+
+Add to `pubspec.yaml`:
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.1.0
+```
+
+## 7. Complete Flow
+
+1. **View Tournaments**: User opens app → Tournament List shown
+2. **Select Tournament**: User taps a tournament → Booking screen opens
+3. **Book Ticket**: User selects type & quantity → Taps "Book" → API call
+4. **View History**: User navigates to "My Tickets" → Sees all tickets with QR codes
+5. **Refresh**: Pull to refresh on "My Tickets" to update list

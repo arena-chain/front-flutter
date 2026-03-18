@@ -32,9 +32,14 @@ class _LoginScreenState extends State<LoginScreen> {
       password: _passwordController.text,
     );
 
-    // Navigate to home if login was successful
+    // Navigate based on user role
     if (mounted && authViewModel.authState == AuthState.authenticated) {
-      Navigator.pushReplacementNamed(context, AppRoutes.playerHome);
+      final role = authViewModel.currentUser?.role ?? '';
+      if (role == 'scouter') {
+        Navigator.pushReplacementNamed(context, AppRoutes.scouterHome);
+      } else {
+        Navigator.pushReplacementNamed(context, AppRoutes.playerHome);
+      }
     }
   }
 

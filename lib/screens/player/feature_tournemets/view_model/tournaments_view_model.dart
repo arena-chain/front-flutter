@@ -1,6 +1,7 @@
 import 'package:arena_chain_flutter/core/dto/tournaments/create_tournament_dto.dart';
+import 'package:arena_chain_flutter/core/models/feature_tournaments/ticket_model.dart';
+
 import 'package:arena_chain_flutter/core/models/feature_friends/friend_user_model.dart';
-import 'package:arena_chain_flutter/core/models/feature_friends/friendship_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_catalog/catalog_model.dart';
 import 'package:arena_chain_flutter/core/repositories/feature_friends/friends_repository.dart';
@@ -17,12 +18,14 @@ class TournamentsViewModel extends ChangeNotifier {
   List<TournamentModel> _tournaments = [];
   List<FriendUser> _availableFriends = [];
   List<CatalogModel> _availableGames = [];
+  List<TicketModel> _myTickets = [];
   bool _isLoading = false;
   String? _error;
 
   List<TournamentModel> get tournaments => _tournaments;
   List<FriendUser> get availableFriends => _availableFriends;
   List<CatalogModel> get availableGames => _availableGames;
+  List<TicketModel> get myTickets => _myTickets;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -135,6 +138,45 @@ class TournamentsViewModel extends ChangeNotifier {
       _error = e.toString();
       notifyListeners();
       return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<List<TicketModel>> bookTicket({
+    required String tournamentId,
+    required String ticketType,
+    required int quantity,
+  }) async {
+    _setLoading(true);
+    try {
+      final tickets = await _tournamentsRepository.bookTicket(
+        tournamentId: tournamentId,
+        userId: currentUserId,
+        ticketType: ticketType,
+        quantity: quantity,
+      );
+      _error = null;
+      // Reload tournaments to update slot counts if necessary
+      await loadTournaments();
+      return tickets;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> fetchMyTickets() async {
+    _setLoading(true);
+    try {
+      _myTickets = await _tournamentsRepository.getMyTickets(currentUserId);
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+      print('Error fetching tickets: $e');
     } finally {
       _setLoading(false);
     }

@@ -13,7 +13,10 @@ import 'package:arena_chain_flutter/screens/player/feature_friends/ui/add_friend
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/create_tournament_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/booking_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/ticket_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/my_tickets_screen.dart';
 import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
+import 'package:arena_chain_flutter/core/models/feature_tournaments/ticket_model.dart';
+import 'package:arena_chain_flutter/screens/scouter/ui/scouter_home_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -31,6 +34,10 @@ class AppRoutes {
   static const String createTournament = '/tournaments/create';
   static const String tournamentBooking = '/tournaments/booking';
   static const String tournamentTicket = '/tournaments/ticket';
+  static const String myTickets = '/tickets/my_tickets';
+
+  // Scouter routes
+  static const String scouterHome = '/scouter/home';
 
   static Map<String, WidgetBuilder> get routes => {
         splash: (context) => const SplashScreen(),
@@ -62,7 +69,10 @@ class AppRoutes {
           return TicketScreen(
             tournament: args['tournament'] as TournamentModel,
             ticketCount: args['ticketCount'] as int,
+            tickets: args['tickets'] as List<TicketModel>?,
           );
         },
+        myTickets: (context) => const MyTicketsScreen(),
+        scouterHome: (context) => const ScouterHomeScreen(),
       };
 }

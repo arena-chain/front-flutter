@@ -8,6 +8,7 @@ import 'package:arena_chain_flutter/screens/player/feature_tournemets/view_model
 import 'package:arena_chain_flutter/screens/player/feature_home/player_home.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/ui/login_screen.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/ui/splash_screen.dart';
+import 'package:arena_chain_flutter/screens/scouter/ui/scouter_home_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 void main() {
@@ -39,13 +40,18 @@ class MyApp extends StatelessWidget {
         title: 'Arena-Chain',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          fontFamily: GoogleFonts.inter().fontFamily, // Use Inter font if available via google_fonts
-          scaffoldBackgroundColor: const Color(0xFF0F0C08),
+          fontFamily: GoogleFonts.inter().fontFamily,
+          scaffoldBackgroundColor: const Color(0xFF080B14),
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF00FF00),
+            seedColor: const Color(0xFF0D1117),
             brightness: Brightness.dark,
             primary: const Color(0xFF00FF00),
-            surface: const Color(0xFF0F0C08),
+            secondary: const Color(0xFF7B2FBE),
+            surface: const Color(0xFF0D1117),
+            onSurface: Colors.white,
+          ).copyWith(
+            outline: const Color(0xFF1E2740),
+            outlineVariant: const Color(0xFF1E2740),
           ),
           useMaterial3: true,
         ),
@@ -53,6 +59,8 @@ class MyApp extends StatelessWidget {
           builder: (context, authViewModel, child) {
             switch (authViewModel.authState) {
               case AuthState.authenticated:
+                final role = authViewModel.currentUser?.role ?? '';
+                if (role == 'scouter') return const ScouterHomeScreen();
                 return const PlayerHomeScreen();
               case AuthState.unauthenticated:
                 return const LoginScreen();

@@ -37,6 +37,15 @@ class SideDrawer extends StatelessWidget {
                     Navigator.pushNamed(context, AppRoutes.subscriptions);
                   },
                 ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.confirmation_number,
+                  title: 'My Tickets',
+                  onTap: () {
+                    Navigator.pop(context); // Close drawer
+                    Navigator.pushNamed(context, AppRoutes.myTickets);
+                  },
+                ),
                 const Divider(color: Color(0xFF1A1F36), height: 32),
                 _buildDrawerItem(
                   context,

@@ -15,6 +15,7 @@ class TournamentModel {
   final String? locationName;
   final double? latitude;
   final double? longitude;
+  final List<TicketType>? ticketTypes;
 
   TournamentModel({
     required this.id,
@@ -33,6 +34,7 @@ class TournamentModel {
     this.locationName,
     this.latitude,
     this.longitude,
+    this.ticketTypes,
   });
 
   factory TournamentModel.fromJson(Map<String, dynamic> json) {
@@ -51,15 +53,15 @@ class TournamentModel {
     }
 
     return TournamentModel(
-      id: json['_id'] as String,
-      name: json['name'] as String,
-      gameId: getId(json['gameId']),
-      type: json['type'] as String,
+      id: json['_id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      gameId: json['gameId'] != null ? getId(json['gameId']) : '',
+      type: json['type'] as String? ?? 'OFFICIAL',
       startDate: parseDate(json['startDate']),
       endDate: parseDate(json['endDate']),
-      maxTeams: json['maxTeams'] is int ? json['maxTeams'] : int.tryParse(json['maxTeams'].toString()) ?? 0,
+      maxTeams: json['maxTeams'] is int ? json['maxTeams'] : int.tryParse(json['maxTeams']?.toString() ?? '0') ?? 0,
       prizePool: json['prizePool']?.toString(),
-      organizerId: getId(json['organizerId']),
+      organizerId: json['organizerId'] != null ? getId(json['organizerId']) : '',
       participants: (json['participants'] as List<dynamic>?)
               ?.map((e) => getId(e))
               .toList() ??
@@ -72,6 +74,10 @@ class TournamentModel {
       locationName: json['locationName'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
+      ticketTypes: (json['ticketTypes'] as List<dynamic>?)
+          ?.where((e) => e is Map<String, dynamic>)
+          .map((e) => TicketType.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -93,6 +99,39 @@ class TournamentModel {
       'locationName': locationName,
       'latitude': latitude,
       'longitude': longitude,
+      'ticketTypes': ticketTypes?.map((e) => e.toJson()).toList(),
+    };
+  }
+}
+
+class TicketType {
+  final String name;
+  final double price;
+  final int capacity;
+  final int sold;
+
+  TicketType({
+    required this.name,
+    required this.price,
+    required this.capacity,
+    required this.sold,
+  });
+
+  factory TicketType.fromJson(Map<String, dynamic> json) {
+    return TicketType(
+      name: json['name'] as String,
+      price: (json['price'] as num).toDouble(),
+      capacity: json['capacity'] as int,
+      sold: json['sold'] as int? ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'price': price,
+      'capacity': capacity,
+      'sold': sold,
     };
   }
 }

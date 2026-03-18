@@ -1,18 +1,22 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
+import 'package:arena_chain_flutter/core/models/feature_tournaments/ticket_model.dart';
 import 'package:intl/intl.dart';
 
 class TicketScreen extends StatelessWidget {
   final TournamentModel tournament;
   final int ticketCount;
+  final List<TicketModel>? tickets;
 
   const TicketScreen({
     super.key,
     required this.tournament,
     required this.ticketCount,
+    this.tickets,
   });
 
   @override
@@ -23,6 +27,11 @@ class TicketScreen extends StatelessWidget {
       tournament.latitude ?? 48.8566,
       tournament.longitude ?? 2.3522,
     );
+
+    // Use the first ticket's QR code if available, otherwise fallback
+    final String qrData = (tickets != null && tickets!.isNotEmpty)
+        ? tickets!.first.qrCode
+        : 'TICKET:${tournament.id}:COUNT:$ticketCount';
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0C08),
@@ -74,12 +83,16 @@ class TicketScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 24),
                         // QR Code
-                        QrImageView(
-                          data: 'TICKET:${tournament.id}:COUNT:$ticketCount',
-                          version: QrVersions.auto,
-                          size: 200.0,
-                          backgroundColor: Colors.white,
-                        ),
+                        if (qrData.startsWith('data:image'))
+                           _buildBase64Image(qrData)
+                        else
+                          QrImageView(
+                            data: qrData,
+                            version: QrVersions.auto,
+                            size: 200.0,
+                            backgroundColor: Colors.white,
+                          ),
+                        
                         const SizedBox(height: 16),
                         Text(
                           '$ticketCount Entry Ticket${ticketCount > 1 ? 's' : ''}',
@@ -89,6 +102,18 @@ class TicketScreen extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                        if (tickets != null && tickets!.isNotEmpty)
+                           Padding(
+                             padding: const EdgeInsets.only(top: 8.0),
+                             child: Text(
+                               'Type: ${tickets!.first.type}',
+                               style: const TextStyle(
+                                 color: Colors.grey,
+                                 fontSize: 14,
+                                 fontWeight: FontWeight.w500,
+                               ),
+                             ),
+                           ),
                       ],
                     ),
                   ),
@@ -122,7 +147,7 @@ class TicketScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          tournament.locationName ?? 'Event Details',
+                          tournament.locationName ?? 'Location details not available',
                           style: const TextStyle(
                             color: Colors.black,
                             fontSize: 16,
@@ -131,7 +156,7 @@ class TicketScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         Container(
-                          height: 150,
+                          height: 200,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.grey[300]!),
@@ -146,7 +171,7 @@ class TicketScreen extends StatelessWidget {
                               children: [
                                 TileLayer(
                                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                  userAgentPackageName: 'com.example.app',
+                                  userAgentPackageName: 'com.example.arena_chain_flutter',
                                 ),
                                 MarkerLayer(
                                   markers: [
@@ -198,5 +223,23 @@ class TicketScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildBase64Image(String base64String) {
+    try {
+      // Remove header if present (e.g., "data:image/png;base64,")
+      final String pureBase64 = base64String.split(',').last;
+      return Image.memory(
+        base64Decode(pureBase64),
+        width: 200,
+        height: 200,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+           return const Icon(Icons.broken_image, size: 100, color: Colors.grey);
+        },
+      );
+    } catch (e) {
+      return const Icon(Icons.broken_image, size: 100, color: Colors.grey);
+    }
   }
 }

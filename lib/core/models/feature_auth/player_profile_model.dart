@@ -21,17 +21,17 @@ class PlayerProfile {
 
   factory PlayerProfile.fromJson(Map<String, dynamic> json) {
     return PlayerProfile(
-      userId: json['userId'] as String,
-      isPro: json['isPro'] as bool,
-      isVerified: json['isVerified'] as bool,
-      elo: json['elo'] as int,
-      rank: json['rank'] as String,
-      stats: json['stats'] as Map<String, dynamic>? ?? {},
-      createdAt: json['createdAt'] != null 
-          ? DateTime.parse(json['createdAt'] as String)
+      userId: (json['userId'] ?? json['user'] ?? '') as String,
+      isPro: json['isPro'] == true,
+      isVerified: json['isVerified'] == true,
+      elo: (json['elo'] as num?)?.toInt() ?? 0,
+      rank: (json['rank'] as String?) ?? 'UNRANKED',
+      stats: (json['stats'] as Map<String, dynamic>?) ?? {},
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String)
           : null,
       updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
+          ? DateTime.tryParse(json['updatedAt'] as String)
           : null,
     );
   }
