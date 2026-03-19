@@ -42,8 +42,6 @@ class AuthApi {
 
   Future<AuthResponse> registerTeamManager(RegisterTeamManagerDto dto) async {
     final url = Uri.parse('$baseUrl/auth/register/team-manager');
-  Future<AuthResponse> login(LoginDto dto) async {
-    final url = Uri.parse('$baseUrl/auth/login');
 
     try {
       final response = await http.post(

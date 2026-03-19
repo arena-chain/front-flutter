@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final role = authViewModel.currentUser?.role ?? '';
       if (role == 'scouter') {
         Navigator.pushReplacementNamed(context, AppRoutes.scouterHome);
-      if (authViewModel.currentUser?.role == 'admin') {
+      } else if (role == 'admin') {
         Navigator.pushReplacementNamed(context, AppRoutes.adminHome);
       } else {
         Navigator.pushReplacementNamed(context, AppRoutes.playerHome);

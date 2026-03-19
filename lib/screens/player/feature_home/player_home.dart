@@ -370,7 +370,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {},
+          onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Center(
             child: Column(

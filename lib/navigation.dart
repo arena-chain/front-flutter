@@ -20,6 +20,8 @@ import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/my_tick
 import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_tournaments/ticket_model.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/scouter_home_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/game_room_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -41,6 +43,10 @@ class AppRoutes {
   static const String tournamentBooking = '/tournaments/booking';
   static const String tournamentTicket = '/tournaments/ticket';
   static const String myTickets = '/tickets/my_tickets';
+
+  // Matchmaking routes
+  static const String matchmaking = '/player/matchmaking';
+  static const String gameRoom = '/player/game-room';
 
   // Scouter routes
   static const String scouterHome = '/scouter/home';
@@ -82,6 +88,8 @@ class AppRoutes {
           );
         },
         myTickets: (context) => const MyTicketsScreen(),
+        matchmaking: (context) => const MatchmakingScreen(),
+        gameRoom: (context) => const GameRoomScreen(),
         scouterHome: (context) => const ScouterHomeScreen(),
       };
 }
