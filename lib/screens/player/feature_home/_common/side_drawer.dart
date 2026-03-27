@@ -73,62 +73,76 @@ class SideDrawer extends StatelessWidget {
         final initial = nickname.isNotEmpty ? nickname[0].toUpperCase() : 'P';
         final email = user?.email ?? 'player@example.com';
 
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
-          decoration: const BoxDecoration(
-            color: Color(0xFF0A0E1A),
-            border: Border(
-              bottom: BorderSide(color: Color(0xFF1A1F36)),
+        return InkWell(
+          onTap: () {
+            Navigator.pop(context); // Close drawer
+            Navigator.pushNamed(context, AppRoutes.playerProfile);
+          },
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+            decoration: const BoxDecoration(
+              color: Color(0xFF0A0E1A),
+              border: Border(
+                bottom: BorderSide(color: Color(0xFF1A1F36)),
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00FF00).withOpacity(0.2),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF00FF00), width: 2),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00FF00).withOpacity(0.2),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFF00FF00), width: 2),
+                    image: (user?.avatar != null && user!.avatar!.isNotEmpty)
+                        ? DecorationImage(
+                            image: NetworkImage(user.avatar!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: (user == null || user.avatar == null || user.avatar!.isEmpty)
+                      ? Center(
+                          child: Text(
+                            initial,
+                            style: const TextStyle(
+                              color: Color(0xFF00FF00),
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                      : null,
                 ),
-                child: Center(
-                  child: Text(
-                    initial,
-                    style: const TextStyle(
-                      color: Color(0xFF00FF00),
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        nickname,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        email,
+                        style: const TextStyle(
+                          color: Color(0xFF7A86AC),
+                          fontSize: 12,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      nickname,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      email,
-                      style: const TextStyle(
-                        color: Color(0xFF7A86AC),
-                        fontSize: 12,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

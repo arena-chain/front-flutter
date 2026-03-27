@@ -19,6 +19,7 @@ import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/ticket_
 import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/game_room_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_news/ui/news_list_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -35,6 +36,7 @@ class AppRoutes {
   static const String myChannel = '/player/channel';
   static const String subscriptions = '/player/subscriptions';
   static const String leagues = '/player/leagues';
+  static const String news = '/player/news';
   static const String addFriend = '/player/friends/add';
   static const String createTournament = '/tournaments/create';
   static const String tournamentBooking = '/tournaments/booking';
@@ -55,6 +57,8 @@ class AppRoutes {
         myAccount: (context) => const MyAccountScreen(),
         myChannel: (context) => const MyChannelScreen(),
         subscriptions: (context) => const SubscriptionsScreen(),
+        leagues: (context) => const LeaguesListScreen(),
+        news: (context) => const NewsListScreen(),
         leagues: (context) => Scaffold(
           backgroundColor: const Color(0xFF0A0E1A),
           appBar: AppBar(

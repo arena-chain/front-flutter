@@ -6,16 +6,20 @@ class User {
   final String email;
   final String nickname;
   final String role;
-  final PlayerProfile? playerProfile;
-  final TeamManagerProfile? teamManagerProfile;
+  final bool isEmailVerified;
+  final String? avatar;
+  final String? country;
+  final PlayerProfile? profile;
 
   User({
     required this.id,
     required this.email,
     required this.nickname,
     required this.role,
-    this.playerProfile,
-    this.teamManagerProfile,
+    this.isEmailVerified = false,
+    this.avatar,
+    this.country,
+    this.profile,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -45,12 +49,16 @@ class User {
     }
 
     return User(
-      id: json['id'] as String? ?? json['_id'] as String,
-      email: json['email'] as String,
-      nickname: json['nickname'] as String,
-      role: role,
-      playerProfile: playerProfile,
-      teamManagerProfile: teamManagerProfile,
+      id: (json['id'] ?? json['_id'] ?? '').toString(),
+      email: (json['email'] ?? '').toString(),
+      nickname: (json['nickname'] ?? 'Recruit').toString(),
+      role: (json['role'] ?? 'PLAYER').toString(),
+      isEmailVerified: json['isEmailVerified'] as bool? ?? false,
+      avatar: json['avatar'] as String?,
+      country: json['country'] as String?,
+      profile: json['profile'] != null
+          ? PlayerProfile.fromJson(json['profile'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -60,8 +68,10 @@ class User {
       'email': email,
       'nickname': nickname,
       'role': role,
-      'playerProfile': playerProfile?.toJson(),
-      'teamManagerProfile': teamManagerProfile?.toJson(),
+      'isEmailVerified': isEmailVerified,
+      'avatar': avatar,
+      'country': country,
+      'profile': profile?.toJson(),
     };
   }
 }

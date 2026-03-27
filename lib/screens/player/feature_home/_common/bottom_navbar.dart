@@ -14,10 +14,8 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1221),
         border: Border(
           top: BorderSide(
-            color: const Color(0xFF1A1F36),
             width: 1,
           ),
         ),
@@ -41,17 +39,17 @@ class BottomNavBar extends StatelessWidget {
               ),
               _buildNavItem(
                 icon: Icons.emoji_events_outlined,
-                label: 'Tournaments',
+                label: 'Arena',
                 index: 2,
               ),
               _buildNavItem(
-                icon: Icons.people,
-                label: 'Friends',
+                icon: Icons.newspaper_outlined,
+                label: 'News',
                 index: 3,
               ),
               _buildNavItem(
                 icon: Icons.groups_outlined,
-                label: 'Clubs',
+                label: 'Hub',
                 index: 4,
               ),
             ],
@@ -87,7 +85,7 @@ class BottomNavBar extends StatelessWidget {
               style: TextStyle(
                 color: isSelected ? const Color(0xFF00FF00) : const Color(0xFF4A5568),
                 fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
             ),
           ],

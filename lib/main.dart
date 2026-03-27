@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/navigation.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
+import 'package:arena_chain_flutter/screens/player/feature_leagues/viewmodel/league_viewmodel.dart';
+import 'package:arena_chain_flutter/screens/player/feature_news/viewmodel/news_viewmodel.dart';
+import 'package:arena_chain_flutter/screens/player/feature_rank/viewmodel/rank_viewmodel.dart';
+import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_viewmodel.dart';
 import 'package:arena_chain_flutter/core/config/api_config.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/auth_state.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/view_model/friends_view_model.dart';
@@ -28,12 +32,12 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProxyProvider<AuthViewModel, FriendsViewModel>(
           create: (context) => FriendsViewModel(currentUserId: ''),
-          update: (context, auth, previous) => 
+          update: (context, auth, previous) =>
             FriendsViewModel(currentUserId: auth.currentUser?.id ?? ''),
         ),
         ChangeNotifierProxyProvider<AuthViewModel, TournamentsViewModel>(
           create: (context) => TournamentsViewModel(currentUserId: ''),
-          update: (context, auth, previous) => 
+          update: (context, auth, previous) =>
             TournamentsViewModel(currentUserId: auth.currentUser?.id ?? ''),
         ),
         ChangeNotifierProxyProvider<AuthViewModel, MatchmakingViewModel>(
@@ -44,6 +48,10 @@ class MyApp extends StatelessWidget {
             return vm;
           },
         ),
+        ChangeNotifierProvider(create: (_) => LevelViewModel()),
+        ChangeNotifierProvider(create: (_) => NewsViewModel()),
+        ChangeNotifierProvider(create: (_) => RankViewModel()),
+        ChangeNotifierProvider(create: (_) => LeagueViewModel()),
       ],
       child: MaterialApp(
         title: 'Arena-Chain',

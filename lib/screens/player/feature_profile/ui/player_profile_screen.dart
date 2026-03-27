@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/core/api/riot/riot_api.dart';
@@ -22,10 +23,30 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
   String? _riotTagLine;
   String? _riotRegion;
 
+  late final TextEditingController _nicknameController;
+  String? _avatarUrl;
+  bool _isEditing = false;
+
   @override
   void initState() {
     super.initState();
-    _checkLinkStatus();
+    _nicknameController = TextEditingController();
+
+    // Initialize with data on first load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
+      final user = authViewModel.currentUser;
+      _nicknameController.text = user?.nickname ?? 'Player';
+      _avatarUrl = user?.avatar ?? '';
+      setState(() {});
+      _checkLinkStatus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    super.dispose();
   }
 
   Future<void> _checkLinkStatus() async {
@@ -51,14 +72,61 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
     }
   }
 
+  void _generateRandomAvatar() {
+    final styles = ['avataaars', 'bottts', 'pixel-art', 'lorelei', 'adventurer'];
+    final randomStyle = styles[Random().nextInt(styles.length)];
+    final randomSeed = Random().nextInt(100000).toString();
+
+    setState(() {
+      _avatarUrl = 'https://api.dicebear.com/7.x/$randomStyle/png?seed=$randomSeed';
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Nouvel avatar généré !', style: TextStyle(color: Colors.black)),
+        backgroundColor: Color(0xFF00FF00),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _handleSave() async {
+    final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
+
+    // First update locally for instant feedback
+    authViewModel.updateLocalProfile(nickname: _nicknameController.text, avatarUrl: _avatarUrl);
+
+    setState(() {
+      _isEditing = false;
+    });
+
+    // Then persist to backend + local storage so it survives logout/login
+    final success = await authViewModel.updateProfile(
+      nickname: _nicknameController.text,
+      avatarUrl: _avatarUrl,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success ? 'Profil mis à jour avec succès.' : 'Sauvegarde locale uniquement (hors ligne).',
+          style: const TextStyle(color: Colors.black),
+        ),
+        backgroundColor: const Color(0xFF00FF00),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthViewModel>(
       builder: (context, authViewModel, child) {
         final user = authViewModel.currentUser;
-        final nickname = user?.nickname ?? 'Player';
+        final country = user?.country ?? 'TUNISIA';
+        // If not editing, display truth from state or input. If editing, display input.
+        final nickname = _isEditing ? _nicknameController.text : (_nicknameController.text.isNotEmpty ? _nicknameController.text : (user?.nickname ?? 'Player'));
         final email = user?.email ?? '';
-        final isPro = user?.playerProfile?.isPro ?? false;
+        final isPro = user?.profile?.isPro ?? false;
 
         return Scaffold(
           backgroundColor: const Color(0xFF0A0E1A),
@@ -181,10 +249,10 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
         _checkLinkStatus();
       },
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: const Color(0xFF0F1221),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFF1A1F36)),
         ),
         child: Row(

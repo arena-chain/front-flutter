@@ -12,14 +12,14 @@ class FriendsListScreen extends StatefulWidget {
   State<FriendsListScreen> createState() => _FriendsListScreenState();
 }
 
-class _FriendsListScreenState extends State<FriendsListScreen> with SingleTickerProviderStateMixin {
+class _FriendsListScreenState extends State<FriendsListScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    // Load data after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final viewModel = context.read<FriendsViewModel>();
       viewModel.loadFriends();
@@ -107,11 +107,18 @@ class _FriendsListScreenState extends State<FriendsListScreen> with SingleTicker
     return Consumer<FriendsViewModel>(
       builder: (context, viewModel, child) {
         if (viewModel.isLoading && viewModel.friends.isEmpty) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFF00FF00)));
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF00FF00)),
+          );
         }
 
         if (viewModel.friends.isEmpty) {
-          return const Center(child: Text('No friends yet', style: TextStyle(color: Colors.grey)));
+          return const Center(
+            child: Text(
+              'No friends yet',
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
         }
 
         return ListView.separated(
@@ -120,29 +127,20 @@ class _FriendsListScreenState extends State<FriendsListScreen> with SingleTicker
           separatorBuilder: (context, index) => const SizedBox(height: 16),
           itemBuilder: (context, index) {
             final friendship = viewModel.friends[index];
-            // Determine which user is the friend.
-            // Since we know currentUserId, we can filter, but ViewModel returns FriendshipModel.
-            // FriendshipModel has requester and recipient which can be Map or String.
-            // Assuming the API returns populated objects as per our earlier reading.
-            // However, our model parsing logic: `requester` and `recipient` are dynamic.
-            // We need a way to get the friend user safely.
-            
-            // For now, let's assume we can get friend details.
-            // We need to know who "I" am to show the "Other" person.
             final myId = viewModel.currentUserId;
-            
-            // Helper to get friend data manually (since model helper was stubbed)
+
             dynamic friendData;
-            // requester can be String (ID) or FriendUser object
-            if (friendship.requester is FriendUser && (friendship.requester as FriendUser).id != myId) {
-               friendData = friendship.requester;
-            } else if (friendship.recipient is FriendUser && (friendship.recipient as FriendUser).id != myId) {
-               friendData = friendship.recipient;
-            } 
-            
-            // Fallback if we can't identify
-            final nickname = friendData is FriendUser ? friendData.nickname : 'Unknown';
-            final statusText = 'Friend'; // Could be online status later
+            if (friendship.requester is FriendUser &&
+                (friendship.requester as FriendUser).id != myId) {
+              friendData = friendship.requester;
+            } else if (friendship.recipient is FriendUser &&
+                (friendship.recipient as FriendUser).id != myId) {
+              friendData = friendship.recipient;
+            }
+
+            final nickname =
+                friendData is FriendUser ? friendData.nickname : 'Unknown';
+            const statusText = 'Friend';
 
             return _buildFriendItem(nickname, statusText);
           },
@@ -155,7 +153,12 @@ class _FriendsListScreenState extends State<FriendsListScreen> with SingleTicker
     return Consumer<FriendsViewModel>(
       builder: (context, viewModel, child) {
         if (viewModel.pendingRequests.isEmpty) {
-          return const Center(child: Text('No pending requests', style: TextStyle(color: Colors.grey)));
+          return const Center(
+            child: Text(
+              'No pending requests',
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
         }
 
         return ListView.separated(
@@ -163,9 +166,10 @@ class _FriendsListScreenState extends State<FriendsListScreen> with SingleTicker
           itemCount: viewModel.pendingRequests.length,
           separatorBuilder: (context, index) => const SizedBox(height: 16),
           itemBuilder: (context, index) {
-             final friendship = viewModel.pendingRequests[index];
-             final requester = friendship.requester;
-             final nickname = requester is FriendUser ? requester.nickname : 'Unknown';
+            final friendship = viewModel.pendingRequests[index];
+            final requester = friendship.requester;
+            final nickname =
+                requester is FriendUser ? requester.nickname : 'Unknown';
 
             return Container(
               padding: const EdgeInsets.all(16),
@@ -176,7 +180,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> with SingleTicker
               ),
               child: Row(
                 children: [
-                   Container(
+                  Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
@@ -184,7 +188,11 @@ class _FriendsListScreenState extends State<FriendsListScreen> with SingleTicker
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.amber),
                     ),
-                    child: const Icon(Icons.question_mark, color: Colors.amber, size: 20),
+                    child: const Icon(
+                      Icons.question_mark,
+                      color: Colors.amber,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -193,7 +201,10 @@ class _FriendsListScreenState extends State<FriendsListScreen> with SingleTicker
                       children: [
                         Text(
                           nickname,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const Text(
                           'Wants to be your friend',
@@ -239,7 +250,9 @@ class _FriendsListScreenState extends State<FriendsListScreen> with SingleTicker
             decoration: BoxDecoration(
               color: const Color(0xFF1A1F36),
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF00FF00).withOpacity(0.5)),
+              border: Border.all(
+                color: const Color(0xFF00FF00).withOpacity(0.5),
+              ),
             ),
             child: const Icon(Icons.person, color: Colors.white),
           ),

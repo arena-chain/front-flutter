@@ -15,7 +15,7 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
   @override
   void initState() {
     super.initState();
-    
+
     // Load tournaments when screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TournamentsViewModel>().loadTournaments();
@@ -284,21 +284,21 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: isFull 
-                  ? null 
+              onPressed: isFull
+                  ? null
                   : () {
                       Navigator.pushNamed(
-                        context, 
+                        context,
                         '/tournaments/booking',
                         arguments: tournament,
                       );
                     },
               style: ElevatedButton.styleFrom(
-                backgroundColor: isFull 
-                    ? const Color(0xFF1A1F36) 
+                backgroundColor: isFull
+                    ? const Color(0xFF1A1F36)
                     : const Color(0xFF00FF00),
-                foregroundColor: isFull 
-                    ? const Color(0xFF7A86AC) 
+                foregroundColor: isFull
+                    ? const Color(0xFF7A86AC)
                     : const Color(0xFF0A0E1A),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(

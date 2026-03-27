@@ -18,7 +18,7 @@ class TeamManagerApi {
   }
 
   Future<List<TeamManagerProfile>> getPendingManagers() async {
-    final url = Uri.parse('$baseUrl/team-manager/pending');
+    final url = Uri.parse('$baseUrl/api/team-manager/pending');
     final headers = await _getHeaders();
 
     try {
@@ -35,7 +35,7 @@ class TeamManagerApi {
   }
 
   Future<void> approveManager(String userId) async {
-    final url = Uri.parse('$baseUrl/team-manager/$userId/approve');
+    final url = Uri.parse('$baseUrl/api/team-manager/$userId/approve');
     final headers = await _getHeaders();
 
     try {
@@ -49,7 +49,7 @@ class TeamManagerApi {
   }
 
   Future<void> rejectManager(String userId) async {
-    final url = Uri.parse('$baseUrl/team-manager/$userId/reject');
+    final url = Uri.parse('$baseUrl/api/team-manager/$userId/reject');
     final headers = await _getHeaders();
 
     try {

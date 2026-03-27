@@ -4,6 +4,9 @@ import 'package:arena_chain_flutter/core/api/authenticated_client.dart';
 import 'package:arena_chain_flutter/core/dto/auth/login_dto.dart';
 import 'package:arena_chain_flutter/core/dto/auth/register_player_dto.dart';
 import 'package:arena_chain_flutter/core/dto/auth/register_team_manager_dto.dart';
+import 'package:arena_chain_flutter/core/dto/auth/verify_email_dto.dart';
+import 'package:arena_chain_flutter/core/dto/auth/forgot_password_dto.dart';
+import 'package:arena_chain_flutter/core/dto/auth/reset_password_dto.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/auth_response_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/user_model.dart';
 
@@ -129,6 +132,111 @@ class AuthRepository {
       return null;
     } catch (e) {
       return null;
+    }
+  }
+
+  /// Update the current user's profile
+  Future<User> updateProfile({
+    String? nickname,
+    String? region,
+    String? avatar,
+  }) async {
+    // Load the current saved user so we can merge fields
+    final existingUserJson = await _tokenStorage.getUser();
+
+    User? updatedUser;
+    try {
+      updatedUser = await _authApi.updateProfile(
+        nickname: nickname,
+        region: region,
+        avatar: avatar,
+      );
+    } catch (e) {
+      // Backend call failed - still persist locally if we have existing user
+      if (existingUserJson != null) {
+        final merged = {
+          ...existingUserJson,
+          if (nickname != null) 'nickname': nickname,
+          if (avatar != null) 'avatar': avatar,
+        };
+        await _tokenStorage.saveUser(merged);
+        return User.fromJson(merged);
+      }
+      throw Exception('Failed to update profile: ${e.toString()}');
+    }
+
+    // Backend call succeeded: merge any missing fields from existing data
+    final mergedJson = {
+      if (existingUserJson != null) ...existingUserJson,
+      ...updatedUser.toJson(),
+      // If backend didn't return avatar, keep our local one
+      'avatar': updatedUser.avatar ?? avatar ?? existingUserJson?['avatar'],
+      'nickname': updatedUser.nickname.isNotEmpty
+          ? updatedUser.nickname
+          : (nickname ?? existingUserJson?['nickname'] ?? 'Player'),
+    };
+    await _tokenStorage.saveUser(mergedJson);
+    return User.fromJson(mergedJson);
+  }
+
+  /// Verify email with OTP
+  Future<AuthResponse> verifyEmail(VerifyEmailDto dto) async {
+    try {
+      final response = await _authApi.verifyEmail(dto);
+      if (response.user != null) {
+        await _tokenStorage.saveUser(response.user!.toJson());
+      }
+      return response;
+    } catch (e) {
+      throw Exception('Verification failed: ${e.toString()}');
+    }
+  }
+
+  /// Resend verification OTP
+  Future<void> resendOtp(String email) async {
+    try {
+      await _authApi.resendOtp(email);
+    } catch (e) {
+      throw Exception('Failed to resend OTP: ${e.toString()}');
+    }
+  }
+
+  /// Request password reset
+  Future<void> forgotPassword(ForgotPasswordDto dto) async {
+    try {
+      await _authApi.forgotPassword(dto);
+    } catch (e) {
+      throw Exception('Request failed: ${e.toString()}');
+    }
+  }
+
+  /// Reset password with OTP
+  Future<void> resetPassword(ResetPasswordDto dto) async {
+    try {
+      await _authApi.resetPassword(dto);
+    } catch (e) {
+      throw Exception('Reset failed: ${e.toString()}');
+    }
+  }
+
+  /// Login with Google
+  Future<AuthResponse> googleLogin(String idToken) async {
+    try {
+      final response = await _authApi.googleLogin(idToken);
+      if (response.user != null) {
+        await _tokenStorage.saveUser(response.user!.toJson());
+      }
+      return response;
+    } catch (e) {
+      throw Exception('Google login failed: ${e.toString()}');
+    }
+  }
+
+  Future<void> verifyResetOtp(String email, String otp) async {
+    try {
+      await _authApi.verifyResetOtp(email, otp);
+    } catch (e) {
+      throw Exception('OTP verification failed: ${e.toString()}');
     }
   }
 }

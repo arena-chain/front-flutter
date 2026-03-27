@@ -18,7 +18,7 @@ class FriendsApi {
   }
 
   Future<List<FriendUser>> searchUsers(String query, {String? excludeUserId}) async {
-    final uri = Uri.parse('$baseUrl/users/search').replace(
+    final uri = Uri.parse('$baseUrl/api/users/search').replace(
       queryParameters: {
         'q': query,
         if (excludeUserId != null) 'excludeUserId': excludeUserId,
@@ -37,7 +37,7 @@ class FriendsApi {
 
   Future<FriendshipModel> sendFriendRequest(String requesterId, String recipientId) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/friendship/send-request'),
+      Uri.parse('$baseUrl/api/friendship/send-request'),
       headers: await _getHeaders(),
       body: json.encode({
         'requesterId': requesterId,
@@ -55,7 +55,7 @@ class FriendsApi {
 
   Future<List<FriendshipModel>> getFriends(String userId) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/friendship/friends/$userId'),
+      Uri.parse('$baseUrl/api/friendship/friends/$userId'),
       headers: await _getHeaders(),
     );
 
@@ -69,7 +69,7 @@ class FriendsApi {
 
   Future<List<FriendshipModel>> getPendingRequests(String userId) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/friendship/pending-requests/$userId'),
+      Uri.parse('$baseUrl/api/friendship/pending-requests/$userId'),
       headers: await _getHeaders(),
     );
 
@@ -83,7 +83,7 @@ class FriendsApi {
 
   Future<FriendshipModel> acceptRequest(String friendshipId, String userId) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/friendship/accept/$friendshipId'),
+      Uri.parse('$baseUrl/api/friendship/accept/$friendshipId'),
       headers: await _getHeaders(),
       body: json.encode({'userId': userId}),
     );
@@ -98,7 +98,7 @@ class FriendsApi {
 
   Future<void> rejectRequest(String friendshipId, String userId) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/friendship/reject/$friendshipId'),
+      Uri.parse('$baseUrl/api/friendship/reject/$friendshipId'),
       headers: await _getHeaders(),
       body: json.encode({'userId': userId}),
     );

@@ -18,7 +18,7 @@ class TeamApi {
   }
 
   Future<List<Team>> getTeams() async {
-    final url = Uri.parse('$baseUrl/teams');
+    final url = Uri.parse('$baseUrl/api/teams');
     
     try {
       final response = await http.get(url); // Public endpoint might not need token, but good to have if we change it
@@ -35,7 +35,7 @@ class TeamApi {
   }
 
   Future<void> createTeam(Map<String, dynamic> teamData) async {
-    final url = Uri.parse('$baseUrl/teams');
+    final url = Uri.parse('$baseUrl/api/teams');
     final headers = await _getHeaders();
 
     try {
@@ -54,7 +54,7 @@ class TeamApi {
   }
 
   Future<void> updateTeam(String id, Map<String, dynamic> teamData) async {
-    final url = Uri.parse('$baseUrl/teams/$id');
+    final url = Uri.parse('$baseUrl/api/teams/$id');
     final headers = await _getHeaders();
 
     try {
@@ -73,7 +73,7 @@ class TeamApi {
   }
 
   Future<void> deleteTeam(String id) async {
-    final url = Uri.parse('$baseUrl/teams/$id');
+    final url = Uri.parse('$baseUrl/api/teams/$id');
     final headers = await _getHeaders();
 
     try {

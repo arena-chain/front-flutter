@@ -16,7 +16,7 @@ class MatchmakingApi {
     DateTime? scheduledAt,
     Map<String, dynamic>? riotAccountInfo,
   }) async {
-    final url = Uri.parse('$baseUrl/matchmaking/queue');
+    final url = Uri.parse('$baseUrl/api/matchmaking/queue');
     final body = <String, dynamic>{
       'game': game,
       'mode': mode,
@@ -40,7 +40,7 @@ class MatchmakingApi {
   }
 
   Future<void> cancelQueue(String ticketId) async {
-    final url = Uri.parse('$baseUrl/matchmaking/queue/$ticketId');
+    final url = Uri.parse('$baseUrl/api/matchmaking/queue/$ticketId');
     final response = await _client.delete(url);
 
     if (response.statusCode != 200 && response.statusCode != 204) {
@@ -50,7 +50,7 @@ class MatchmakingApi {
   }
 
   Future<GameMatchModel> respondToMatch(String gameId, bool accept) async {
-    final url = Uri.parse('$baseUrl/matchmaking/games/$gameId/response');
+    final url = Uri.parse('$baseUrl/api/matchmaking/games/$gameId/response');
     final response = await _client.post(url, body: {'accept': accept});
 
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -62,7 +62,7 @@ class MatchmakingApi {
   }
 
   Future<GameMatchModel> getGame(String gameId) async {
-    final url = Uri.parse('$baseUrl/matchmaking/games/$gameId');
+    final url = Uri.parse('$baseUrl/api/matchmaking/games/$gameId');
     final response = await _client.get(url);
 
     if (response.statusCode == 200) {
@@ -74,7 +74,7 @@ class MatchmakingApi {
   }
 
   Future<TicketModel?> getActiveTicket() async {
-    final url = Uri.parse('$baseUrl/matchmaking/my-active-ticket');
+    final url = Uri.parse('$baseUrl/api/matchmaking/my-active-ticket');
     final response = await _client.get(url);
 
     if (response.statusCode == 200) {
@@ -87,7 +87,7 @@ class MatchmakingApi {
   }
 
   Future<void> acknowledgeGame(String gameId) async {
-    final url = Uri.parse('$baseUrl/matchmaking/games/$gameId/acknowledge');
+    final url = Uri.parse('$baseUrl/api/matchmaking/games/$gameId/acknowledge');
     final response = await _client.post(url, body: {});
 
     if (response.statusCode != 200 && response.statusCode != 201) {
@@ -97,7 +97,7 @@ class MatchmakingApi {
   }
 
   Future<GameMatchModel?> getActiveGame() async {
-    final url = Uri.parse('$baseUrl/matchmaking/my-active-game');
+    final url = Uri.parse('$baseUrl/api/matchmaking/my-active-game');
     final response = await _client.get(url);
 
     if (response.statusCode == 200) {
@@ -110,7 +110,7 @@ class MatchmakingApi {
   }
 
   Future<List<TicketModel>> getScheduledTickets() async {
-    final url = Uri.parse('$baseUrl/matchmaking/my-scheduled-tickets');
+    final url = Uri.parse('$baseUrl/api/matchmaking/my-scheduled-tickets');
     final response = await _client.get(url);
 
     if (response.statusCode == 200) {

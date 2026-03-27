@@ -19,7 +19,7 @@ class CatalogApi {
   Future<List<CatalogModel>> getGames() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/catalog'),
+        Uri.parse('$baseUrl/api/catalog'),
         headers: await _getHeaders(),
       );
 

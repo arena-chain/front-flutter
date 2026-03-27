@@ -3,13 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:arena_chain_flutter/core/dto/tournaments/create_tournament_dto.dart';
 import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
-
-<<<<<<< Updated upstream
-=======
-import 'package:arena_chain_flutter/core/models/feature_tournaments/ticket_model.dart';
 import 'package:arena_chain_flutter/core/config/api_config.dart';
 
->>>>>>> Stashed changes
 class TournamentsApi {
   static String get baseUrl => ApiConfig.baseUrl;
   final TokenStorage _tokenStorage = TokenStorage();
@@ -27,7 +22,7 @@ class TournamentsApi {
     print('Creating tournament with data: $jsonData');
     
     final response = await http.post(
-      Uri.parse('$baseUrl/tournements'),
+      Uri.parse('$baseUrl/api/tournements'),
       headers: await _getHeaders(),
       body: jsonEncode(jsonData),
     );
@@ -46,7 +41,7 @@ class TournamentsApi {
 
   Future<List<TournamentModel>> getTournaments() async {
     final response = await http.get(
-      Uri.parse('$baseUrl/tournements'),
+      Uri.parse('$baseUrl/api/tournements'),
       headers: await _getHeaders(),
     );
 

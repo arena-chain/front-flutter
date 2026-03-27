@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/bottom_navbar.dart';
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/live_list_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/tournaments_list_screen.dart';
-
+import 'package:arena_chain_flutter/screens/player/feature_news/ui/news_list_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_clubs/ui/clubs_list_screen.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
+import 'package:arena_chain_flutter/screens/player/feature_news/viewmodel/news_viewmodel.dart';
+import 'package:arena_chain_flutter/screens/player/feature_rank/viewmodel/rank_viewmodel.dart';
+import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_viewmodel.dart';
 import 'package:arena_chain_flutter/navigation.dart';
 
 import 'package:arena_chain_flutter/screens/player/feature_friends/ui/friends_list_screen.dart';
@@ -123,7 +127,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       case 2:
         return const TournamentsListScreen();
       case 3:
-        return const FriendsListScreen();
+        return const NewsListScreen();
       case 4:
         return const ClubsListScreen();
       default:
@@ -136,9 +140,13 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       child: Column(
         children: [
           _buildHeader(),
+          const SizedBox(height: 16),
+          _buildLevelProgression(),
           const SizedBox(height: 24),
           _buildQuickActions(),
           const SizedBox(height: 32),
+          _buildNexusFeed(),
+          const SizedBox(height: 24),
           _buildCurrentRank(),
           const SizedBox(height: 32),
           _buildRecentGames(),
@@ -210,6 +218,224 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
+  Widget _buildLevelProgression() {
+    return Consumer<LevelViewModel>(
+      builder: (context, levelVM, child) {
+        if (levelVM.isLoading) {
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF00FF00)));
+        }
+
+        final level = levelVM.currentLevel;
+        if (level == null) return const SizedBox.shrink();
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [const Color(0xFF00FF00).withOpacity(0.15), Colors.black],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF00FF00).withOpacity(0.3), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF00FF00).withOpacity(0.1),
+                  blurRadius: 15,
+                  spreadRadius: -2,
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'LEVEL PROGRESSION',
+                          style: TextStyle(
+                            color: Color(0xFF00FF00),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Level ${level.level}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00FF00).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF00FF00), width: 1),
+                      ),
+                      child: const Icon(Icons.flash_on, color: Color(0xFF00FF00), size: 24),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Stack(
+                  children: [
+                    Container(
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                    FractionallySizedBox(
+                      widthFactor: level.progressPct / 100,
+                      child: Container(
+                        height: 10,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF00FF00), Color(0xFF00CC00)],
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                          boxShadow: [
+                            BoxShadow(color: const Color(0xFF00FF00).withOpacity(0.3), blurRadius: 8),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${level.xp} / ${level.xpToNextLevel} XP',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      '${level.progressPct.toInt()}% Complete',
+                      style: const TextStyle(
+                        color: Color(0xFF00FF00),
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNexusFeed() {
+    return Consumer<NewsViewModel>(
+      builder: (context, newsVM, child) {
+        final news = newsVM.newsResponse?.news ?? [];
+        if (news.isEmpty && !newsVM.isLoading) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Nexus Feed',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _onNavTap(3), // Navigate to News tab
+                    child: const Text('Explore All', style: TextStyle(color: Color(0xFF00FF00))),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 150,
+              child: newsVM.isLoading
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF00FF00)))
+                : ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: news.length > 5 ? 5 : news.length,
+                    itemBuilder: (context, index) {
+                      final item = news[index];
+                      return Container(
+                        width: 280,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF151515),
+                          borderRadius: BorderRadius.circular(12),
+                          image: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                            ? DecorationImage(
+                                image: NetworkImage(item.imageUrl!),
+                                fit: BoxFit.cover,
+                                colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.6), BlendMode.darken),
+                              )
+                            : null,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF00FF00),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  item.game.toUpperCase(),
+                                  style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                item.title,
+                                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildQuickActions() {
     return Consumer<AuthViewModel>(
       builder: (context, authViewModel, child) {
@@ -222,81 +448,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // User Profile Card - Now Clickable
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(context, AppRoutes.playerProfile);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0F1221),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFF00FF00).withOpacity(0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF00FF00).withOpacity(0.2),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: const Color(0xFF00FF00), width: 2),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  initial,
-                                  style: const TextStyle(
-                                    color: Color(0xFF00FF00),
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    nickname,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  const Text(
-                                    'Tap to view profile',
-                                    style: TextStyle(
-                                      color: Color(0xFF7A86AC),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_forward_ios,
-                              color: Color(0xFF00FF00),
-                              size: 16,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
+
               const Text(
                 'Quick Actions',
                 style: TextStyle(
@@ -370,7 +522,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap ?? () {},
+          onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Center(
             child: Column(
@@ -387,7 +539,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
@@ -399,131 +551,92 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   }
 
   Widget _buildCurrentRank() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Current Rank',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0F1221),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF1A1F36)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00FF00).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'Valorant',
-                          style: TextStyle(
-                            color: Color(0xFF00FF00),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Diamond 2',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'ELO: 2450',
-                        style: TextStyle(
-                          color: Color(0xFF7A86AC),
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Progress to Diamond 3',
-                        style: TextStyle(
-                          color: Color(0xFF7A86AC),
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Stack(
+    return Consumer<RankViewModel>(
+      builder: (context, rankVM, child) {
+        if (rankVM.isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF00FF00)));
+
+        final primaryRank = rankVM.primaryRank;
+        if (primaryRank == null) return const SizedBox.shrink();
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Current Status',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF151515),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF333333)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            height: 8,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1A1F36),
+                              color: const Color(0xFF00FF00).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                          ),
-                          FractionallySizedBox(
-                            widthFactor: 0.65,
-                            child: Container(
-                              height: 8,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF00FF00), Color(0xFF00CC00)],
-                                ),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
+                            child: Text(
+                              primaryRank.game.toUpperCase(),
+                              style: const TextStyle(color: Color(0xFF00FF00), fontSize: 10, fontWeight: FontWeight.bold),
                             ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            primaryRank.tier,
+                            style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'ELO Rating: ${primaryRank.elo}',
+                            style: const TextStyle(color: Color(0xFF7A86AC), fontSize: 13),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              _buildMiniStat('Wins', primaryRank.wins.toString()),
+                              const SizedBox(width: 16),
+                              _buildMiniStat('Losses', primaryRank.losses.toString()),
+                              const SizedBox(width: 16),
+                              _buildMiniStat('Win Rate', '${((primaryRank.wins / ((primaryRank.wins + primaryRank.losses) == 0 ? 1 : (primaryRank.wins + primaryRank.losses))) * 100).toInt()}%'),
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        '65%',
-                        style: TextStyle(
-                          color: Color(0xFF00FF00),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00FF00).withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.military_tech,
-                    size: 32,
-                    color: Color(0xFF00FF00),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMiniStat(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Color(0xFF7A86AC), fontSize: 10)),
+        const SizedBox(height: 2),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+      ],
     );
   }
 
@@ -537,7 +650,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Recent Games',
+                'Recent Matches',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -546,24 +659,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
               ),
               TextButton(
                 onPressed: () {},
-                child: const Row(
-                  children: [
-                    Text(
-                      'View All',
-                      style: TextStyle(
-                        color: Color(0xFF00FF00),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_forward,
-                      color: Color(0xFF00FF00),
-                      size: 16,
-                    ),
-                  ],
-                ),
+                child: const Text('View All', style: TextStyle(color: Color(0xFF00FF00))),
               ),
             ],
           ),
@@ -604,13 +700,14 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1221),
+        color: const Color(0xFF151515),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1A1F36)),
+        border: Border.all(color: const Color(0xFF333333)),
       ),
       child: Column(
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -637,7 +734,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: isWin 
+                  color: isWin
                     ? const Color(0xFF00FF00).withOpacity(0.1)
                     : const Color(0xFFFF0055).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -665,19 +762,19 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStat('Score', score),
+              _buildMiniStat('Score', score),
               Container(
                 width: 1,
                 height: 24,
                 color: const Color(0xFF1A1F36),
               ),
-              _buildStat('K/D/A', kda),
+              _buildMiniStat('K/D/A', kda),
               Container(
                 width: 1,
                 height: 24,
                 color: const Color(0xFF1A1F36),
               ),
-              _buildStat('Rank', rank),
+              _buildMiniStat('Rank', rank),
             ],
           ),
         ],
@@ -685,25 +782,12 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
-  Widget _buildStat(String label, String value) {
+  Widget _buildLargeStat(String label, String value) {
     return Column(
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF7A86AC),
-            fontSize: 11,
-          ),
-        ),
+        Text(label, style: const TextStyle(color: Color(0xFF7A86AC), fontSize: 10)),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
       ],
     );
   }

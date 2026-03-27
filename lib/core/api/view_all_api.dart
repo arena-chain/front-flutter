@@ -33,7 +33,7 @@ class ViewAllApi {
   // GET /player
   Future<List<PlayerDetail>> getAllPlayers() async {
     final r = await http.get(
-      Uri.parse('$_base/player'),
+      Uri.parse('$_base/api/player'),
       headers: await _headers(),
     );
     final data = _check(r, 'Failed to load players') as List<dynamic>;
@@ -45,7 +45,7 @@ class ViewAllApi {
   // GET /leagues
   Future<List<LeagueModel>> getAllLeagues() async {
     final r = await http.get(
-      Uri.parse('$_base/leagues'),
+      Uri.parse('$_base/api/leagues'),
       headers: await _headers(),
     );
     final data = _check(r, 'Failed to load leagues') as List<dynamic>;
@@ -57,7 +57,7 @@ class ViewAllApi {
   // GET /tournements
   Future<List<TournamentListItem>> getAllTournaments() async {
     final r = await http.get(
-      Uri.parse('$_base/tournements'),
+      Uri.parse('$_base/api/tournements'),
       headers: await _headers(),
     );
     final data = _check(r, 'Failed to load tournaments') as List<dynamic>;

@@ -36,7 +36,7 @@ class ScouterApi {
 
   Future<List<GameModel>> getCatalog() async {
     final headers = await _authHeaders();
-    final resp = await http.get(Uri.parse('$baseUrl/catalog'), headers: headers);
+    final resp = await http.get(Uri.parse('$baseUrl/api/catalog'), headers: headers);
     final data = _decode(resp, 'Failed to load games') as List<dynamic>;
     return data.map((e) => GameModel.fromJson(e as Map<String, dynamic>)).toList();
   }

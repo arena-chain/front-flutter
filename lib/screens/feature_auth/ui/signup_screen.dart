@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/auth_state.dart';
 import 'package:arena_chain_flutter/navigation.dart';
+import 'package:arena_chain_flutter/screens/feature_auth/ui/verify_email_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -32,7 +33,7 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> _signup(AuthViewModel authViewModel) async {
     if (!_formKey.currentState!.validate()) return;
 
-    await authViewModel.registerPlayer(
+    final success = await authViewModel.registerPlayer(
       email: _emailController.text.trim(),
       nickname: _nicknameController.text.trim(),
       password: _passwordController.text,
