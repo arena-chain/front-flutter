@@ -9,7 +9,10 @@ import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 import 'package:arena_chain_flutter/core/config/api_config.dart';
 
 class AuthApi {
+<<<<<<< Updated upstream
   // Use ApiConfig to handle platform-specific URLs
+=======
+>>>>>>> Stashed changes
   static String get baseUrl => ApiConfig.baseUrl;
   final TokenStorage _tokenStorage = TokenStorage();
 

@@ -8,6 +8,25 @@ import 'package:arena_chain_flutter/core/models/riot/riot_tft_match_detail_model
 class RiotApi {
   final String baseUrl = ApiConfig.baseUrl;
 
+  String _extractErrorMessage(http.Response response) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        final msg = decoded['message'];
+        if (msg is String && msg.trim().isNotEmpty) return msg;
+        if (msg is List && msg.isNotEmpty) return msg.join('\n');
+        final err = decoded['error'];
+        if (err is String && err.trim().isNotEmpty) return err;
+      }
+    } catch (_) {
+      // ignore JSON parse errors; fall back to raw body / status
+    }
+
+    final body = response.body.trim();
+    if (body.isNotEmpty) return body;
+    return 'HTTP ${response.statusCode}';
+  }
+
   Future<RiotAccountModel> fetchPlayerAccount({
     required String gameName,
     required String tagLine,
@@ -35,7 +54,7 @@ class RiotApi {
         final data = jsonDecode(response.body);
         return RiotAccountModel.fromJson(data);
       } else {
-        throw Exception('Error: ${response.statusCode}');
+        throw Exception(_extractErrorMessage(response));
       }
     } catch (e) {
       print('RiotApi Error: $e');

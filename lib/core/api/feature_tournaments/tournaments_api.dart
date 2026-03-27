@@ -4,8 +4,14 @@ import 'package:arena_chain_flutter/core/dto/tournaments/create_tournament_dto.d
 import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 
+<<<<<<< Updated upstream
+=======
+import 'package:arena_chain_flutter/core/models/feature_tournaments/ticket_model.dart';
+import 'package:arena_chain_flutter/core/config/api_config.dart';
+
+>>>>>>> Stashed changes
 class TournamentsApi {
-  static const String baseUrl = 'http://10.0.2.2:3000';
+  static String get baseUrl => ApiConfig.baseUrl;
   final TokenStorage _tokenStorage = TokenStorage();
 
   Future<Map<String, String>> _getHeaders() async {

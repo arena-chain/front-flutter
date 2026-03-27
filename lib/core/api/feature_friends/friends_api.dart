@@ -3,12 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 import 'package:arena_chain_flutter/core/models/feature_friends/friend_user_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_friends/friendship_model.dart';
-import 'package:arena_chain_flutter/core/api/feature_auth/auth_api.dart';
+import 'package:arena_chain_flutter/core/config/api_config.dart';
 
 class FriendsApi {
-  // baseUrl is defined in AuthApi, reusing it here or defining a common constant would be better
-  // For now using the same hardcoded value as in AuthApi to ensure consistency
-  static const String baseUrl = 'http://10.0.2.2:3000';
+  static String get baseUrl => ApiConfig.baseUrl;
   final TokenStorage _tokenStorage = TokenStorage();
 
   Future<Map<String, String>> _getHeaders() async {
