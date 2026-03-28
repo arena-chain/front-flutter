@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:arena_chain_flutter/core/dto/auth/login_dto.dart';
@@ -14,6 +15,7 @@ import 'package:arena_chain_flutter/core/config/api_config.dart';
 
 class AuthApi {
   static String get baseUrl => ApiConfig.baseUrl;
+  static const Duration _timeout = Duration(seconds: 10);
   final TokenStorage _tokenStorage = TokenStorage();
 
   Future<AuthResponse> registerPlayer(RegisterPlayerDto dto) async {
@@ -24,7 +26,7 @@ class AuthApi {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(dto.toJson()),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -68,7 +70,7 @@ class AuthApi {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(dto.toJson()),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -82,6 +84,8 @@ class AuthApi {
         final error = jsonDecode(response.body);
         throw Exception(error['message'] ?? 'Login failed');
       }
+    } on TimeoutException {
+      throw Exception('Connection timed out. Check that the server is running and reachable.');
     } catch (e) {
       throw Exception('Failed to login: $e');
     }
@@ -99,7 +103,7 @@ class AuthApi {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(dto.toJson()),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -129,7 +133,7 @@ class AuthApi {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         final error = jsonDecode(response.body);
@@ -148,7 +152,7 @@ class AuthApi {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(dto.toJson()),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         final error = jsonDecode(response.body);
@@ -167,7 +171,7 @@ class AuthApi {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(dto.toJson()),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         final error = jsonDecode(response.body);
@@ -186,7 +190,7 @@ class AuthApi {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'idToken': idToken}),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -216,7 +220,7 @@ class AuthApi {
           'email': email,
           'otp': otp,
         }),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         final error = jsonDecode(response.body);
@@ -238,7 +242,7 @@ class AuthApi {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -272,7 +276,7 @@ class AuthApi {
           if (region != null) 'region': region,
           if (avatar != null) 'avatar': avatar,
         }),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
