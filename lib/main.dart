@@ -6,7 +6,6 @@ import 'package:arena_chain_flutter/screens/player/feature_leagues/viewmodel/lea
 import 'package:arena_chain_flutter/screens/player/feature_news/viewmodel/news_viewmodel.dart';
 import 'package:arena_chain_flutter/screens/player/feature_rank/viewmodel/rank_viewmodel.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_viewmodel.dart';
-import 'package:arena_chain_flutter/core/config/api_config.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/auth_state.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/view_model/friends_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/view_model/tournaments_view_model.dart';

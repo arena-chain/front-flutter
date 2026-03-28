@@ -57,8 +57,6 @@ class AppRoutes {
         myAccount: (context) => const MyAccountScreen(),
         myChannel: (context) => const MyChannelScreen(),
         subscriptions: (context) => const SubscriptionsScreen(),
-        leagues: (context) => const LeaguesListScreen(),
-        news: (context) => const NewsListScreen(),
         leagues: (context) => Scaffold(
           backgroundColor: const Color(0xFF0A0E1A),
           appBar: AppBar(
@@ -68,6 +66,7 @@ class AppRoutes {
           ),
           body: const LeaguesListScreen(),
         ),
+        news: (context) => const NewsListScreen(),
         addFriend: (context) => const AddFriendScreen(),
         createTournament: (context) => const CreateTournamentScreen(),
         tournamentBooking: (context) {

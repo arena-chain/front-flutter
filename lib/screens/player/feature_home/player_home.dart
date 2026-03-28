@@ -37,9 +37,12 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NewsViewModel>().fetchNews(refresh: true);
+      context.read<RankViewModel>().fetchMyRanks();
+      context.read<LevelViewModel>().fetchMyLevel();
+
       _matchmakingVm = context.read<MatchmakingViewModel>();
       _matchmakingVm!.addListener(_onMatchmakingChanged);
-      // Handle current status immediately (state may already be restored)
       _onMatchmakingChanged();
     });
   }

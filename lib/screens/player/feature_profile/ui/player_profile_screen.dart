@@ -452,6 +452,7 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
   }
 
   Widget _buildProfileHeader(String nickname, String email, bool isPro) {
+    final avatarUrl = _avatarUrl ?? '';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
@@ -461,84 +462,179 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFF1A1F36)),
         ),
-        child: Row(
+        child: Column(
           children: [
-            // Avatar
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: const Color(0xFF00FF00).withOpacity(0.2),
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF00FF00), width: 3),
-              ),
-              child: Center(
-                child: Text(
-                  nickname.isNotEmpty ? nickname[0].toUpperCase() : 'P',
-                  style: const TextStyle(
-                    color: Color(0xFF00FF00),
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: _isEditing ? _generateRandomAvatar : null,
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00FF00).withOpacity(0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF00FF00), width: 3),
+                          image: avatarUrl.isNotEmpty
+                              ? DecorationImage(
+                                  image: NetworkImage(avatarUrl),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: avatarUrl.isEmpty
+                            ? Center(
+                                child: Text(
+                                  nickname.isNotEmpty ? nickname[0].toUpperCase() : 'P',
+                                  style: const TextStyle(
+                                    color: Color(0xFF00FF00),
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
+                      if (_isEditing)
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.refresh, color: Colors.white, size: 24),
+                                Text(
+                                  'Generate',
+                                  style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                                )
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            // User Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Flexible(
-                        child: Text(
-                          nickname,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                      if (_isEditing)
+                        TextField(
+                          controller: _nicknameController,
+                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            filled: true,
+                            fillColor: const Color(0xFF151515),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFF1A1F36)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFF00FF00)),
+                            ),
                           ),
-                          overflow: TextOverflow.ellipsis,
+                        )
+                      else
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                nickname,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Color(0xFF7A86AC), size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                setState(() {
+                                  _isEditing = true;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        isPro ? 'Professional Player' : 'Casual Player',
+                        style: const TextStyle(
+                          color: Color(0xFF7A86AC),
+                          fontSize: 14,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Color(0xFF7A86AC), size: 20),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {},
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00FF00).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF00FF00)),
+                        ),
+                        child: const Text(
+                          'Diamond',
+                          style: TextStyle(
+                            color: Color(0xFF00FF00),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    isPro ? 'Professional Player' : 'Casual Player',
-                    style: const TextStyle(
-                      color: Color(0xFF7A86AC),
-                      fontSize: 14,
+                ),
+              ],
+            ),
+            if (_isEditing) ...[
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _handleSave,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00FF00),
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00FF00).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF00FF00)),
-                    ),
-                    child: const Text(
-                      'Diamond',
-                      style: TextStyle(
-                        color: Color(0xFF00FF00),
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        setState(() {
+                          _isEditing = false;
+                        });
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0xFF1A1F36)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
+                      child: const Text('Cancel'),
                     ),
                   ),
                 ],
               ),
-            ),
+            ],
           ],
         ),
       ),
