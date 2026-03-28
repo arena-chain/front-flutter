@@ -1,0 +1,574 @@
+# Friendship System - API Documentation
+
+**Base URL**: `http://localhost:3000`
+
+---
+
+## 📋 Table of Contents
+
+1. [Overview](#overview)
+2. [User Search API](#user-search-api)
+3. [Friendship API](#friendship-api)
+4. [Data Models](#data-models)
+5. [Quick Integration Guide](#quick-integration-guide)
+
+---
+
+## Overview
+
+The Friendship System allows users to:
+- 🔍 **Search** for users by nickname or email
+- ➕ **Send** friend requests
+- ✅ **Accept/Reject** incoming requests
+- 👥 **View** friends list (only connected users)
+- 🚫 **Block/Unblock** users
+- ❌ **Unfriend** users
+
+**Authentication**: All endpoints will require JWT authentication (currently disabled for development).
+
+---
+
+## User Search API
+
+### Search Users
+
+Search for users by nickname or email to find people to add as friends.
+
+```http
+GET /users/search?q={query}&excludeUserId={currentUserId}
+```
+
+**Query Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `q` | string | ✅ Yes | Search query (nickname or email) |
+| `excludeUserId` | string | ❌ No | User ID to exclude from results (typically current user) |
+
+**Response**: `200 OK`
+```json
+[
+  {
+    "_id": "6988c38372c9c886a2c0c6ed",
+    "nickname": "khalil",
+    "email": "khalilmouscou@gmail.com"
+  }
+]
+```
+
+**Example**:
+```javascript
+// Search for users named "khalil", excluding current user
+fetch('http://localhost:3000/users/search?q=khalil&excludeUserId=6984ce23fa3faaf8f8179494')
+  .then(res => res.json())
+  .then(users => console.log(users));
+```
+
+---
+
+## Friendship API
+
+### 1. Send Friend Request
+
+```http
+POST /freindship/send-request
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "requesterId": "6984ce23fa3faaf8f8179494",
+  "recipientId": "6988c38372c9c886a2c0c6ed"
+}
+```
+
+**Response**: `201 Created`
+```json
+{
+  "_id": "69890a1b72c9c886a2c0c6f0",
+  "requesterId": "6984ce23fa3faaf8f8179494",
+  "recipientId": "6988c38372c9c886a2c0c6ed",
+  "status": "PENDING",
+  "createdAt": "2026-02-09T08:30:00.000Z",
+  "updatedAt": "2026-02-09T08:30:00.000Z"
+}
+```
+
+**Errors**:
+- `400` - Cannot send request to yourself
+- `409` - Friend request already exists or already friends
+
+---
+
+### 2. Accept Friend Request
+
+```http
+POST /freindship/accept/{friendshipId}
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "userId": "6988c38372c9c886a2c0c6ed"
+}
+```
+
+**Response**: `200 OK`
+```json
+{
+  "_id": "69890a1b72c9c886a2c0c6f0",
+  "requesterId": "6984ce23fa3faaf8f8179494",
+  "recipientId": "6988c38372c9c886a2c0c6ed",
+  "status": "ACCEPTED",
+  "acceptedAt": "2026-02-09T08:35:00.000Z",
+  "createdAt": "2026-02-09T08:30:00.000Z",
+  "updatedAt": "2026-02-09T08:35:00.000Z"
+}
+```
+
+**Errors**:
+- `404` - Friend request not found
+- `400` - Not authorized or request no longer pending
+
+---
+
+### 3. Reject Friend Request
+
+```http
+POST /freindship/reject/{friendshipId}
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "userId": "6988c38372c9c886a2c0c6ed"
+}
+```
+
+**Response**: `200 OK`
+
+---
+
+### 4. Get My Friends
+
+Get all users you're friends with (status = ACCEPTED).
+
+```http
+GET /freindship/friends/{userId}
+```
+
+**Response**: `200 OK`
+```json
+[
+  {
+    "_id": "69890a1b72c9c886a2c0c6f0",
+    "requesterId": {
+      "_id": "6984ce23fa3faaf8f8179494",
+      "nickname": "bringaa24",
+      "email": "khalilmouscou24@gmail.com"
+    },
+    "recipientId": {
+      "_id": "6988c38372c9c886a2c0c6ed",
+      "nickname": "khalil",
+      "email": "khalilmouscou@gmail.com"
+    },
+    "status": "ACCEPTED",
+    "acceptedAt": "2026-02-09T08:35:00.000Z"
+  }
+]
+```
+
+**Note**: Extract the friend user object based on userId:
+```javascript
+const friends = friendships.map(f => 
+  f.requesterId._id === myUserId ? f.recipientId : f.requesterId
+);
+```
+
+---
+
+### 5. Get Pending Requests (Received)
+
+Get friend requests **you received** that are still pending.
+
+```http
+GET /freindship/pending-requests/{userId}
+```
+
+**Response**: `200 OK`
+```json
+[
+  {
+    "_id": "69890a1b72c9c886a2c0c6f0",
+    "requesterId": {
+      "_id": "6984ce23fa3faaf8f8179494",
+      "nickname": "bringaa24",
+      "email": "khalilmouscou24@gmail.com"
+    },
+    "status": "PENDING",
+    "createdAt": "2026-02-09T08:30:00.000Z"
+  }
+]
+```
+
+---
+
+### 6. Get Sent Requests
+
+Get friend requests **you sent** that are still pending.
+
+```http
+GET /freindship/sent-requests/{userId}
+```
+
+**Response**: `200 OK`
+
+---
+
+### 7. Check Friendship Status
+
+Check the friendship status between two users.
+
+```http
+GET /freindship/status/{userId1}/{userId2}
+```
+
+**Response**: `200 OK`
+```json
+{
+  "status": "ACCEPTED"
+}
+```
+
+**Possible values**: `NONE`, `PENDING`, `ACCEPTED`, `REJECTED`, `BLOCKED`
+
+---
+
+### 8. Are Friends? (Boolean)
+
+Quick check if two users are friends.
+
+```http
+GET /freindship/are-friends/{userId1}/{userId2}
+```
+
+**Response**: `200 OK`
+```json
+{
+  "areFriends": true
+}
+```
+
+---
+
+### 9. Unfriend User
+
+Remove a friend (delete accepted friendship).
+
+```http
+DELETE /freindship/remove
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "userId": "6984ce23fa3faaf8f8179494",
+  "friendId": "6988c38372c9c886a2c0c6ed"
+}
+```
+
+**Response**: `200 OK`
+```json
+{
+  "message": "Friend removed successfully"
+}
+```
+
+---
+
+### 10. Block User
+
+```http
+POST /freindship/block
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "userId": "6984ce23fa3faaf8f8179494",
+  "blockedUserId": "6988c38372c9c886a2c0c6ed"
+}
+```
+
+**Response**: `200 OK`
+
+---
+
+### 11. Unblock User
+
+```http
+DELETE /freindship/unblock
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "userId": "6984ce23fa3faaf8f8179494",
+  "blockedUserId": "6988c38372c9c886a2c0c6ed"
+}
+```
+
+**Response**: `200 OK`
+
+---
+
+### 12. Get Blocked Users
+
+```http
+GET /freindship/blocked/{userId}
+```
+
+**Response**: `200 OK`
+
+---
+
+## Data Models
+
+### User
+```typescript
+{
+  _id: string;           // MongoDB ObjectId
+  nickname: string;      // User display name
+  email: string;         // User email
+}
+```
+
+### Friendship
+```typescript
+{
+  _id: string;
+  requesterId: User | string;     // Can be populated or just ID
+  recipientId: User | string;     // Can be populated or just ID
+  status: "PENDING" | "ACCEPTED" | "REJECTED" | "BLOCKED";
+  acceptedAt?: string;            // ISO date string
+  rejectedAt?: string;
+  blockedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+---
+
+## Quick Integration Guide
+
+### React/TypeScript Example
+
+```typescript
+const API_URL = 'http://localhost:3000';
+
+// 1. Search for users
+const searchUsers = async (query: string, currentUserId: string) => {
+  const response = await fetch(
+    `${API_URL}/users/search?q=${query}&excludeUserId=${currentUserId}`
+  );
+  return response.json();
+};
+
+// 2. Send friend request
+const sendFriendRequest = async (requesterId: string, recipientId: string) => {
+  const response = await fetch(`${API_URL}/freindship/send-request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requesterId, recipientId }),
+  });
+  return response.json();
+};
+
+// 3. Get my friends
+const getFriends = async (userId: string) => {
+  const response = await fetch(`${API_URL}/freindship/friends/${userId}`);
+  const friendships = await response.json();
+  
+  // Extract friend user objects
+  return friendships.map(f => 
+    f.requesterId._id === userId ? f.recipientId : f.requesterId
+  );
+};
+
+// 4. Accept friend request
+const acceptRequest = async (userId: string, friendshipId: string) => {
+  const response = await fetch(`${API_URL}/freindship/accept/${friendshipId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+  return response.json();
+};
+```
+
+### Flutter/Dart Example
+
+```dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+class FriendshipService {
+  static const baseUrl = 'http://10.0.2.2:3000'; // Android emulator
+
+  // Search users
+  Future<List<User>> searchUsers(String query, String? excludeUserId) async {
+    final uri = Uri.parse('$baseUrl/users/search').replace(
+      queryParameters: {
+        'q': query,
+        if (excludeUserId != null) 'excludeUserId': excludeUserId,
+      },
+    );
+    
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      final List data = json.decode(response.body);
+      return data.map((json) => User.fromJson(json)).toList();
+    }
+    throw Exception('Failed to search users');
+  }
+
+  // Send friend request
+  Future<void> sendFriendRequest(String requesterId, String recipientId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/freindship/send-request'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'requesterId': requesterId,
+        'recipientId': recipientId,
+      }),
+    );
+    
+    if (response.statusCode != 201) {
+      throw Exception('Failed to send friend request');
+    }
+  }
+
+  // Get friends
+  Future<List<User>> getFriends(String userId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/freindship/friends/$userId'),
+    );
+
+    if (response.statusCode == 200) {
+      final List friendships = json.decode(response.body);
+      
+      return friendships.map((f) {
+        final iAmRequester = f['requesterId']['_id'] == userId;
+        final friendData = iAmRequester ? f['recipientId'] : f['requesterId'];
+        return User.fromJson(friendData);
+      }).toList();
+    }
+    
+    throw Exception('Failed to load friends');
+  }
+}
+```
+
+---
+
+## Testing with cURL
+
+```bash
+# 1. Search users
+curl "http://localhost:3000/users/search?q=khalil"
+
+# 2. Send friend request
+curl -X POST http://localhost:3000/freindship/send-request \
+  -H "Content-Type: application/json" \
+  -d '{"requesterId":"USER_ID_1","recipientId":"USER_ID_2"}'
+
+# 3. Get friends
+curl http://localhost:3000/freindship/friends/USER_ID
+
+# 4. Get pending requests
+curl http://localhost:3000/freindship/pending-requests/USER_ID
+
+# 5. Accept request
+curl -X POST http://localhost:3000/freindship/accept/FRIENDSHIP_ID \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"USER_ID"}'
+
+# 6. Check status
+curl http://localhost:3000/freindship/status/USER_ID_1/USER_ID_2
+```
+
+---
+
+## Common Workflows
+
+### 1. Adding a Friend
+
+```
+1. Search users          → GET /users/search?q=khalil
+2. Get friendship status → GET /freindship/status/{myId}/{theirId}
+3. Send friend request   → POST /freindship/send-request
+```
+
+### 2. Managing Friend Requests
+
+```
+1. Get pending requests  → GET /freindship/pending-requests/{userId}
+2. Accept/Reject         → POST /freindship/accept/{friendshipId}
+                           POST /freindship/reject/{friendshipId}
+```
+
+### 3. Viewing Friends
+
+```
+1. Get friends list      → GET /freindship/friends/{userId}
+2. Extract user objects  → Filter based on userId
+```
+
+---
+
+## Error Handling
+
+All endpoints return appropriate HTTP status codes:
+
+| Code | Meaning |
+|------|---------|
+| `200` | Success |
+| `201` | Created (friend request sent) |
+| `400` | Bad request (invalid data, cannot send to self, etc.) |
+| `404` | Resource not found |
+| `409` | Conflict (already friends, request exists) |
+
+**Error Response Format**:
+```json
+{
+  "statusCode": 400,
+  "message": "Cannot send friend request to yourself",
+  "error": "Bad Request"
+}
+```
+
+---
+
+## Notes for Frontend Developers
+
+1. **User IDs**: Always use MongoDB ObjectId strings (24 hex characters)
+2. **Current User**: Get from authentication context/session
+3. **Populated Data**: `/friends` and `/pending-requests` return populated user objects
+4. **Status Check**: Use `/status` endpoint before showing "Add Friend" button
+5. **Real-time Updates**: Consider WebSocket integration for instant notifications
+
+---
+
+## Support
+
+- **Backend Developer**: Khalil Mouscou
+- **API Version**: 1.0
+- **Last Updated**: 2026-02-09
+
+For questions or issues, contact the backend team.
