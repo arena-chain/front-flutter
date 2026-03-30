@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/bottom_navbar.dart';
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/scheduled_streams_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/tournaments_list_screen.dart';
@@ -16,7 +15,6 @@ import 'package:arena_chain_flutter/screens/training/training_dashboard_screen.d
 import 'package:arena_chain_flutter/core/api/training_api_service.dart';
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 
-import 'package:arena_chain_flutter/screens/player/feature_friends/ui/friends_list_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/side_drawer.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_dialogs.dart';
@@ -469,7 +467,6 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       builder: (context, authViewModel, child) {
         final user = authViewModel.currentUser;
         final nickname = user?.nickname ?? 'Player';
-        final initial = nickname.isNotEmpty ? nickname[0].toUpperCase() : 'P';
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -515,17 +512,6 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          _buildActionCard(
-            icon: Icons.groups_2,
-            label: 'Local Tournament',
-            gradient: const LinearGradient(
-              colors: [Color(0xFF00FFAA), Color(0xFF00AA77)],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-            isWide: true,
           ),
         ],
           ),
@@ -669,50 +655,69 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   }
 
   Widget _buildRecentGames() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Consumer<RankViewModel>(
+      builder: (context, rankVM, child) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Recent Matches',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Recent Matches',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {},
+                    child: const Text('View All', style: TextStyle(color: Color(0xFF00FF00))),
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: () {},
-                child: const Text('View All', style: TextStyle(color: Color(0xFF00FF00))),
-              ),
+              const SizedBox(height: 16),
+              if (rankVM.isLoading)
+                const Center(child: CircularProgressIndicator(color: Color(0xFF00FF00)))
+              else if (rankVM.ranks.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF151515),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF333333)),
+                  ),
+                  child: const Text(
+                    'No match history yet. Play games to see recent performance.',
+                    style: TextStyle(color: Color(0xFF7A86AC)),
+                  ),
+                )
+              else
+                ...rankVM.ranks.take(3).map((rank) {
+                  final totalMatches = rank.wins + rank.losses;
+                  final isPositive = rank.wins >= rank.losses;
+                  final winRate = totalMatches == 0 ? 0 : ((rank.wins / totalMatches) * 100).toInt();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildGameCard(
+                      game: rank.game,
+                      result: isPositive ? 'Positive' : 'Needs Work',
+                      score: '${rank.wins}-${rank.losses}',
+                      kda: '$winRate% WR',
+                      rank: rank.tier,
+                      timeAgo: _timeAgo(rank.updatedAt),
+                      isWin: isPositive,
+                    ),
+                  );
+                }),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildGameCard(
-            game: 'Valorant',
-            result: 'Win',
-            score: '13-10',
-            kda: '18/12/7',
-            rank: 'Diamond 2',
-            timeAgo: '2 hours ago',
-            isWin: true,
-          ),
-          const SizedBox(height: 12),
-          _buildGameCard(
-            game: 'Valorant',
-            result: 'Loss',
-            score: '9-13',
-            kda: '14/15/8',
-            rank: 'Diamond 1',
-            timeAgo: '5 hours ago',
-            isWin: false,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -818,5 +823,14 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
         Text(value, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
       ],
     );
+  }
+
+  String _timeAgo(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inDays > 0) return '${diff.inDays}d ago';
+    if (diff.inHours > 0) return '${diff.inHours}h ago';
+    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
+    return 'Just now';
   }
 }

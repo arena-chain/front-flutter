@@ -25,6 +25,13 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  String _homeRouteFor(AuthViewModel vm) {
+    final role = vm.currentUser?.role.toLowerCase() ?? '';
+    if (role == 'scouter') return AppRoutes.scouterHome;
+    if (role == 'admin') return AppRoutes.adminHome;
+    return AppRoutes.playerHome;
+  }
+
   Future<void> _login(AuthViewModel authViewModel) async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -33,18 +40,16 @@ class _LoginScreenState extends State<LoginScreen> {
       password: _passwordController.text,
     );
 
-    // Navigate to home if login was successful
     if (mounted && authViewModel.authState == AuthState.authenticated) {
-      Navigator.pushReplacementNamed(context, AppRoutes.playerHome);
+      Navigator.pushReplacementNamed(context, _homeRouteFor(authViewModel));
     }
   }
 
   Future<void> _loginWithGoogle(AuthViewModel authViewModel) async {
     await authViewModel.signInWithGoogle();
 
-    // Navigate to home if login was successful
     if (mounted && authViewModel.authState == AuthState.authenticated) {
-      Navigator.pushReplacementNamed(context, AppRoutes.playerHome);
+      Navigator.pushReplacementNamed(context, _homeRouteFor(authViewModel));
     }
   }
 

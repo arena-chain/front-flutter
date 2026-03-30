@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Allow camera access to record videos for upload.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow photo library access to choose videos for upload.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Allow microphone access when recording videos.</string>
 </dict>
 </plist>

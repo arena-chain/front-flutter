@@ -5,14 +5,16 @@ class ApiConfig {
   // Use 'ipconfig' (Windows) or 'ifconfig' (Mac/Linux) to find it.
   static const String _lanIp = '192.168.1.12';
 
+  // Set to true when running on an Android emulator, false for a physical device.
+  static const bool _isEmulator = true;
+
   static String get baseUrl {
     if (kIsWeb) {
       return 'http://localhost:3000';
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      // Physical devices need the LAN IP; emulators use 10.0.2.2.
-      // Using LAN IP works for both, as long as the server binds to 0.0.0.0.
-      return 'http://$_lanIp:3000';
+      // Emulators reach the host machine via 10.0.2.2; physical devices use the LAN IP.
+      return _isEmulator ? 'http://10.0.2.2:3000' : 'http://$_lanIp:3000';
     }
     return 'http://localhost:3000';
   }

@@ -283,4 +283,58 @@ class ScouterApi {
         as Map<String, dynamic>;
     return Recommendation.fromJson(data);
   }
+
+  // ── Highlights ────────────────────────────────────────────────────────────
+
+  Future<List<HighlightItem>> getHighlights() async {
+    final headers = await _authHeaders();
+    final resp = await http.get(
+      Uri.parse('$baseUrl/api/highlights'),
+      headers: headers,
+    );
+    final data = _decode(resp, 'Failed to load highlights');
+    if (data is List) {
+      return data
+          .map((e) => HighlightItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  // ── Rank progression ──────────────────────────────────────────────────────
+
+  Future<List<RankEntry>> getPlayerRanks(String playerUserId) async {
+    final headers = await _authHeaders();
+    final resp = await http.get(
+      Uri.parse('$baseUrl/api/rank/user/$playerUserId/all'),
+      headers: headers,
+    );
+    final data = _decode(resp, 'Failed to load ranks');
+    if (data is List) {
+      return data
+          .map((e) => RankEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  // ── Watchlist check ───────────────────────────────────────────────────────
+
+  Future<bool> checkWatchlist({
+    required String scouterId,
+    required String playerId,
+  }) async {
+    final headers = await _authHeaders();
+    final resp = await http.get(
+      Uri.parse(
+          '$baseUrl/api/scouting/watchlist/check?scouterId=$scouterId&playerId=$playerId'),
+      headers: headers,
+    );
+    if (resp.statusCode == 404) return false;
+    final data = _decode(resp, 'Failed to check watchlist');
+    if (data is Map) {
+      return (data['onWatchlist'] ?? data['found'] ?? data['exists'] ?? false) == true;
+    }
+    return false;
+  }
 }

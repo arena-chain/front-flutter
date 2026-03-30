@@ -12,6 +12,7 @@ import 'package:arena_chain_flutter/screens/player/feature_profile/ui/my_channel
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/subscriptions_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/my_account_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_leagues/ui/leagues_list_screen.dart';
+import 'package:arena_chain_flutter/screens/leagues/player_leagues_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/ui/add_friend_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/create_tournament_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/booking_screen.dart';
@@ -30,6 +31,7 @@ import 'package:arena_chain_flutter/screens/Team_Manager/team_feed_screen.dart';
 import 'package:arena_chain_flutter/screens/Team_Manager/team_profile_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/live_stream_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/scheduled_streams_screen.dart';
+import 'package:arena_chain_flutter/screens/scouter/ui/scouter_home_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -65,6 +67,7 @@ class AppRoutes {
   static const String teamProfile = '/team/profile';
   static const String liveStream = '/player/live-stream';
   static const String scheduledStreams = '/player/scheduled-streams';
+  static const String scouterHome = '/scouter/home';
 
   static Map<String, WidgetBuilder> get routes => {
         splash: (context) => const SplashScreen(),
@@ -79,15 +82,7 @@ class AppRoutes {
         myAccount: (context) => const MyAccountScreen(),
         myChannel: (context) => const MyChannelScreen(),
         subscriptions: (context) => const SubscriptionsScreen(),
-        leagues: (context) => Scaffold(
-          backgroundColor: const Color(0xFF0A0E1A),
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF0A0E1A),
-            title: const Text('Leagues', style: TextStyle(color: Colors.white)),
-            leading: const BackButton(color: Colors.white),
-          ),
-          body: const LeaguesListScreen(),
-        ),
+        leagues: (context) => const PlayerLeaguesScreen(),
         news: (context) => const NewsListScreen(),
         addFriend: (context) => const AddFriendScreen(),
         createTournament: (context) => const CreateTournamentScreen(),
@@ -134,5 +129,6 @@ class AppRoutes {
           return LiveStreamScreen(streamId: streamId);
         },
         scheduledStreams: (context) => const ScheduledStreamsScreen(),
+        scouterHome: (context) => const ScouterHomeScreen(),
       };
 }

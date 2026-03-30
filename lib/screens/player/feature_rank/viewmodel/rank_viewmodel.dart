@@ -17,33 +17,9 @@ class RankViewModel extends ChangeNotifier {
 
     try {
       _ranks = await _rankApi.getMyRanks();
-      
-      // Fallback Demo Data if the user has no recorded games
-      if (_ranks.isEmpty) {
-        _ranks = [
-          Rank(
-            game: 'Valorant',
-            elo: 2450,
-            tier: 'Diamond II',
-            wins: 142,
-            losses: 89,
-            updatedAt: DateTime.now(),
-          )
-        ];
-      }
     } catch (e) {
       debugPrint('Error fetching ranks: $e');
-      // Inject demo data on failure (especially for new accounts/admins without ranks)
-      _ranks = [
-        Rank(
-          game: 'Valorant',
-          elo: 2450,
-          tier: 'Diamond II',
-          wins: 142,
-          losses: 89,
-          updatedAt: DateTime.now(),
-        )
-      ];
+      _ranks = [];
     } finally {
       _isLoading = false;
       notifyListeners();

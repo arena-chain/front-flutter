@@ -13,6 +13,8 @@ import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_mode
 import 'package:arena_chain_flutter/screens/player/feature_home/player_home.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/ui/login_screen.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/ui/splash_screen.dart';
+import 'package:arena_chain_flutter/screens/scouter/ui/scouter_home_screen.dart';
+import 'package:arena_chain_flutter/screens/admin/ui/admin_home_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 void main() {
@@ -70,6 +72,9 @@ class MyApp extends StatelessWidget {
           builder: (context, authViewModel, child) {
             switch (authViewModel.authState) {
               case AuthState.authenticated:
+                final role = authViewModel.currentUser?.role.toLowerCase() ?? '';
+                if (role == 'scouter') return const ScouterHomeScreen();
+                if (role == 'admin') return const AdminHomeScreen();
                 return const PlayerHomeScreen();
               case AuthState.unauthenticated:
                 return const LoginScreen();
