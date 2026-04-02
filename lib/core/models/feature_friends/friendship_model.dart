@@ -24,16 +24,32 @@ class FriendshipModel {
     required this.createdAt,
   });
 
+  /// Nest/Mongoose may expose `_id`, `id`, or extended JSON `{ "$oid": "..." }`.
+  static String _mongoId(dynamic raw) {
+    if (raw == null) return '';
+    if (raw is String) return raw;
+    if (raw is Map) {
+      final oid = raw[r'$oid'];
+      if (oid != null) return oid.toString();
+    }
+    return raw.toString();
+  }
+
   factory FriendshipModel.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(dynamic v) {
+      if (v == null) return null;
+      if (v is String) return DateTime.tryParse(v);
+      return null;
+    }
+
+    final idRaw = json['_id'] ?? json['id'];
     return FriendshipModel(
-      id: json['_id'] as String,
+      id: _mongoId(idRaw),
       requester: _parseUser(json['requesterId']),
       recipient: _parseUser(json['recipientId']),
-      status: _parseStatus(json['status'] as String),
-      acceptedAt: json['acceptedAt'] != null 
-          ? DateTime.parse(json['acceptedAt'] as String) 
-          : null,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      status: _parseStatus((json['status'] ?? 'PENDING').toString()),
+      acceptedAt: parseDate(json['acceptedAt']),
+      createdAt: parseDate(json['createdAt']) ?? DateTime.now(),
     );
   }
 

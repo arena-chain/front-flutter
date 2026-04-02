@@ -11,9 +11,10 @@ import 'package:arena_chain_flutter/screens/player/feature_profile/ui/settings_s
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/my_channel_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/subscriptions_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/my_account_screen.dart';
-import 'package:arena_chain_flutter/screens/player/feature_leagues/ui/leagues_list_screen.dart';
 import 'package:arena_chain_flutter/screens/leagues/player_leagues_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/ui/add_friend_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_friends/ui/friends_list_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_friends/ui/player_public_profile_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/create_tournament_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/booking_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/ticket_screen.dart';
@@ -50,6 +51,8 @@ class AppRoutes {
   static const String leagues = '/player/leagues';
   static const String news = '/player/news';
   static const String addFriend = '/player/friends/add';
+  static const String friendsList = '/player/friends';
+  static const String playerPublicProfile = '/player/profile/public';
   static const String createTournament = '/tournaments/create';
   static const String tournamentBooking = '/tournaments/booking';
   static const String tournamentTicket = '/tournaments/ticket';
@@ -85,6 +88,28 @@ class AppRoutes {
         leagues: (context) => const PlayerLeaguesScreen(),
         news: (context) => const NewsListScreen(),
         addFriend: (context) => const AddFriendScreen(),
+        friendsList: (context) => const FriendsListScreen(),
+        playerPublicProfile: (context) {
+          final args = ModalRoute.of(context)!.settings.arguments;
+          String userId;
+          String? preNick;
+          String? preEmail;
+          String? preAvatar;
+          if (args is Map<String, dynamic>) {
+            userId = args['userId'] as String;
+            preNick = args['nickname'] as String?;
+            preEmail = args['email'] as String?;
+            preAvatar = args['avatar'] as String?;
+          } else {
+            userId = args as String;
+          }
+          return PlayerPublicProfileScreen(
+            targetUserId: userId,
+            prefillNickname: preNick,
+            prefillEmail: preEmail,
+            prefillAvatarUrl: preAvatar,
+          );
+        },
         createTournament: (context) => const CreateTournamentScreen(),
         tournamentBooking: (context) {
           final args = ModalRoute.of(context)!.settings.arguments as TournamentModel;

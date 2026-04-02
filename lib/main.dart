@@ -8,6 +8,7 @@ import 'package:arena_chain_flutter/screens/player/feature_rank/viewmodel/rank_v
 import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_viewmodel.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/auth_state.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/view_model/friends_view_model.dart';
+import 'package:arena_chain_flutter/core/services/friends_presence_service.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/view_model/tournaments_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/player_home.dart';
@@ -33,9 +34,13 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProxyProvider<AuthViewModel, FriendsViewModel>(
           create: (context) => FriendsViewModel(currentUserId: ''),
-          update: (context, auth, previous) =>
-            FriendsViewModel(currentUserId: auth.currentUser?.id ?? ''),
+          update: (context, auth, previous) {
+            final id = auth.currentUser?.id ?? '';
+            if (previous != null && previous.currentUserId == id) return previous;
+            return FriendsViewModel(currentUserId: id);
+          },
         ),
+        ChangeNotifierProvider(create: (_) => FriendsPresenceNotifier()),
         ChangeNotifierProxyProvider<AuthViewModel, TournamentsViewModel>(
           create: (context) => TournamentsViewModel(currentUserId: ''),
           update: (context, auth, previous) =>

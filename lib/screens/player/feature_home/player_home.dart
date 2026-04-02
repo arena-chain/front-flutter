@@ -10,6 +10,7 @@ import 'package:arena_chain_flutter/screens/player/feature_news/viewmodel/news_v
 import 'package:arena_chain_flutter/screens/player/feature_rank/viewmodel/rank_viewmodel.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_viewmodel.dart';
 import 'package:arena_chain_flutter/navigation.dart';
+import 'package:arena_chain_flutter/core/services/friends_presence_service.dart';
 
 import 'package:arena_chain_flutter/screens/training/training_dashboard_screen.dart';
 import 'package:arena_chain_flutter/core/api/training_api_service.dart';
@@ -42,6 +43,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<FriendsPresenceNotifier>().connect();
       context.read<NewsViewModel>().fetchNews(refresh: true);
       context.read<RankViewModel>().fetchMyRanks();
       context.read<LevelViewModel>().fetchMyLevel();
@@ -213,7 +215,10 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.search, color: Colors.white),
-                onPressed: () {},
+                tooltip: 'Find players',
+                onPressed: () {
+                  Navigator.pushNamed(context, AppRoutes.addFriend);
+                },
               ),
               Stack(
                 children: [
