@@ -1,0 +1,991 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:arena_chain_flutter/core/api/riot/riot_api.dart';
+import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
+import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
+import 'package:arena_chain_flutter/navigation.dart';
+
+class PlayerProfileScreen extends StatefulWidget {
+  const PlayerProfileScreen({super.key});
+
+  @override
+  State<PlayerProfileScreen> createState() => _PlayerProfileScreenState();
+}
+
+class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
+  final RiotApi _riotApi = RiotApi();
+  final TokenStorage _tokenStorage = TokenStorage();
+
+  bool _isLoadingLinkStatus = true;
+  String _linkStatus = 'unlinked';
+  String? _riotGameName;
+  String? _riotTagLine;
+  String? _riotRegion;
+
+  late final TextEditingController _nicknameController;
+  String? _avatarUrl;
+  bool _isEditing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nicknameController = TextEditingController();
+
+    // Initialize with data on first load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
+      final user = authViewModel.currentUser;
+      _nicknameController.text = user?.nickname ?? 'Player';
+      _avatarUrl = user?.avatar ?? '';
+      setState(() {});
+      _checkLinkStatus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkLinkStatus() async {
+    try {
+      final token = await _tokenStorage.getAccessToken();
+      if (token == null) {
+        if (mounted) setState(() => _isLoadingLinkStatus = false);
+        return;
+      }
+
+      final result = await _riotApi.getLinkStatus(token: token);
+      if (mounted) {
+        setState(() {
+          _linkStatus = result['status'] ?? 'unlinked';
+          _riotGameName = result['riotGameName'];
+          _riotTagLine = result['riotTagLine'];
+          _riotRegion = result['riotRegion'];
+          _isLoadingLinkStatus = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingLinkStatus = false);
+    }
+  }
+
+  void _generateRandomAvatar() {
+    final styles = ['avataaars', 'bottts', 'pixel-art', 'lorelei', 'adventurer'];
+    final randomStyle = styles[Random().nextInt(styles.length)];
+    final randomSeed = Random().nextInt(100000).toString();
+
+    setState(() {
+      _avatarUrl = 'https://api.dicebear.com/7.x/$randomStyle/png?seed=$randomSeed';
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Nouvel avatar généré !', style: TextStyle(color: Colors.black)),
+        backgroundColor: Color(0xFF00FF00),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _handleSave() async {
+    final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
+
+    // First update locally for instant feedback
+    authViewModel.updateLocalProfile(nickname: _nicknameController.text, avatarUrl: _avatarUrl);
+
+    setState(() {
+      _isEditing = false;
+    });
+
+    // Then persist to backend + local storage so it survives logout/login
+    final success = await authViewModel.updateProfile(
+      nickname: _nicknameController.text,
+      avatarUrl: _avatarUrl,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success ? 'Profil mis à jour avec succès.' : 'Sauvegarde locale uniquement (hors ligne).',
+          style: const TextStyle(color: Colors.black),
+        ),
+        backgroundColor: const Color(0xFF00FF00),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AuthViewModel>(
+      builder: (context, authViewModel, child) {
+        final user = authViewModel.currentUser;
+        final country = user?.country ?? 'TUNISIA';
+        // If not editing, display truth from state or input. If editing, display input.
+        final nickname = _isEditing ? _nicknameController.text : (_nicknameController.text.isNotEmpty ? _nicknameController.text : (user?.nickname ?? 'Player'));
+        final email = user?.email ?? '';
+        final isPro = user?.profile?.isPro ?? false;
+
+        return Scaffold(
+          backgroundColor: const Color(0xFF0A0E1A),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF0A0E1A),
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.person, color: Color(0xFF00FF00), size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'My Profile',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.settings, color: Color(0xFF00FF00)),
+                onPressed: () {
+                  Navigator.pushNamed(context, AppRoutes.settings);
+                },
+              ),
+            ],
+          ),
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 24),
+                _buildProfileHeader(nickname, email, isPro),
+                const SizedBox(height: 24),
+                _buildStatsSection(),
+                const SizedBox(height: 24),
+                _buildTeamManagementSection(authViewModel),
+                const SizedBox(height: 24),
+                _buildConnectedGameAccounts(),
+                const SizedBox(height: 24),
+                _buildMyLeagues(),
+                const SizedBox(height: 24),
+                _buildAchievements(),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTeamManagementSection(AuthViewModel auth) {
+    final user = auth.currentUser;
+    final role = user?.role.toLowerCase() ?? '';
+    final isManager = role == 'team_manager';
+    final isAdmin = role == 'admin';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.groups, color: Color(0xFF00FF00), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Team Management',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (isManager)
+            _buildActionTile(
+              'Manager Dashboard',
+              'Manage your squad, roster, and news.',
+              Icons.dashboard_customize,
+              const Color(0xFFE94560),
+              () => Navigator.pushNamed(context, AppRoutes.managerDashboard, arguments: user?.teamId ?? ''),
+            )
+          else if (!isAdmin)
+            _buildActionTile(
+              'Become Team Manager',
+              'Apply to leading your own official squad.',
+              Icons.stars,
+              const Color(0xFF00FF00),
+              () => Navigator.pushNamed(context, AppRoutes.managerApplication),
+            ),
+          const SizedBox(height: 12),
+          _buildActionTile(
+            'Recruitment Inbox',
+            'View team invitations and player offers.',
+            Icons.mail_outline,
+            Colors.blueAccent,
+            () => Navigator.pushNamed(context, AppRoutes.playerInvitations),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionTile(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F1221),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF7A86AC), fontSize: 12)),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConnectedGameAccounts() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.sports_esports, color: Color(0xFF00FF00), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Connected Game Accounts',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_isLoadingLinkStatus)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F1221),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF1A1F36)),
+              ),
+              child: const Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF00FF00),
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
+            )
+          else if (_linkStatus == 'verified')
+            _buildLinkedAccountCard()
+          else if (_linkStatus == 'pending_verification')
+            _buildPendingAccountCard()
+          else
+            _buildNoAccountsCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLinkedAccountCard() {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.pushNamed(
+          context,
+          AppRoutes.myAccount,
+          arguments: {
+            'gameName': _riotGameName,
+            'tagLine': _riotTagLine,
+            'region': _riotRegion,
+            'autoFetch': true,
+          },
+        );
+        _checkLinkStatus();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F1221),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF1A1F36)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFC89B3C), width: 2),
+              ),
+              child: const Center(
+                child: Text(
+                  'LoL',
+                  style: TextStyle(
+                    color: Color(0xFFC89B3C),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'League of Legends',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.verified, color: Color(0xFF00FF00), size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_riotGameName ?? ''}#${_riotTagLine ?? ''}',
+                        style: const TextStyle(
+                          color: Color(0xFF7A86AC),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Color(0xFF7A86AC), size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPendingAccountCard() {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.pushNamed(
+          context,
+          AppRoutes.myAccount,
+          arguments: {
+            'gameName': _riotGameName,
+            'tagLine': _riotTagLine,
+            'region': _riotRegion,
+            'autoFetch': false,
+          },
+        );
+        _checkLinkStatus();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F1221),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFF9800).withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFF9800), width: 2),
+              ),
+              child: const Center(
+                child: Text(
+                  'LoL',
+                  style: TextStyle(
+                    color: Color(0xFFFF9800),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'League of Legends',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.pending, color: Colors.orange.shade300, size: 14),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'Pending verification',
+                        style: TextStyle(
+                          color: Color(0xFFFF9800),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Color(0xFF7A86AC), size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoAccountsCard() {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.pushNamed(context, AppRoutes.myAccount);
+        _checkLinkStatus();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F1221),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF1A1F36)),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.link_off, color: Colors.white.withOpacity(0.2), size: 40),
+            const SizedBox(height: 12),
+            const Text(
+              'Connect your game account and fetch its data',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF7A86AC),
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00FF00).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF00FF00)),
+              ),
+              child: const Text(
+                'Connect Now',
+                style: TextStyle(
+                  color: Color(0xFF00FF00),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader(String nickname, String email, bool isPro) {
+    final avatarUrl = _avatarUrl ?? '';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F1221),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF1A1F36)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: _isEditing ? _generateRandomAvatar : null,
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00FF00).withOpacity(0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF00FF00), width: 3),
+                          image: avatarUrl.isNotEmpty
+                              ? DecorationImage(
+                                  image: NetworkImage(avatarUrl),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: avatarUrl.isEmpty
+                            ? Center(
+                                child: Text(
+                                  nickname.isNotEmpty ? nickname[0].toUpperCase() : 'P',
+                                  style: const TextStyle(
+                                    color: Color(0xFF00FF00),
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
+                      if (_isEditing)
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.refresh, color: Colors.white, size: 24),
+                                Text(
+                                  'Generate',
+                                  style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                                )
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_isEditing)
+                        TextField(
+                          controller: _nicknameController,
+                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            filled: true,
+                            fillColor: const Color(0xFF151515),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFF1A1F36)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFF00FF00)),
+                            ),
+                          ),
+                        )
+                      else
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                nickname,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Color(0xFF7A86AC), size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                setState(() {
+                                  _isEditing = true;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        isPro ? 'Professional Player' : 'Casual Player',
+                        style: const TextStyle(
+                          color: Color(0xFF7A86AC),
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00FF00).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF00FF00)),
+                        ),
+                        child: const Text(
+                          'Diamond',
+                          style: TextStyle(
+                            color: Color(0xFF00FF00),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (_isEditing) ...[
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _handleSave,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00FF00),
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        setState(() {
+                          _isEditing = false;
+                        });
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0xFF1A1F36)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildStatCard('Matches', '142', Icons.sports_esports),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildStatCard('Wins', '89', Icons.emoji_events),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildStatCard('Win Rate', '63%', Icons.trending_up),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F1221),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF1A1F36)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: const Color(0xFF00FF00), size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Color(0xFF00FF00),
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF7A86AC),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMyLeagues() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.shield, color: Color(0xFF00FF00), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'My Leagues',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildLeagueCard(
+            name: 'Valorant Pro League',
+            game: 'Valorant',
+            rank: '#12',
+            points: '2680 pts',
+            rankBadge: 'Diamond',
+            rankColor: const Color(0xFF00FF00),
+          ),
+          const SizedBox(height: 12),
+          _buildLeagueCard(
+            name: 'League of Legends Masters',
+            game: 'League of Legends',
+            rank: '#8',
+            points: '3150 pts',
+            rankBadge: 'Platinum',
+            rankColor: const Color(0xFF00DDDD),
+          ),
+          const SizedBox(height: 12),
+          _buildLeagueCard(
+            name: 'CS2 Elite Division',
+            game: 'CS2',
+            rank: '#24',
+            points: '1890 pts',
+            rankBadge: 'Gold',
+            rankColor: const Color(0xFFFFAA00),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeagueCard({
+    required String name,
+    required String game,
+    required String rank,
+    required String points,
+    required String rankBadge,
+    required Color rankColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F1221),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF1A1F36)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: rankColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: rankColor),
+                ),
+                child: Text(
+                  rankBadge,
+                  style: TextStyle(
+                    color: rankColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1F36),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              game,
+              style: const TextStyle(
+                color: Color(0xFF7A86AC),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Rank $rank',
+                style: const TextStyle(
+                  color: Color(0xFF7A86AC),
+                  fontSize: 13,
+                ),
+              ),
+              Text(
+                points,
+                style: const TextStyle(
+                  color: Color(0xFF00FF00),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAchievements() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.emoji_events, color: Color(0xFF00FF00), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Achievements',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _buildAchievementBadge('First Win', Icons.emoji_events),
+              _buildAchievementBadge('10 Wins', Icons.military_tech),
+              _buildAchievementBadge('50 Matches', Icons.sports_esports),
+              _buildAchievementBadge('Diamond Rank', Icons.diamond),
+              _buildAchievementBadge('Win Streak', Icons.local_fire_department),
+              _buildAchievementBadge('Team Player', Icons.groups),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAchievementBadge(String title, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F1221),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF00FF00)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: const Color(0xFF00FF00), size: 20),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
