@@ -21,6 +21,7 @@ import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_m
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/game_room_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_news/ui/news_list_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_messages/ui/messages_screen.dart';
 import 'package:arena_chain_flutter/screens/Team_Manager/manager_application_screen.dart';
 import 'package:arena_chain_flutter/screens/admin/admin_manager_approval_screen.dart';
 import 'package:arena_chain_flutter/screens/Team_Manager/team_manager_dashboard.dart';
@@ -49,6 +50,7 @@ class AppRoutes {
   static const String subscriptions = '/player/subscriptions';
   static const String leagues = '/player/leagues';
   static const String news = '/player/news';
+  static const String messages = '/player/messages';
   static const String addFriend = '/player/friends/add';
   static const String createTournament = '/tournaments/create';
   static const String tournamentBooking = '/tournaments/booking';
@@ -84,6 +86,7 @@ class AppRoutes {
         subscriptions: (context) => const SubscriptionsScreen(),
         leagues: (context) => const PlayerLeaguesScreen(),
         news: (context) => const NewsListScreen(),
+        messages: (context) => const MessagesScreen(),
         addFriend: (context) => const AddFriendScreen(),
         createTournament: (context) => const CreateTournamentScreen(),
         tournamentBooking: (context) {

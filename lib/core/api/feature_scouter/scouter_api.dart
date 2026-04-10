@@ -301,6 +301,148 @@ class ScouterApi {
     return [];
   }
 
+  /// Public catalog (same as web `GET /highlights/public`).
+  Future<List<HighlightItem>> getPublicHighlights() async {
+    final headers = await _authHeaders();
+    final resp = await http.get(
+      Uri.parse('$baseUrl/api/highlights/public'),
+      headers: headers,
+    );
+    final data = _decode(resp, 'Failed to load public highlights');
+    if (data is List) {
+      return data
+          .map((e) => HighlightItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<List<HighlightItem>> getHighlightsForVideo(
+    String videoId, {
+    bool publicOnly = false,
+  }) async {
+    final headers = await _authHeaders();
+    final q = publicOnly ? '?publicOnly=true' : '';
+    final resp = await http.get(
+      Uri.parse(
+        '$baseUrl/api/highlights/video/${Uri.encodeComponent(videoId)}$q',
+      ),
+      headers: headers,
+    );
+    final data = _decode(resp, 'Failed to load highlights for video');
+    if (data is List) {
+      return data
+          .map((e) => HighlightItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<Map<String, dynamic>> getHighlightEngagement(String highlightId) async {
+    final headers = await _authHeaders();
+    final resp = await http.get(
+      Uri.parse(
+        '$baseUrl/api/highlights/${Uri.encodeComponent(highlightId)}/engagement',
+      ),
+      headers: headers,
+    );
+    return _decode(resp, 'Failed to load engagement') as Map<String, dynamic>;
+  }
+
+  Future<List<Map<String, dynamic>>> getHighlightComments(
+    String highlightId,
+  ) async {
+    final headers = await _authHeaders();
+    final resp = await http.get(
+      Uri.parse(
+        '$baseUrl/api/highlights/${Uri.encodeComponent(highlightId)}/comments',
+      ),
+      headers: headers,
+    );
+    final data = _decode(resp, 'Failed to load comments');
+    if (data is List) {
+      return data
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<Map<String, dynamic>> postHighlightComment(
+    String highlightId,
+    String body, {
+    String? parentCommentId,
+  }) async {
+    final headers = await _authHeaders();
+    final resp = await http.post(
+      Uri.parse(
+        '$baseUrl/api/highlights/${Uri.encodeComponent(highlightId)}/comments',
+      ),
+      headers: headers,
+      body: jsonEncode({
+        'body': body,
+        if (parentCommentId != null) 'parentCommentId': parentCommentId,
+      }),
+    );
+    return _decode(resp, 'Failed to post comment') as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> likeHighlight(String highlightId) async {
+    final headers = await _authHeaders();
+    final resp = await http.post(
+      Uri.parse(
+        '$baseUrl/api/highlights/${Uri.encodeComponent(highlightId)}/like',
+      ),
+      headers: headers,
+    );
+    return _decode(resp, 'Failed to like') as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> unlikeHighlight(String highlightId) async {
+    final headers = await _authHeaders();
+    final resp = await http.delete(
+      Uri.parse(
+        '$baseUrl/api/highlights/${Uri.encodeComponent(highlightId)}/like',
+      ),
+      headers: headers,
+    );
+    if (resp.statusCode >= 200 && resp.statusCode < 300) {
+      if (resp.body.isEmpty) return {'liked': false};
+      final data = jsonDecode(resp.body);
+      if (data is Map<String, dynamic>) return data;
+      return {'liked': false};
+    }
+    throw Exception('Failed to unlike');
+  }
+
+  Future<Map<String, dynamic>> saveHighlight(String highlightId) async {
+    final headers = await _authHeaders();
+    final resp = await http.post(
+      Uri.parse(
+        '$baseUrl/api/highlights/${Uri.encodeComponent(highlightId)}/save',
+      ),
+      headers: headers,
+    );
+    return _decode(resp, 'Failed to save') as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> unsaveHighlight(String highlightId) async {
+    final headers = await _authHeaders();
+    final resp = await http.delete(
+      Uri.parse(
+        '$baseUrl/api/highlights/${Uri.encodeComponent(highlightId)}/save',
+      ),
+      headers: headers,
+    );
+    if (resp.statusCode >= 200 && resp.statusCode < 300) {
+      if (resp.body.isEmpty) return {'saved': false};
+      final data = jsonDecode(resp.body);
+      if (data is Map<String, dynamic>) return data;
+      return {'saved': false};
+    }
+    throw Exception('Failed to unsave');
+  }
+
   // ── Rank progression ──────────────────────────────────────────────────────
 
   Future<List<RankEntry>> getPlayerRanks(String playerUserId) async {

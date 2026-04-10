@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
 import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_matches_view_model.dart';
+import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_public_highlights_view_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_scouter/scouter_models.dart';
-import 'package:arena_chain_flutter/screens/scouter/ui/scouter_player_detail_screen.dart';
+import 'package:arena_chain_flutter/screens/scouter/ui/scouter_highlight_detail_screen.dart';
 
 class ScouterFeedTab extends StatelessWidget {
   final String scouterId;
@@ -14,12 +15,13 @@ class ScouterFeedTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ScouterMatchesViewModel>(
-      builder: (context, vm, _) {
+    return Consumer2<ScouterMatchesViewModel, ScouterPublicHighlightsViewModel>(
+      builder: (context, vm, hlVm, _) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(context),
+            _buildTopHighlightsRow(context, hlVm),
             _buildFilterChips(vm),
             Expanded(
               child: vm.isLoading
@@ -33,6 +35,143 @@ class ScouterFeedTab extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  /// Public clips ranked by reactions (likes + comments + saves) — same idea as web scouter dashboard.
+  Widget _buildTopHighlightsRow(BuildContext context, ScouterPublicHighlightsViewModel hlVm) {
+    if (!hlVm.isLoading && hlVm.highlights.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+          child: Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: Color(0xFF00FF00), size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Top highlights',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (hlVm.isLoading)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF00FF00),
+                  ),
+                )
+              else
+                Text(
+                  '${hlVm.highlights.length} clips',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    fontSize: 12,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 200,
+          child: hlVm.isLoading && hlVm.highlights.isEmpty
+              ? const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF00FF00)),
+                )
+              : ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  itemCount: hlVm.highlights.length,
+                  itemBuilder: (ctx, i) {
+                    final h = hlVm.highlights[i];
+                    return _feedHighlightCard(context, h);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _feedHighlightCard(BuildContext context, HighlightItem h) {
+    final thumb = h.thumbnailUrl;
+    final clip = h.clipUrl;
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (_) => ScouterHighlightDetailScreen(highlight: h),
+            ),
+          );
+        },
+        child: Container(
+          width: 120,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF00FF00).withValues(alpha: 0.35)),
+            color: const Color(0xFF111625).withValues(alpha: 0.8),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (thumb != null && thumb.isNotEmpty)
+                Image.network(
+                  thumb,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const ColoredBox(color: Colors.black26),
+                )
+              else if (clip != null && clip.isNotEmpty)
+                const ColoredBox(color: Colors.black45)
+              else
+                const ColoredBox(color: Colors.black26),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.75),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+              const Center(
+                child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 36),
+              ),
+              Positioned(
+                left: 8,
+                right: 8,
+                bottom: 8,
+                child: Text(
+                  h.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

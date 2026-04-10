@@ -7,18 +7,18 @@ import '../../core/api/training_api_service.dart';
 import '../../core/models/training_models.dart';
 import 'training_game_screen.dart';
 
-// ─── COLOUR PALETTE ───────────────────────────────────────────────────────────
-const _bg = Color(0xFF0A0D12);
-const _surface = Color(0xFF111620);
-const _card = Color(0xFF161C28);
-const _accent = Color(0xFFE83B3B);
-const _accentGlow = Color(0x44E83B3B);
-const _gold = Color(0xFFFFD700);
-const _silver = Color(0xFFC0C0C0);
-const _bronze = Color(0xFFCD7F32);
+// ─── COLOUR PALETTE (single accent: neon green, matches Home / bottom nav) ───
+const _bg = Color(0xFF000000);
+const _surface = Color(0xFF14151C);
+const _card = Color(0xFF1A1C23);
+const _neon = Color(0xFF39FF14);
+const _neonDeep = Color(0xFF1FA34A);
+const _neonGlow = Color(0x5539FF14);
+const _rank2 = Color(0xFF7AE582);
+const _rank3 = Color(0xFF4CAF50);
 const _textPrimary = Color(0xFFEEEEEE);
-const _textSecondary = Color(0xFF8896A8);
-const _border = Color(0xFF1E2736);
+const _textSecondary = Color(0xFF8B95A5);
+const _border = Color(0xFF2A2D36);
 
 class TrainingDashboardScreen extends StatefulWidget {
   /// Inject the API service (or construct it here if you use a DI container).
@@ -47,7 +47,6 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
   PersonalStats? _myStats;
   bool _loadingLeaderboard = true;
   bool _loadingStats = true;
-  String? _leaderboardError;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -88,7 +87,6 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
     if (!mounted) return;
     setState(() {
       _loadingLeaderboard = true;
-      _leaderboardError = null;
     });
     try {
       final data = await widget.apiService.getLeaderboard(
@@ -97,8 +95,8 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
         difficulty: _selectedDifficulty,
       );
       if (mounted) setState(() => _leaderboard = data);
-    } catch (e) {
-      if (mounted) setState(() => _leaderboardError = e.toString());
+    } catch (_) {
+      if (mounted) setState(() => _leaderboard = []);
     } finally {
       if (mounted) setState(() => _loadingLeaderboard = false);
     }
@@ -146,7 +144,7 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
         body: SafeArea(
           child: CustomScrollView(
             slivers: [
-              _buildHeader(),
+              _buildHeaderSliver(),
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverList(
@@ -170,48 +168,76 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
     );
   }
 
-  Widget _buildHeader() {
-    return SliverAppBar(
-      backgroundColor: _bg,
-      expandedHeight: 120,
-      floating: false,
-      pinned: true,
-      elevation: 0,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new, color: _textSecondary),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
-        title: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildHeaderSliver() {
+    final canPop = Navigator.of(context).canPop();
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 20, 8, 8),
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            Row(
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Icon(Icons.my_location, color: _accent, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  'TRAINING MODE',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: _textPrimary,
-                    letterSpacing: 2,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _neon.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _neon.withValues(alpha: 0.35)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _neon.withValues(alpha: 0.12),
+                            blurRadius: 10,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.filter_center_focus, color: _neon, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'TRAINING MODE',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: _textPrimary,
+                        letterSpacing: 1.8,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'Sharpen your aim. Climb the ranks.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _textSecondary.withValues(alpha: 0.95),
+                      fontWeight: FontWeight.w400,
+                      height: 1.35,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 2),
-            Text(
-              'Sharpen your aim. Climb the ranks.',
-              style: TextStyle(
-                fontSize: 11,
-                color: _textSecondary,
-                fontWeight: FontWeight.w400,
-                letterSpacing: 0.5,
+            if (canPop)
+              Positioned(
+                left: 0,
+                top: 0,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                  icon: const Icon(Icons.arrow_back_ios_new, color: _textSecondary, size: 18),
+                  onPressed: () => Navigator.maybePop(context),
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -235,9 +261,7 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
         Row(
           children: _difficultyOptions.map((diff) {
             final selected = _selectedDifficulty == diff;
-            final color = diff == 'EASY' ? const Color(0xFF3BE87B) 
-                        : diff == 'MEDIUM' ? const Color(0xFF3B9EE8) 
-                        : _accent;
+            const Color accentColor = _neon;
             return Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(right: 8),
@@ -249,14 +273,22 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    height: 44,
+                    height: 46,
                     decoration: BoxDecoration(
-                      color: selected ? color.withOpacity(0.15) : _surface,
-                      borderRadius: BorderRadius.circular(10),
+                      color: selected ? accentColor.withValues(alpha: 0.14) : _surface,
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: selected ? color : _border,
+                        color: selected ? accentColor : _border,
                         width: selected ? 2 : 1,
                       ),
+                      boxShadow: selected
+                          ? [
+                              BoxShadow(
+                                color: accentColor.withValues(alpha: 0.22),
+                                blurRadius: 10,
+                              ),
+                            ]
+                          : null,
                     ),
                     alignment: Alignment.center,
                     child: Text(
@@ -264,7 +296,7 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
-                        color: selected ? color : _textSecondary,
+                        color: selected ? accentColor : _textSecondary,
                         letterSpacing: 1,
                       ),
                     ),
@@ -279,127 +311,111 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
   }
 
   Widget _buildPlaySection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _border),
-        boxShadow: [
-          BoxShadow(
-            color: _accent.withOpacity(0.08),
-            blurRadius: 24,
-            spreadRadius: 0,
+    const accentColor = _neon;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'SELECT DURATION',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: _textSecondary,
+            letterSpacing: 2,
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'SELECT DURATION',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: _textSecondary,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: _durationOptions.map((opt) {
-              final selected = _selectedDuration == opt['value'];
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _selectedDuration = opt['value'] as int);
-                      _fetchLeaderboard();
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: selected ? _accent : _surface,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: selected ? _accent : _border,
-                          width: selected ? 2 : 1,
-                        ),
-                        boxShadow: selected
-                            ? [
-                                BoxShadow(
-                                  color: _accentGlow,
-                                  blurRadius: 12,
-                                  spreadRadius: 0,
-                                )
-                              ]
-                            : [],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: _durationOptions.map((opt) {
+            final selected = _selectedDuration == opt['value'];
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _selectedDuration = opt['value'] as int);
+                    _fetchLeaderboard();
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: selected ? accentColor.withValues(alpha: 0.14) : _surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: selected ? accentColor : _border,
+                        width: selected ? 2 : 1,
                       ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        opt['label'] as String,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: selected ? Colors.white : _textSecondary,
-                          letterSpacing: 1,
-                        ),
-                      ),
+                      boxShadow: selected
+                          ? [
+                              BoxShadow(
+                                color: accentColor.withValues(alpha: 0.22),
+                                blurRadius: 10,
+                              ),
+                            ]
+                          : null,
                     ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 24),
-          // PLAY button
-          ScaleTransition(
-            scale: _pulseAnimation,
-            child: GestureDetector(
-              onTap: _startGame,
-              child: Container(
-                width: double.infinity,
-                height: 60,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFE83B3B), Color(0xFFB52020)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _accent.withOpacity(0.5),
-                      blurRadius: 20,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.play_arrow_rounded,
-                        color: Colors.white, size: 28),
-                    SizedBox(width: 8),
-                    Text(
-                      'PLAY',
+                    alignment: Alignment.center,
+                    child: Text(
+                      opt['label'] as String,
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: 3,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: selected ? accentColor : _textSecondary,
+                        letterSpacing: 1,
                       ),
                     ),
-                  ],
+                  ),
                 ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 24),
+        ScaleTransition(
+          scale: _pulseAnimation,
+          child: GestureDetector(
+            onTap: _startGame,
+            child: Container(
+              width: double.infinity,
+              height: 58,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [_neon, _neonDeep],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: _neonGlow,
+                    blurRadius: 18,
+                    spreadRadius: 0,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.play_arrow_rounded, color: Colors.black, size: 28),
+                  SizedBox(width: 8),
+                  Text(
+                    'PLAY',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black,
+                      letterSpacing: 3,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -416,18 +432,26 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
         color: _card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
-              color: _accent.withOpacity(0.15),
+              color: const Color(0xFF0F2818),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _neon.withValues(alpha: 0.4)),
             ),
-            child: const Icon(Icons.person, color: _accent, size: 24),
+            child: Icon(Icons.person_rounded, color: _neon.withValues(alpha: 0.95), size: 28),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -469,7 +493,7 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
-                    color: _accent,
+                    color: _neon,
                   ),
                 ),
               ],
@@ -485,7 +509,7 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
       children: [
         Row(
           children: [
-            const Icon(Icons.emoji_events, color: _gold, size: 18),
+            Icon(Icons.emoji_events_rounded, color: _neon.withValues(alpha: 0.9), size: 20),
             const SizedBox(width: 8),
             const Text(
               'LEADERBOARD',
@@ -497,9 +521,14 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
               ),
             ),
             const Spacer(),
-            GestureDetector(
-              onTap: _fetchLeaderboard,
-              child: const Icon(Icons.refresh, color: _textSecondary, size: 18),
+            IconButton(
+              onPressed: _fetchLeaderboard,
+              icon: Icon(Icons.refresh_rounded, color: _textSecondary.withValues(alpha: 0.85), size: 22),
+              style: IconButton.styleFrom(
+                backgroundColor: _surface,
+                padding: const EdgeInsets.all(8),
+                minimumSize: const Size(40, 40),
+              ),
             ),
           ],
         ),
@@ -509,19 +538,15 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
                 padding: const EdgeInsets.only(bottom: 10),
                 child: _shimmerCard(height: 64),
               ))
-        else if (_leaderboardError != null)
-          _buildErrorCard()
         else if (_leaderboard.isEmpty)
           _buildEmptyLeaderboard()
         else
-          ..._leaderboard
-              .asMap()
-              .entries
-              .map((e) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _buildLeaderboardRow(e.value),
-                  ))
-              .toList(),
+          ..._leaderboard.map(
+            (e) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildLeaderboardRow(e),
+            ),
+          ),
       ],
     );
   }
@@ -532,17 +557,14 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
     Widget rankWidget;
 
     if (entry.rank == 1) {
-      rankColor = _gold;
-      rankWidget =
-          const Icon(Icons.emoji_events, color: _gold, size: 20);
+      rankColor = _neon;
+      rankWidget = const Icon(Icons.emoji_events_rounded, color: _neon, size: 20);
     } else if (entry.rank == 2) {
-      rankColor = _silver;
-      rankWidget =
-          const Icon(Icons.emoji_events, color: _silver, size: 20);
+      rankColor = _rank2;
+      rankWidget = const Icon(Icons.emoji_events_rounded, color: _rank2, size: 20);
     } else if (entry.rank == 3) {
-      rankColor = _bronze;
-      rankWidget =
-          const Icon(Icons.emoji_events, color: _bronze, size: 20);
+      rankColor = _rank3;
+      rankWidget = const Icon(Icons.emoji_events_rounded, color: _rank3, size: 20);
     } else {
       rankColor = _textSecondary;
       rankWidget = Text(
@@ -558,10 +580,10 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        color: isMe ? _accent.withOpacity(0.12) : _card,
-        borderRadius: BorderRadius.circular(12),
+        color: isMe ? _neon.withValues(alpha: 0.08) : _card,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isMe ? _accent.withOpacity(0.4) : _border,
+          color: isMe ? _neon.withValues(alpha: 0.4) : _border,
           width: isMe ? 1.5 : 1,
         ),
       ),
@@ -598,7 +620,7 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: isMe ? _accent : _textPrimary,
+                    color: isMe ? _neon : _textPrimary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -632,40 +654,13 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
     );
   }
 
-  Widget _buildErrorCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _accent.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: _accent),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Could not load leaderboard. Tap to retry.',
-              style: const TextStyle(color: _textSecondary, fontSize: 13),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: _accent),
-            onPressed: _fetchLeaderboard,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildEmptyLeaderboard() {
     return Container(
       padding: const EdgeInsets.all(32),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: _card,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _border),
       ),
       child: Column(
@@ -686,8 +681,9 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen>
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(12),
+        color: _surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border),
       ),
     );
   }

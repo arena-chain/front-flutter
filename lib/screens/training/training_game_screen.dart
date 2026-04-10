@@ -480,12 +480,63 @@ class _TrainingGameScreenState extends State<TrainingGameScreen>
     );
   }
 
+  void _stopGameSession() {
+    _countdownTimer?.cancel();
+    _targetSpawnTimer?.cancel();
+    _targetExpiryTimer?.cancel();
+    _comboBreakTimer?.cancel();
+    _countdownTimer = null;
+    _targetSpawnTimer = null;
+    _targetExpiryTimer = null;
+    _gameOver = true;
+  }
+
+  Future<void> _onBackPressed() async {
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _surface,
+        surfaceTintColor: Colors.transparent,
+        title: const Text(
+          'Leave training?',
+          style: TextStyle(
+            color: _textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        content: const Text(
+          'Your current session will end without saving a result.',
+          style: TextStyle(color: _textSecondary, fontSize: 14, height: 1.35),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Stay', style: TextStyle(color: _textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Leave',
+              style: TextStyle(
+                color: _accent,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (leave != true || !mounted) return;
+    _stopGameSession();
+    Navigator.of(context).pop();
+  }
+
   Widget _buildHUD() {
     final timerColor = _timeRemaining <= 10 ? _accent : _textPrimary;
 
     return Container(
       height: _kTopBarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.only(left: 8, right: 24),
       decoration: BoxDecoration(
         color: _surface,
         border: const Border(
@@ -499,6 +550,15 @@ class _TrainingGameScreenState extends State<TrainingGameScreen>
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                IconButton(
+                  tooltip: 'Back',
+                  icon: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: _textPrimary,
+                    size: 24,
+                  ),
+                  onPressed: _onBackPressed,
+                ),
                 IconButton(
                   icon: Icon(
                     _isSoundMuted ? Icons.volume_off : Icons.volume_up,
