@@ -6,9 +6,16 @@ import '../../../../core/api/video_api.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/models/channel_model.dart';
 import '../../../../core/models/video_model.dart';
+<<<<<<< HEAD
 import '../../../feature_auth/viewmodel/auth_viewmodel.dart';
 import '../../feature_live/ui/live_stream_screen.dart'; // Import Live Screen
 import '../../feature_live/ui/schedule_stream_screen.dart'; // Import Schedule Screen
+=======
+import '../../../../core/models/feature_scouter/scouter_models.dart';
+import '../../../../core/repositories/feature_scouter/scouter_repository.dart';
+import '../../../feature_auth/viewmodel/auth_viewmodel.dart';
+import '../../../scouter/ui/scouter_highlight_detail_screen.dart';
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 import 'video_player_screen.dart';
 
 class MyChannelScreen extends StatefulWidget {
@@ -22,6 +29,7 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
   // Mocking state: set to null to see "Create Channel", or an object to see "Channel"
   Channel? _myChannel;
   List<Video> _videos = [];
+<<<<<<< HEAD
   final VideoApi _videoApi = VideoApi();
   bool _isLoadingVideos = false;
   bool _isUploadingVideo = false;
@@ -31,6 +39,20 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
   final Color _cardColor = const Color(0xFF131625);
   final Color _accentColor = const Color(0xFF00E5FF); // Cyber punk blue cyan
   final Color _primaryActionColor = const Color(0xFFD32F2F); // Red for Go Live
+=======
+  List<HighlightItem> _highlightClips = [];
+  final VideoApi _videoApi = VideoApi();
+  bool _isLoadingVideos = false;
+  bool _loadingClips = false;
+  bool _isUploadingVideo = false;
+  bool _showUploadActions = false;
+
+  /// Matches Home / Live / Training (black canvas + neon).
+  final Color _backgroundColor = const Color(0xFF000000);
+  final Color _cardColor = const Color(0xFF1A1C23);
+  final Color _surface = const Color(0xFF0A0A0A);
+  final Color _neon = const Color(0xFF39FF14);
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
   @override
   void initState() {
@@ -110,6 +132,10 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
       final videos = await _videoApi.getVideos(uploaderId: uploaderId);
       if (!mounted) return;
       setState(() => _videos = videos);
+<<<<<<< HEAD
+=======
+      await _loadHighlightClips(uploaderId);
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -122,29 +148,110 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     }
   }
 
+<<<<<<< HEAD
   Future<void> _pickAndUploadVideo() async {
     final source = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: _cardColor,
+=======
+  /// Short clips from the player’s uploads + public pool, ranked by reactions (mobile parity with web).
+  Future<void> _loadHighlightClips(String? userId) async {
+    if (userId == null || userId.isEmpty) {
+      if (mounted) setState(() => _highlightClips = []);
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _loadingClips = true);
+    try {
+      final repo = ScouterRepository();
+      final approved = _videos.where((v) => v.status == VideoStatus.approved).toList();
+      final fromVideo = <HighlightItem>[];
+      for (final v in approved) {
+        if (v.id.isEmpty) continue;
+        try {
+          final list =
+              await repo.getHighlightsForVideo(v.id, publicOnly: false);
+          for (final h in list) {
+            if (h.creatorId == userId) fromVideo.add(h);
+          }
+        } catch (_) {}
+      }
+      final byId = {for (final h in fromVideo) h.id: h};
+      if (byId.isEmpty) {
+        try {
+          final pub = await repo.getPublicHighlights();
+          for (final h in pub) {
+            if (h.creatorId == userId) byId[h.id] = h;
+          }
+        } catch (_) {}
+      }
+      var merged = byId.values.toList();
+      if (merged.isNotEmpty) {
+        merged = await repo.rankHighlights(merged);
+      }
+      if (mounted) setState(() => _highlightClips = merged);
+    } catch (_) {
+      if (mounted) setState(() => _highlightClips = []);
+    } finally {
+      if (mounted) setState(() => _loadingClips = false);
+    }
+  }
+
+  Future<void> _pickAndUploadVideo() async {
+    final source = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: _surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        side: BorderSide(color: Color(0x3329FF14)),
+      ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       builder: (bottomSheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+<<<<<<< HEAD
             ListTile(
               leading: const Icon(Icons.video_library, color: Colors.white),
+=======
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: _neon.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: Icon(Icons.video_library_outlined, color: _neon.withValues(alpha: 0.9)),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               title: const Text('Pick from gallery', style: TextStyle(color: Colors.white)),
               onTap: () => Navigator.pop(bottomSheetContext, 'gallery'),
             ),
             ListTile(
+<<<<<<< HEAD
               leading: const Icon(Icons.videocam, color: Colors.white),
+=======
+              leading: Icon(Icons.videocam_outlined, color: _neon.withValues(alpha: 0.9)),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               title: const Text('Record with camera', style: TextStyle(color: Colors.white)),
               onTap: () => Navigator.pop(bottomSheetContext, 'camera'),
             ),
             ListTile(
+<<<<<<< HEAD
               leading: const Icon(Icons.folder_open, color: Colors.white),
               title: const Text('Browse files', style: TextStyle(color: Colors.white)),
               onTap: () => Navigator.pop(bottomSheetContext, 'files'),
             ),
+=======
+              leading: Icon(Icons.folder_open_rounded, color: _neon.withValues(alpha: 0.9)),
+              title: const Text('Browse files', style: TextStyle(color: Colors.white)),
+              onTap: () => Navigator.pop(bottomSheetContext, 'files'),
+            ),
+            const SizedBox(height: 8),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           ],
         ),
       ),
@@ -191,16 +298,45 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: _cardColor,
+<<<<<<< HEAD
         title: const Text('Upload Video', style: TextStyle(color: Colors.white)),
+=======
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: _neon.withValues(alpha: 0.35)),
+        ),
+        title: Text(
+          'Upload Video',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            shadows: [Shadow(color: _neon.withValues(alpha: 0.25), blurRadius: 8)],
+          ),
+        ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: titleController,
               style: const TextStyle(color: Colors.white),
+<<<<<<< HEAD
               decoration: const InputDecoration(
                 labelText: 'Title',
                 labelStyle: TextStyle(color: Colors.white70),
+=======
+              decoration: InputDecoration(
+                labelText: 'Title',
+                labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: _neon.withValues(alpha: 0.2)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: _neon.withValues(alpha: 0.55)),
+                ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ),
             ),
             const SizedBox(height: 12),
@@ -208,9 +344,23 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
               controller: descriptionController,
               maxLines: 3,
               style: const TextStyle(color: Colors.white),
+<<<<<<< HEAD
               decoration: const InputDecoration(
                 labelText: 'Description (optional)',
                 labelStyle: TextStyle(color: Colors.white70),
+=======
+              decoration: InputDecoration(
+                labelText: 'Description (optional)',
+                labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: _neon.withValues(alpha: 0.2)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: _neon.withValues(alpha: 0.55)),
+                ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ),
             ),
           ],
@@ -218,11 +368,23 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
+<<<<<<< HEAD
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Upload'),
+=======
+            child: Text('Cancel', style: TextStyle(color: Colors.white.withValues(alpha: 0.65))),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: _neon,
+              foregroundColor: Colors.black,
+            ),
+            child: const Text('Upload', style: TextStyle(fontWeight: FontWeight.w800)),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           ),
         ],
       ),
@@ -271,6 +433,7 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     }
   }
 
+<<<<<<< HEAD
   void _showGoLiveOptions() {
     showModalBottomSheet(
       context: context,
@@ -375,6 +538,17 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
         ),
       ),
     );
+=======
+  int get _approvedVideoCount =>
+      _videos.where((v) => v.status == VideoStatus.approved).length;
+
+  int get _totalVideoViews => _videos.fold<int>(0, (sum, v) => sum + v.views);
+
+  String _formatCompactCount(int n) {
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+    return '$n';
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   }
 
   @override
@@ -385,11 +559,16 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     return Scaffold(
       backgroundColor: _backgroundColor,
       body: CustomScrollView(
+<<<<<<< HEAD
+=======
+        clipBehavior: Clip.none,
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         slivers: [
           _buildSliverAppBar(),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
+<<<<<<< HEAD
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -459,10 +638,132 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
                       ),
                     ),
                   const SizedBox(height: 8),
+=======
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.topCenter,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 36),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(child: _buildUserInfo()),
+                        const SizedBox(height: 20),
+                        _buildChannelStrip(),
+                        const SizedBox(height: 20),
+                        _buildChannelActions(),
+                        const SizedBox(height: 28),
+                        _buildStatsSection(),
+                        const SizedBox(height: 32),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Recent Videos',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  shadows: [
+                                    Shadow(color: _neon.withValues(alpha: 0.28), blurRadius: 8),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                setState(() => _showUploadActions = !_showUploadActions);
+                              },
+                              style: IconButton.styleFrom(
+                                backgroundColor: _surface,
+                                side: BorderSide(color: _neon.withValues(alpha: 0.35)),
+                              ),
+                              icon: Icon(
+                                _showUploadActions ? Icons.close_rounded : Icons.add_rounded,
+                                color: _neon.withValues(alpha: 0.95),
+                              ),
+                              tooltip: 'Toggle upload actions',
+                            ),
+                          ],
+                        ),
+                        if (_showUploadActions)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _cardColor,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: _neon.withValues(alpha: 0.28)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _neon.withValues(alpha: 0.08),
+                                  blurRadius: 16,
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: FilledButton.icon(
+                                    onPressed: _isUploadingVideo ? null : _pickAndUploadVideo,
+                                    icon: _isUploadingVideo
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.black,
+                                            ),
+                                          )
+                                        : const Icon(Icons.upload_rounded, color: Colors.black),
+                                    label: Text(
+                                      _isUploadingVideo ? 'Uploading...' : 'Upload video',
+                                      style: const TextStyle(fontWeight: FontWeight.w800),
+                                    ),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: _neon,
+                                      foregroundColor: Colors.black,
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                IconButton(
+                                  onPressed: _isLoadingVideos ? null : _fetchVideos,
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: _surface,
+                                    side: BorderSide(color: _neon.withValues(alpha: 0.35)),
+                                  ),
+                                  icon: Icon(Icons.refresh_rounded, color: _neon.withValues(alpha: 0.9)),
+                                  tooltip: 'Refresh videos',
+                                ),
+                              ],
+                            ),
+                          ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    top: -100,
+                    left: 0,
+                    right: 0,
+                    child: Center(child: _buildChannelAvatar()),
+                  ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 ],
               ),
             ),
           ),
+<<<<<<< HEAD
+=======
+          _buildHighlightClipsSliver(),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           _buildSliverVideoList(),
           const SliverToBoxAdapter(
              child: SizedBox(height: 80), // Bottom padding
@@ -472,6 +773,7 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildSliverVideoList() {
     final approvedVideos = _videos.where((v) => v.status == VideoStatus.approved).toList();
     if (_isLoadingVideos) {
@@ -479,6 +781,166 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
         child: Padding(
           padding: EdgeInsets.all(24.0),
           child: Center(child: CircularProgressIndicator()),
+=======
+  Widget _buildHighlightClipsSliver() {
+    if (!_loadingClips && _highlightClips.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.auto_awesome, color: _neon, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'My highlight clips',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(color: _neon.withValues(alpha: 0.22), blurRadius: 6),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                if (_loadingClips)
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: _neon.withValues(alpha: 0.85)),
+                  )
+                else
+                  Text(
+                    '${_highlightClips.length}',
+                    style: TextStyle(
+                      color: _neon.withValues(alpha: 0.75),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (_loadingClips && _highlightClips.isEmpty)
+              SizedBox(
+                height: 120,
+                child: Center(child: CircularProgressIndicator(color: _neon.withValues(alpha: 0.85))),
+              )
+            else
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _highlightClips.length,
+                  itemBuilder: (context, i) {
+                    final h = _highlightClips[i];
+                    final thumb = h.thumbnailUrl;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  ScouterHighlightDetailScreen(highlight: h),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 120,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _neon.withValues(alpha: 0.12),
+                                blurRadius: 12,
+                              ),
+                            ],
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: _neon.withValues(alpha: 0.35)),
+                              color: _cardColor,
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                if (thumb != null && thumb.isNotEmpty)
+                                  Image.network(
+                                    thumb,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        _highlightClipPlaceholder(),
+                                  )
+                                else
+                                  _highlightClipPlaceholder(),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withValues(alpha: 0.75),
+                                      ],
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                    ),
+                                  ),
+                                ),
+                                Center(
+                                  child: Icon(
+                                    Icons.play_circle_rounded,
+                                    color: _neon.withValues(alpha: 0.85),
+                                    size: 40,
+                                  ),
+                                ),
+                                Positioned(
+                                  left: 8,
+                                  right: 8,
+                                  bottom: 8,
+                                  child: Text(
+                                    h.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSliverVideoList() {
+    final approvedVideos = _videos.where((v) => v.status == VideoStatus.approved).toList();
+    if (_isLoadingVideos) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Center(
+            child: CircularProgressIndicator(color: _neon.withValues(alpha: 0.85)),
+          ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         ),
       );
     }
@@ -487,7 +949,18 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(32.0),
+<<<<<<< HEAD
             child: Text('No videos uploaded yet.', style: TextStyle(color: Colors.grey[600])),
+=======
+            child: Text(
+              'No videos uploaded yet.',
+              style: TextStyle(
+                color: _neon.withValues(alpha: 0.45),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           ),
         ),
       );
@@ -516,6 +989,7 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
                     },
               child: Container(
                 decoration: BoxDecoration(
+<<<<<<< HEAD
                   color: _cardColor,
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -604,6 +1078,122 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
                     ),
                   ],
                 ),
+=======
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _neon.withValues(alpha: 0.08),
+                      blurRadius: 18,
+                    ),
+                  ],
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: _neon.withValues(alpha: 0.28)),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Thumbnail placeholder
+                      Stack(
+                        children: [
+                          Container(
+                            height: 180,
+                            width: double.infinity,
+                            color: Colors.black26,
+                            child: video.thumbnailUrl != null
+                                ? Image.network(
+                                    video.thumbnailUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => _videoThumbPlaceholder(),
+                                  )
+                                : _videoThumbPlaceholder(),
+                          ),
+                          Positioned(
+                            left: 12,
+                            top: 12,
+                            child: Icon(
+                              Icons.play_circle_rounded,
+                              color: _neon.withValues(alpha: 0.9),
+                              size: 36,
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.82),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: _neon.withValues(alpha: 0.35)),
+                              ),
+                              child: Text(
+                                _formatDuration(video.duration),
+                                style: TextStyle(
+                                  color: _neon.withValues(alpha: 0.95),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              video.title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Text(
+                                  '${video.views} views',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.45),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                  child: Icon(Icons.circle, size: 4, color: _neon.withValues(alpha: 0.35)),
+                                ),
+                                Text(
+                                  _timeAgo(video.uploadDate),
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.45),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (playableUrl == null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  'Video URL missing',
+                                  style: TextStyle(color: Colors.red[300], fontSize: 12),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ),
             ),
           );
@@ -664,6 +1254,7 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     return url;
   }
 
+<<<<<<< HEAD
   // ... (Keep existing _buildSliverAppBar, _buildUserInfo, _buildActionButtons, _buildStatsSection, _buildStatItem, _buildVerticalDivider) ...
   // Note: I will need to manually preserve them if I am replacing the whole block, or rely on context. 
   // Since I replaced a large chunk, I will re-implement them or leave them if they were outside the replaced range.
@@ -673,10 +1264,33 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
 
   // To be safe, I should probably output the helper methods I'm calling in `build` or ensure they are preserved.
   // Let's assume the user wants me to replace the logic. I will include the necessary helper methods for the tabs and lists.
+=======
+  /// Banner when URL missing or fails to load — pro channel look, matches app neon.
+  Widget _bannerBackground() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF1A2830),
+            const Color(0xFF0F1A14),
+            _backgroundColor,
+          ],
+        ),
+      ),
+      child: CustomPaint(
+        painter: _ChannelBannerGridPainter(color: _neon.withValues(alpha: 0.1)),
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
   Widget _buildSliverAppBar() {
     return SliverAppBar(
       backgroundColor: _backgroundColor,
+<<<<<<< HEAD
       expandedHeight: 200.0,
       pinned: true,
       leading: Container(
@@ -718,20 +1332,74 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
             // Gradient Overlay
             Positioned.fill(
               child: Container(
+=======
+      expandedHeight: 200,
+      pinned: true,
+      stretch: true,
+      leading: Container(
+        margin: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.55),
+          shape: BoxShape.circle,
+          border: Border.all(color: _neon.withValues(alpha: 0.22)),
+        ),
+        child: BackButton(color: _neon.withValues(alpha: 0.95)),
+      ),
+      actions: [
+        Container(
+          margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.55),
+            shape: BoxShape.circle,
+            border: Border.all(color: _neon.withValues(alpha: 0.22)),
+          ),
+          child: IconButton(
+            icon: Icon(Icons.settings_outlined, color: _neon.withValues(alpha: 0.95)),
+            onPressed: () {},
+          ),
+        ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        stretchModes: const [StretchMode.zoomBackground],
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(
+              child: _myChannel!.bannerUrl != null && _myChannel!.bannerUrl!.isNotEmpty
+                  ? Image.network(
+                      _myChannel!.bannerUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => _bannerBackground(),
+                    )
+                  : _bannerBackground(),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
+<<<<<<< HEAD
                       Colors.transparent,
                       _backgroundColor.withOpacity(0.9),
                       _backgroundColor,
                     ],
                     stops: const [0.0, 0.8, 1.0],
+=======
+                      Colors.black.withValues(alpha: 0.2),
+                      Colors.transparent,
+                      _backgroundColor.withValues(alpha: 0.75),
+                      _backgroundColor,
+                    ],
+                    stops: const [0.0, 0.28, 0.78, 1.0],
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                   ),
                 ),
               ),
             ),
+<<<<<<< HEAD
             // Avatar (Half inside/half outside handled by padding in body, but visual here)
             Container(
               transform: Matrix4.translationValues(0, 50, 0),
@@ -747,6 +1415,22 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
                   child: _myChannel!.avatarUrl == null
                       ? const Icon(Icons.person, size: 50, color: Colors.white)
                       : null,
+=======
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 2,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      _neon.withValues(alpha: 0.55),
+                      Colors.transparent,
+                    ],
+                  ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 ),
               ),
             ),
@@ -756,6 +1440,7 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildUserInfo() {
     return Column(
       children: [
@@ -776,6 +1461,158 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
           ],
         ),
         const SizedBox(height: 4),
+=======
+  Widget _buildChannelAvatar() {
+    const double inner = 100;
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: _neon.withValues(alpha: 0.55), width: 2.5),
+        boxShadow: [
+          BoxShadow(color: _neon.withValues(alpha: 0.25), blurRadius: 22, spreadRadius: 0),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.65), blurRadius: 16, offset: const Offset(0, 8)),
+        ],
+      ),
+      padding: const EdgeInsets.all(3),
+      child: ClipOval(
+        child: SizedBox(
+          width: inner,
+          height: inner,
+          child: _myChannel!.avatarUrl != null && _myChannel!.avatarUrl!.isNotEmpty
+              ? Image.network(
+                  _myChannel!.avatarUrl!,
+                  fit: BoxFit.cover,
+                  width: inner,
+                  height: inner,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return ColoredBox(
+                      color: _cardColor,
+                      child: Center(
+                        child: SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: _neon.withValues(alpha: 0.75),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) => _avatarFallback(inner),
+                )
+              : _avatarFallback(inner),
+        ),
+      ),
+    );
+  }
+
+  Widget _avatarFallback(double size) {
+    final name = _myChannel!.name;
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _cardColor,
+            _neon.withValues(alpha: 0.12),
+          ],
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: TextStyle(
+          color: _neon.withValues(alpha: 0.95),
+          fontSize: size * 0.38,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
+  Widget _videoThumbPlaceholder() {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                _cardColor,
+                _neon.withValues(alpha: 0.08),
+              ],
+            ),
+          ),
+        ),
+        Center(
+          child: Icon(
+            Icons.play_circle_outline_rounded,
+            color: _neon.withValues(alpha: 0.42),
+            size: 56,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _highlightClipPlaceholder() {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _cardColor,
+            _neon.withValues(alpha: 0.12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserInfo() {
+    final handle = _myChannel!.name.replaceAll(' ', '').toLowerCase();
+    return Column(
+      children: [
+        Text(
+          '@$handle',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.45),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(
+                _myChannel!.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.verified_rounded, color: _neon.withValues(alpha: 0.95), size: 22),
+          ],
+        ),
+        const SizedBox(height: 6),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         Text(
           'Tunisia • Pro Gamer',
           style: TextStyle(color: Colors.grey[400], fontSize: 14),
@@ -784,6 +1621,7 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildActionButtons() {
     return Row(
       children: [
@@ -799,10 +1637,93 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 8,
               shadowColor: _primaryActionColor.withOpacity(0.5),
+=======
+  Widget _buildChannelStrip() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _neon.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF6E7681),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Offline',
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Esports • VODs & highlights',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.55),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChannelActions() {
+    final border = _neon.withValues(alpha: 0.45);
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () {},
+            icon: Icon(Icons.share_outlined, color: _neon.withValues(alpha: 0.9), size: 20),
+            label: Text(
+              'Share',
+              style: TextStyle(
+                color: _neon.withValues(alpha: 0.95),
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _neon,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              side: BorderSide(color: border, width: 1.2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
             ),
           ),
         ),
         const SizedBox(width: 12),
+<<<<<<< HEAD
         Container(
           decoration: BoxDecoration(
             color: _cardColor,
@@ -824,6 +1745,26 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
           child: IconButton(
             icon: const Icon(Icons.edit, color: Colors.white),
             onPressed: () {},
+=======
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.tune_rounded, color: Colors.black, size: 20),
+            label: const Text(
+              'Customize',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: _neon,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           ),
         ),
       ],
@@ -832,25 +1773,60 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
 
   Widget _buildStatsSection() {
     return Container(
+<<<<<<< HEAD
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: _cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
+=======
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _neon.withValues(alpha: 0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: _neon.withValues(alpha: 0.04),
+            blurRadius: 20,
+          ),
+        ],
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+<<<<<<< HEAD
           _buildStatItem('Subscribers', '${_myChannel!.subscriberCount}'),
           _buildVerticalDivider(),
           _buildStatItem('Total Views', '12.5K'),
           _buildVerticalDivider(),
           _buildStatItem('Live Streams', '42'),
+=======
+          _buildStatItem(
+            'Followers',
+            _formatCompactCount(_myChannel!.subscriberCount),
+            Icons.people_outline_rounded,
+          ),
+          _buildVerticalDivider(),
+          _buildStatItem(
+            'Total views',
+            _formatCompactCount(_totalVideoViews),
+            Icons.visibility_outlined,
+          ),
+          _buildVerticalDivider(),
+          _buildStatItem(
+            'Videos',
+            '$_approvedVideoCount',
+            Icons.video_library_outlined,
+          ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         ],
       ),
     );
   }
 
+<<<<<<< HEAD
   Widget _buildStatItem(String label, String value) {
     return Column(
       children: [
@@ -868,6 +1844,30 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
           style: TextStyle(color: Colors.grey[500], fontSize: 12),
         ),
       ],
+=======
+  Widget _buildStatItem(String label, String value, IconData icon) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, color: _neon.withValues(alpha: 0.65), size: 18),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     );
   }
 
@@ -875,7 +1875,11 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     return Container(
       height: 30,
       width: 1,
+<<<<<<< HEAD
       color: Colors.white12,
+=======
+      color: _neon.withValues(alpha: 0.22),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     );
   }
 
@@ -887,7 +1891,19 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+<<<<<<< HEAD
         leading: const BackButton(color: Colors.white),
+=======
+        leading: Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.55),
+            shape: BoxShape.circle,
+            border: Border.all(color: _neon.withValues(alpha: 0.22)),
+          ),
+          child: BackButton(color: _neon.withValues(alpha: 0.95)),
+        ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ),
       body: Center(
         child: Column(
@@ -898,23 +1914,42 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
               decoration: BoxDecoration(
                 color: _cardColor,
                 shape: BoxShape.circle,
+<<<<<<< HEAD
                 border: Border.all(color: Colors.white10),
               ),
               child: Icon(Icons.videocam_outlined, size: 64, color: _accentColor),
             ),
             const SizedBox(height: 24),
             const Text(
+=======
+                border: Border.all(color: _neon.withValues(alpha: 0.35)),
+                boxShadow: [
+                  BoxShadow(color: _neon.withValues(alpha: 0.12), blurRadius: 20),
+                ],
+              ),
+              child: Icon(Icons.videocam_outlined, size: 64, color: _neon.withValues(alpha: 0.95)),
+            ),
+            const SizedBox(height: 24),
+            Text(
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               'Start Your Journey',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
+<<<<<<< HEAD
+=======
+                shadows: [
+                  Shadow(color: _neon.withValues(alpha: 0.25), blurRadius: 10),
+                ],
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ),
             ),
             const SizedBox(height: 12),
             Text(
               'Create a channel to stream your games,\nupload videos, and build your community.',
               textAlign: TextAlign.center,
+<<<<<<< HEAD
               style: TextStyle(color: Colors.grey[400], fontSize: 16),
             ),
             const SizedBox(height: 40),
@@ -928,6 +1963,26 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
                 elevation: 0,
               ),
               child: const Text('Create Channel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+=======
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.55),
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 40),
+            FilledButton(
+              onPressed: _createChannel,
+              style: FilledButton.styleFrom(
+                backgroundColor: _neon,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text(
+                'Create channel',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
             ),
           ],
         ),
@@ -936,4 +1991,30 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
   }
 }
 
+<<<<<<< HEAD
+=======
+class _ChannelBannerGridPainter extends CustomPainter {
+  final Color color;
+
+  _ChannelBannerGridPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    const step = 22.0;
+    for (double x = 0; x <= size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y <= size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChannelBannerGridPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 

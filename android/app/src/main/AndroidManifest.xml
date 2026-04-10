@@ -2,11 +2,14 @@
     package="com.example.arena_chain_flutter">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.CAMERA"/>
+<<<<<<< HEAD
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus" />
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
     <application
         android:label="arena_chain_flutter"

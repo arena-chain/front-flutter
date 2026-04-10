@@ -8,6 +8,7 @@ class FriendsRepository {
   FriendsRepository({FriendsApi? api}) : _api = api ?? FriendsApi();
 
   Future<List<FriendUser>> searchUsers(String query, {String? excludeUserId}) async {
+<<<<<<< HEAD
     return _api.searchUsers(query, excludeUserId: excludeUserId);
   }
 
@@ -49,5 +50,28 @@ class FriendsRepository {
 
   Future<void> unblockUser(String userId, String blockedUserId) async {
     return _api.unblockUser(userId, blockedUserId);
+=======
+    return await _api.searchUsers(query, excludeUserId: excludeUserId);
+  }
+
+  Future<FriendshipModel> sendFriendRequest(String requesterId, String recipientId) async {
+    return await _api.sendFriendRequest(requesterId, recipientId);
+  }
+
+  Future<List<FriendshipModel>> getFriends(String userId) async {
+    return await _api.getFriends(userId);
+  }
+
+  Future<List<FriendshipModel>> getPendingRequests(String userId) async {
+    return await _api.getPendingRequests(userId);
+  }
+
+  Future<FriendshipModel> acceptRequest(String friendshipId, String userId) async {
+    return await _api.acceptRequest(friendshipId, userId);
+  }
+
+  Future<void> rejectRequest(String friendshipId, String userId) async {
+    return await _api.rejectRequest(friendshipId, userId);
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   }
 }

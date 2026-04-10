@@ -8,11 +8,17 @@ import 'package:arena_chain_flutter/screens/player/feature_rank/viewmodel/rank_v
 import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_viewmodel.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/auth_state.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/view_model/friends_view_model.dart';
+<<<<<<< HEAD
 import 'package:arena_chain_flutter/core/services/friends_presence_service.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/view_model/tournaments_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/player_home.dart';
 import 'package:arena_chain_flutter/core/services/chat_webrtc_service.dart';
+=======
+import 'package:arena_chain_flutter/screens/player/feature_tournemets/view_model/tournaments_view_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_home/player_home.dart';
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 import 'package:arena_chain_flutter/screens/feature_auth/ui/login_screen.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/ui/splash_screen.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/scouter_home_screen.dart';
@@ -35,6 +41,7 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProxyProvider<AuthViewModel, FriendsViewModel>(
           create: (context) => FriendsViewModel(currentUserId: ''),
+<<<<<<< HEAD
           update: (context, auth, previous) {
             final id = auth.currentUser?.id ?? '';
             if (previous != null && previous.currentUserId == id) return previous;
@@ -42,6 +49,11 @@ class MyApp extends StatelessWidget {
           },
         ),
         ChangeNotifierProvider(create: (_) => FriendsPresenceNotifier()),
+=======
+          update: (context, auth, previous) =>
+            FriendsViewModel(currentUserId: auth.currentUser?.id ?? ''),
+        ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         ChangeNotifierProxyProvider<AuthViewModel, TournamentsViewModel>(
           create: (context) => TournamentsViewModel(currentUserId: ''),
           update: (context, auth, previous) =>
@@ -50,7 +62,11 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProxyProvider<AuthViewModel, MatchmakingViewModel>(
           create: (_) => MatchmakingViewModel(),
           update: (context, auth, previous) {
+<<<<<<< HEAD
             final MatchmakingViewModel vm = previous ?? MatchmakingViewModel();
+=======
+            final vm = previous ?? MatchmakingViewModel();
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
             vm.onAuthChanged(auth.authState == AuthState.authenticated);
             return vm;
           },
@@ -59,6 +75,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NewsViewModel()),
         ChangeNotifierProvider(create: (_) => RankViewModel()),
         ChangeNotifierProvider(create: (_) => LeagueViewModel()),
+<<<<<<< HEAD
         ChangeNotifierProxyProvider<AuthViewModel, ChatWebRTCService>(
           create: (_) => ChatWebRTCService(),
           update: (context, auth, service) {
@@ -68,6 +85,8 @@ class MyApp extends StatelessWidget {
             return service ?? ChatWebRTCService();
           },
         ),
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ],
       child: MaterialApp(
         title: 'Arena-Chain',

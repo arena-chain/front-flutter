@@ -7,6 +7,10 @@ import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_reports_v
 import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_matches_view_model.dart';
 import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_watchlist_view_model.dart';
 import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_home_view_model.dart';
+<<<<<<< HEAD
+=======
+import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_public_highlights_view_model.dart';
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 import 'package:arena_chain_flutter/screens/scouter/ui/scouter_feed_tab.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/scouter_side_drawer.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/view_all_players_screen.dart';
@@ -68,6 +72,12 @@ class _ScouterHomeScreenState extends State<ScouterHomeScreen> {
         ChangeNotifierProvider(create: (_) => ScouterMatchesViewModel(scouterId: scouterId)..loadMatches()),
         ChangeNotifierProvider(create: (_) => ScouterWatchlistViewModel(scouterId: scouterId)..loadWatchlist()),
         ChangeNotifierProvider(create: (_) => ScouterHomeViewModel(scouterId: scouterId)..loadDashboard()),
+<<<<<<< HEAD
+=======
+        ChangeNotifierProvider(
+          create: (_) => ScouterPublicHighlightsViewModel()..load(limit: 24),
+        ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ],
       child: Container(
         decoration: const BoxDecoration(

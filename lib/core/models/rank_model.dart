@@ -17,7 +17,11 @@ class Rank {
 
   factory Rank.fromJson(Map<String, dynamic> json) {
     return Rank(
+<<<<<<< HEAD
       game: json['game'] is Map ? (json['game']['title'] ?? '') : (json['game'] ?? ''),
+=======
+      game: json['game'] ?? '',
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       elo: json['elo'] ?? 0,
       tier: json['tier'] ?? 'Unranked',
       wins: json['wins'] ?? 0,

@@ -5,7 +5,10 @@ import 'package:arena_chain_flutter/core/models/feature_friends/friend_user_mode
 import 'package:arena_chain_flutter/core/models/feature_friends/friendship_model.dart';
 import 'package:arena_chain_flutter/core/config/api_config.dart';
 
+<<<<<<< HEAD
 /// Mirrors desktop `shared/api.js` + `freinds/renderer.js` against `/api/friendship` and `/api/users/search`.
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 class FriendsApi {
   static String get baseUrl => ApiConfig.baseUrl;
   final TokenStorage _tokenStorage = TokenStorage();
@@ -14,7 +17,11 @@ class FriendsApi {
     final token = await _tokenStorage.getAccessToken();
     return {
       'Content-Type': 'application/json',
+<<<<<<< HEAD
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+=======
+      // 'Authorization': 'Bearer $token', // Uncomment when auth is enabled on backend
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     };
   }
 
@@ -26,11 +33,19 @@ class FriendsApi {
       },
     );
 
+<<<<<<< HEAD
     final response = await http.get(uri, headers: await _getHeaders());
 
     if (response.statusCode == 200) {
       final List data = json.decode(response.body);
       return data.map((json) => FriendUser.fromJson(json as Map<String, dynamic>)).toList();
+=======
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      final List data = json.decode(response.body);
+      return data.map((json) => FriendUser.fromJson(json)).toList();
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     } else {
       throw Exception('Failed to search users');
     }
@@ -47,9 +62,15 @@ class FriendsApi {
     );
 
     if (response.statusCode == 201) {
+<<<<<<< HEAD
       return FriendshipModel.fromJson(json.decode(response.body) as Map<String, dynamic>);
     } else {
       final error = json.decode(response.body) as Map<String, dynamic>;
+=======
+      return FriendshipModel.fromJson(json.decode(response.body));
+    } else {
+      final error = json.decode(response.body);
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       throw Exception(error['message'] ?? 'Failed to send friend request');
     }
   }
@@ -61,8 +82,13 @@ class FriendsApi {
     );
 
     if (response.statusCode == 200) {
+<<<<<<< HEAD
       final List data = json.decode(response.body) as List;
       return data.map((e) => FriendshipModel.fromJson(e as Map<String, dynamic>)).toList();
+=======
+      final List data = json.decode(response.body);
+      return data.map((json) => FriendshipModel.fromJson(json)).toList();
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     } else {
       throw Exception('Failed to load friends');
     }
@@ -75,13 +101,19 @@ class FriendsApi {
     );
 
     if (response.statusCode == 200) {
+<<<<<<< HEAD
       final List data = json.decode(response.body) as List;
       return data.map((e) => FriendshipModel.fromJson(e as Map<String, dynamic>)).toList();
+=======
+      final List data = json.decode(response.body);
+      return data.map((json) => FriendshipModel.fromJson(json)).toList();
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     } else {
       throw Exception('Failed to load pending requests');
     }
   }
 
+<<<<<<< HEAD
   Future<List<FriendshipModel>> getSentRequests(String userId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/api/friendship/sent-requests/$userId'),
@@ -110,6 +142,8 @@ class FriendsApi {
     }
   }
 
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   Future<FriendshipModel> acceptRequest(String friendshipId, String userId) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/friendship/accept/$friendshipId'),
@@ -118,10 +152,17 @@ class FriendsApi {
     );
 
     if (response.statusCode == 200) {
+<<<<<<< HEAD
       return FriendshipModel.fromJson(json.decode(response.body) as Map<String, dynamic>);
     } else {
       final error = json.decode(response.body) as Map<String, dynamic>;
       throw Exception(error['message'] ?? 'Failed to accept request');
+=======
+      return FriendshipModel.fromJson(json.decode(response.body));
+    } else {
+        final error = json.decode(response.body);
+        throw Exception(error['message'] ?? 'Failed to accept request');
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     }
   }
 
@@ -133,6 +174,7 @@ class FriendsApi {
     );
 
     if (response.statusCode != 200) {
+<<<<<<< HEAD
       final error = json.decode(response.body) as Map<String, dynamic>;
       throw Exception(error['message'] ?? 'Failed to reject request');
     }
@@ -174,6 +216,10 @@ class FriendsApi {
     if (response.statusCode != 200) {
       final error = json.decode(response.body) as Map<String, dynamic>;
       throw Exception(error['message'] ?? 'Failed to unblock user');
+=======
+        final error = json.decode(response.body);
+        throw Exception(error['message'] ?? 'Failed to reject request');
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     }
   }
 }

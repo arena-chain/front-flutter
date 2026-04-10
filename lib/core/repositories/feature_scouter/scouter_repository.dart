@@ -2,6 +2,10 @@ import 'package:arena_chain_flutter/core/api/feature_scouter/scouter_api.dart';
 import 'package:arena_chain_flutter/core/api/feature_scouter/players_directory_api.dart';
 import 'package:arena_chain_flutter/core/models/feature_scouter/scouter_models.dart';
 import 'package:arena_chain_flutter/core/storage/local_scouting_storage.dart';
+<<<<<<< HEAD
+=======
+import 'package:arena_chain_flutter/core/utils/highlight_ranking.dart';
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
 /// Repository layer – delegates to ScouterApi, falls back to local storage when API fails.
 class ScouterRepository {
@@ -180,6 +184,67 @@ class ScouterRepository {
     }
   }
 
+<<<<<<< HEAD
+=======
+  Future<List<HighlightItem>> getPublicHighlights() async {
+    try {
+      return await _api.getPublicHighlights();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Top [limit] public clips by reactions (for scouter home feed).
+  Future<List<HighlightItem>> getRankedPublicHighlights({int limit = 20}) async {
+    try {
+      final list = await _api.getPublicHighlights();
+      final ranked = await rankHighlightsByEngagement(_api, list);
+      if (ranked.length <= limit) return ranked;
+      return ranked.sublist(0, limit);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<HighlightItem>> getHighlightsForVideo(
+    String videoId, {
+    bool publicOnly = false,
+  }) async {
+    try {
+      return await _api.getHighlightsForVideo(videoId, publicOnly: publicOnly);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> getHighlightEngagement(String id) =>
+      _api.getHighlightEngagement(id);
+
+  Future<List<Map<String, dynamic>>> getHighlightComments(String id) =>
+      _api.getHighlightComments(id);
+
+  Future<Map<String, dynamic>> postHighlightComment(
+    String id,
+    String body, {
+    String? parentCommentId,
+  }) =>
+      _api.postHighlightComment(id, body, parentCommentId: parentCommentId);
+
+  Future<Map<String, dynamic>> likeHighlight(String id) => _api.likeHighlight(id);
+
+  Future<Map<String, dynamic>> unlikeHighlight(String id) =>
+      _api.unlikeHighlight(id);
+
+  Future<Map<String, dynamic>> saveHighlight(String id) =>
+      _api.saveHighlight(id);
+
+  Future<Map<String, dynamic>> unsaveHighlight(String id) =>
+      _api.unsaveHighlight(id);
+
+  Future<List<HighlightItem>> rankHighlights(List<HighlightItem> items) =>
+      rankHighlightsByEngagement(_api, items);
+
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   Future<List<RankEntry>> getPlayerRanks(String playerUserId) async {
     try {
       return await _api.getPlayerRanks(playerUserId);

@@ -14,6 +14,13 @@ class ManagerApplicationScreen extends StatefulWidget {
 }
 
 class _ManagerApplicationScreenState extends State<ManagerApplicationScreen> {
+<<<<<<< HEAD
+=======
+  static const Color _background = Color(0xFF000000);
+  static const Color _surface = Color(0xFF1A1C23);
+  static const Color _neon = Color(0xFF39FF14);
+
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   final _formKey = GlobalKey<FormState>();
   final _teamApi = TeamApi();
   final _managerApi = TeamManagerApi();
@@ -96,12 +103,31 @@ class _ManagerApplicationScreenState extends State<ManagerApplicationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+<<<<<<< HEAD
       appBar: AppBar(
         title: const Text('Apply as Team Manager'),
         backgroundColor: const Color(0xFF1A1A2E),
       ),
       body: _isLoading && _teams.isEmpty
           ? const Center(child: CircularProgressIndicator())
+=======
+      backgroundColor: _background,
+      appBar: AppBar(
+        title: const Text(
+          'Apply as Team Manager',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        backgroundColor: _background,
+        elevation: 0,
+        foregroundColor: _neon,
+        iconTheme: IconThemeData(color: _neon.withValues(alpha: 0.92)),
+      ),
+      body: _isLoading && _teams.isEmpty
+          ? Center(child: CircularProgressIndicator(color: _neon.withValues(alpha: 0.85)))
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Form(
@@ -109,6 +135,7 @@ class _ManagerApplicationScreenState extends State<ManagerApplicationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+<<<<<<< HEAD
                     const Text(
                       'Managerial Application',
                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
@@ -117,11 +144,36 @@ class _ManagerApplicationScreenState extends State<ManagerApplicationScreen> {
                     const Text(
                       'Provide your professional details to establish or manage an official team.',
                       style: TextStyle(color: Colors.grey),
+=======
+                    Text(
+                      'Managerial Application',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(color: _neon.withValues(alpha: 0.22), blurRadius: 10),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Provide your professional details to establish or manage an official team.',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.52),
+                        fontSize: 14,
+                        height: 1.35,
+                      ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                     ),
                     const SizedBox(height: 30),
                     
                     DropdownButtonFormField<String>(
+<<<<<<< HEAD
                       dropdownColor: const Color(0xFF16213E),
+=======
+                      dropdownColor: _surface,
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                       decoration: _inputDecoration('Target Team Selection *'),
                       value: _selectedTeamId,
                       items: _teams.map((team) {
@@ -187,7 +239,11 @@ class _ManagerApplicationScreenState extends State<ManagerApplicationScreen> {
                         const SizedBox(width: 15),
                         Expanded(
                           child: DropdownButtonFormField<String>(
+<<<<<<< HEAD
                             dropdownColor: const Color(0xFF16213E),
+=======
+                            dropdownColor: _surface,
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                             decoration: _inputDecoration('Gender'),
                             value: _gender,
                             items: ['Male', 'Female', 'Other'].map((g) {
@@ -211,6 +267,7 @@ class _ManagerApplicationScreenState extends State<ManagerApplicationScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 55,
+<<<<<<< HEAD
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _submitApplication,
                         style: ElevatedButton.styleFrom(
@@ -220,17 +277,51 @@ class _ManagerApplicationScreenState extends State<ManagerApplicationScreen> {
                         child: _isLoading 
                           ? const CircularProgressIndicator(color: Colors.white)
                           : const Text('Submit Application', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+=======
+                      child: FilledButton(
+                        onPressed: _isLoading ? null : _submitApplication,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: _neon,
+                          foregroundColor: Colors.black,
+                          disabledBackgroundColor: _neon.withValues(alpha: 0.35),
+                          disabledForegroundColor: Colors.black.withValues(alpha: 0.45),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                          shadowColor: _neon.withValues(alpha: 0.35),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.black,
+                                ),
+                              )
+                            : const Text(
+                                'Submit Application',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.black,
+                                ),
+                              ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                       ),
                     ),
                   ],
                 ),
               ),
             ),
+<<<<<<< HEAD
       backgroundColor: const Color(0xFF1A1A2E),
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     );
   }
 
   InputDecoration _inputDecoration(String label) {
+<<<<<<< HEAD
     return InputDecoration(
       labelText: label,
       labelStyle: const TextStyle(color: Colors.grey),
@@ -239,6 +330,39 @@ class _ManagerApplicationScreenState extends State<ManagerApplicationScreen> {
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white12)),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE94560))),
+=======
+    final neonSoft = BorderSide(color: _neon.withValues(alpha: 0.32));
+    final neonFocus = BorderSide(color: _neon.withValues(alpha: 0.85), width: 1.5);
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+      floatingLabelStyle: TextStyle(
+        color: _neon.withValues(alpha: 0.88),
+        fontWeight: FontWeight.w600,
+      ),
+      filled: true,
+      fillColor: _surface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: neonSoft,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: neonSoft,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: neonFocus,
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.red.shade400.withValues(alpha: 0.85)),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
+      ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     );
   }
 }

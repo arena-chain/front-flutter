@@ -4,7 +4,13 @@ import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/core/api/riot/riot_api.dart';
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
+<<<<<<< HEAD
 import 'package:arena_chain_flutter/navigation.dart';
+=======
+import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_viewmodel.dart';
+import 'package:arena_chain_flutter/navigation.dart';
+import 'package:arena_chain_flutter/screens/player/feature_home/_common/side_drawer.dart';
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
 class PlayerProfileScreen extends StatefulWidget {
   const PlayerProfileScreen({super.key});
@@ -40,6 +46,10 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
       _avatarUrl = user?.avatar ?? '';
       setState(() {});
       _checkLinkStatus();
+<<<<<<< HEAD
+=======
+      context.read<LevelViewModel>().fetchMyLevel();
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     });
   }
 
@@ -129,6 +139,7 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
         final isPro = user?.profile?.isPro ?? false;
 
         return Scaffold(
+<<<<<<< HEAD
           backgroundColor: const Color(0xFF0A0E1A),
           appBar: AppBar(
             backgroundColor: const Color(0xFF0A0E1A),
@@ -157,11 +168,53 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
                 onPressed: () {
                   Navigator.pushNamed(context, AppRoutes.settings);
                 },
+=======
+          backgroundColor: const Color(0xFF121212),
+          drawer: const SideDrawer(),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF0A0E1A),
+            elevation: 0,
+            leading: Builder(
+              builder: (ctx) => IconButton(
+                icon: const Icon(Icons.menu, color: Color(0xFF00FF00)),
+                onPressed: () => Scaffold.of(ctx).openDrawer(),
+                tooltip: 'Menu',
+              ),
+            ),
+            title: const Text(
+              'Profile',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+              ),
+            ),
+            actions: [
+              if (Navigator.canPop(context))
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white70, size: 20),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              IconButton(
+                icon: Icon(
+                  _isEditing ? Icons.close : Icons.edit_outlined,
+                  color: const Color(0xFF00FF00),
+                ),
+                onPressed: () {
+                  setState(() => _isEditing = !_isEditing);
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.settings, color: Color(0xFF00FF00)),
+                onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ),
             ],
           ),
           body: SingleChildScrollView(
             child: Column(
+<<<<<<< HEAD
               children: [
                 const SizedBox(height: 24),
                 _buildProfileHeader(nickname, email, isPro),
@@ -170,12 +223,34 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
                 const SizedBox(height: 24),
                 _buildTeamManagementSection(authViewModel),
                 const SizedBox(height: 24),
+=======
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_isEditing) ...[
+                  const SizedBox(height: 16),
+                  _buildProfileHeader(nickname, email, isPro),
+                  const SizedBox(height: 24),
+                ] else ...[
+                  _buildCinematicHero(context, nickname, email, isPro, country),
+                  const SizedBox(height: 28),
+                  _buildEndorsementsSection(),
+                  const SizedBox(height: 28),
+                  _buildPortfolioGallery(context),
+                  const SizedBox(height: 28),
+                  _buildActivityFeed(context, nickname),
+                  const SizedBox(height: 28),
+                ],
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 _buildConnectedGameAccounts(),
                 const SizedBox(height: 24),
                 _buildMyLeagues(),
                 const SizedBox(height: 24),
                 _buildAchievements(),
+<<<<<<< HEAD
                 const SizedBox(height: 24),
+=======
+                const SizedBox(height: 32),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ],
             ),
           ),
@@ -184,17 +259,253 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildTeamManagementSection(AuthViewModel auth) {
     final user = auth.currentUser;
     final role = user?.role.toLowerCase() ?? '';
     final isManager = role == 'team_manager';
     final isAdmin = role == 'admin';
+=======
+  static const Color _neon = Color(0xFF00FF00);
+
+  Widget _buildCinematicHero(
+    BuildContext context,
+    String nickname,
+    String email,
+    bool isPro,
+    String country,
+  ) {
+    final avatarUrl = _avatarUrl ?? '';
+    final displayName = nickname.toUpperCase().replaceAll(' ', '_');
+    final tierLabel = isPro ? 'ELITE_RANK' : 'PLAYER_RANK';
+    final bio = isPro
+        ? 'Specializing in competitive play, data-driven improvement, and team synergy. Open to scrims and org opportunities.'
+        : 'Building skills across FPS & MOBA titles. Connect for games, clips, and community.';
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(20, 28, 20, 36),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF040609), Color(0xFF0A0E1A), Color(0xFF121212)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: CustomPaint(
+            painter: _ProfileGridPainter(color: _neon.withValues(alpha: 0.12)),
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 108,
+                      height: 108,
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [_neon.withValues(alpha: 0.9), _neon.withValues(alpha: 0.15)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _neon.withValues(alpha: 0.35),
+                            blurRadius: 28,
+                            spreadRadius: 0,
+                          ),
+                        ],
+                      ),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF040609),
+                          shape: BoxShape.circle,
+                        ),
+                        child: ClipOval(
+                          child: avatarUrl.isNotEmpty
+                              ? Image.network(avatarUrl, fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => _avatarFallback(nickname))
+                              : _avatarFallback(nickname),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 4,
+                      bottom: 4,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00FF00),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF040609), width: 3),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(width: 6, height: 6, decoration: const BoxDecoration(color: _neon, shape: BoxShape.circle)),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        displayName,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '$tierLabel | CONNECTIONS: — | FOLLOWERS: —',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                if (email.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    email,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 11),
+                  ),
+                ],
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, AppRoutes.myChannel);
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _neon,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'WORK WITH ME',
+                      style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Follow coming soon')),
+                          );
+                        },
+                        icon: const Icon(Icons.person_add_alt_1, size: 18),
+                        label: const Text('FOLLOW'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pushNamed(context, AppRoutes.addFriend);
+                        },
+                        icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                        label: const Text('MESSAGE'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  bio,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.72),
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    _hashChip('#${country.toUpperCase()}'),
+                    if (isPro) _hashChip('#PRO'),
+                    _hashChip('#ARENA'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _avatarFallback(String nickname) {
+    return Center(
+      child: Text(
+        nickname.isNotEmpty ? nickname[0].toUpperCase() : 'P',
+        style: const TextStyle(color: _neon, fontSize: 40, fontWeight: FontWeight.w900),
+      ),
+    );
+  }
+
+  Widget _hashChip(String tag) {
+    return Text(
+      tag,
+      style: const TextStyle(color: _neon, fontSize: 12, fontWeight: FontWeight.w700),
+    );
+  }
+
+  Widget _buildEndorsementsSection() {
+    final items = <(IconData, String, double)>[
+      (Icons.track_changes, 'Strategic', 0.82),
+      (Icons.bolt, 'Mechanics', 0.76),
+      (Icons.architecture, 'Draft IQ', 0.68),
+      (Icons.how_to_reg, 'Comms', 0.91),
+      (Icons.handshake, 'Teamplay', 0.74),
+    ];
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+<<<<<<< HEAD
           const Row(
             children: [
               Icon(Icons.groups, color: Color(0xFF00FF00), size: 20),
@@ -205,10 +516,24 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+=======
+          Row(
+            children: [
+              Icon(Icons.rocket_launch_rounded, color: _neon.withValues(alpha: 0.9), size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'ENDORSEMENTS',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.4,
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 ),
               ),
             ],
           ),
+<<<<<<< HEAD
           const SizedBox(height: 16),
           if (isManager)
             _buildActionTile(
@@ -233,12 +558,27 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
             Icons.mail_outline,
             Colors.blueAccent,
             () => Navigator.pushNamed(context, AppRoutes.playerInvitations),
+=======
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 118,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              itemBuilder: (context, i) {
+                final (icon, label, value) = items[i];
+                return _endorsementRing(icon: icon, label: label, value: value);
+              },
+            ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           ),
         ],
       ),
     );
   }
 
+<<<<<<< HEAD
   Widget _buildActionTile(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
@@ -265,6 +605,315 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
             const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 14),
           ],
         ),
+=======
+  Widget _endorsementRing({required IconData icon, required String label, required double value}) {
+    return SizedBox(
+      width: 72,
+      child: Column(
+        children: [
+          SizedBox(
+            width: 64,
+            height: 64,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 64,
+                  height: 64,
+                  child: CircularProgressIndicator(
+                    value: 1,
+                    strokeWidth: 3,
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
+                ),
+                SizedBox(
+                  width: 64,
+                  height: 64,
+                  child: CircularProgressIndicator(
+                    value: value,
+                    strokeWidth: 3,
+                    color: _neon,
+                    strokeCap: StrokeCap.round,
+                  ),
+                ),
+                Icon(icon, color: Colors.white.withValues(alpha: 0.85), size: 22),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.55),
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              height: 1.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPortfolioGallery(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'PORTFOLIO GALLERY',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pushNamed(context, AppRoutes.myChannel),
+                child: const Text('VIEW ALL', style: TextStyle(color: _neon, fontWeight: FontWeight.w800, fontSize: 12)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 132,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _portfolioCard(title: 'Q3 Scouting\nReport', icon: Icons.description_rounded, accent: const Color(0xFF4488FF)),
+                const SizedBox(width: 12),
+                _portfolioCard(title: 'META SHIFTS\nAnalysis', icon: Icons.analytics_rounded, accent: const Color(0xFFFFAA00)),
+                const SizedBox(width: 12),
+                _portfolioVideoCard(title: 'Highlights Reel'),
+                const SizedBox(width: 12),
+                _portfolioCard(title: 'Draft\nStrategy', icon: Icons.fact_check_rounded, accent: const Color(0xFFAA44FF)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _portfolioCard({required String title, required IconData icon, required Color accent}) {
+    return Container(
+      width: 148,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [accent.withValues(alpha: 0.2), Colors.white.withValues(alpha: 0.04)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: accent.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: accent, size: 28),
+          const Spacer(),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              height: 1.25,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _portfolioVideoCard({required String title}) {
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.myChannel),
+      child: Container(
+        width: 148,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _neon.withValues(alpha: 0.45)),
+          gradient: LinearGradient(
+            colors: [_neon.withValues(alpha: 0.12), Colors.black.withValues(alpha: 0.5)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Container(color: Colors.black.withValues(alpha: 0.35)),
+              ),
+            ),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: _neon.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+                border: Border.all(color: _neon, width: 2),
+              ),
+              child: const Icon(Icons.play_arrow_rounded, color: _neon, size: 32),
+            ),
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12,
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityFeed(BuildContext context, String nickname) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.schedule_rounded, color: _neon.withValues(alpha: 0.85), size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'PROFESSIONAL ACTIVITY',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _activityVideoCard(
+                    title: 'META SHIFTS IN ARENA',
+                    subtitle: 'Watch the latest breakdown from $nickname.',
+                    timeLabel: 'Recently',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _activityArticleCard(
+                    title: 'Rising Stars Report',
+                    subtitle: 'Performance snapshot & next steps.',
+                    timeLabel: 'Recently',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _activityVideoCard({required String title, required String subtitle, required String timeLabel}) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1F2E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 10,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.black.withValues(alpha: 0.45),
+                border: Border.all(color: _neon.withValues(alpha: 0.25)),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Icon(Icons.play_circle_fill_rounded, color: _neon.withValues(alpha: 0.85), size: 40),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(subtitle, maxLines: 2, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 10, height: 1.3)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(timeLabel, style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 10)),
+              const Spacer(),
+              Icon(Icons.thumb_up_off_alt, size: 14, color: Colors.white.withValues(alpha: 0.35)),
+              const SizedBox(width: 10),
+              Icon(Icons.chat_bubble_outline, size: 14, color: Colors.white.withValues(alpha: 0.35)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _activityArticleCard({required String title, required String subtitle, required String timeLabel}) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1F2E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: _neon.withValues(alpha: 0.2),
+                child: const Icon(Icons.article_rounded, color: _neon, size: 18),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(subtitle, maxLines: 3, style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 10, height: 1.35)),
+          const SizedBox(height: 10),
+          Text(timeLabel, style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 10)),
+        ],
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ),
     );
   }
@@ -728,6 +1377,7 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildStatsSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -782,6 +1432,8 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
     );
   }
 
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   Widget _buildMyLeagues() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -989,3 +1641,29 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
     );
   }
 }
+<<<<<<< HEAD
+=======
+
+class _ProfileGridPainter extends CustomPainter {
+  final Color color;
+
+  _ProfileGridPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    const step = 28.0;
+    for (double x = 0; x <= size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y <= size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ProfileGridPainter oldDelegate) => oldDelegate.color != color;
+}
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/bottom_navbar.dart';
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/scheduled_streams_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/tournaments_list_screen.dart';
+<<<<<<< HEAD
 import 'package:arena_chain_flutter/screens/player/feature_news/ui/news_list_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_clubs/ui/clubs_list_screen.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
@@ -12,14 +13,32 @@ import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_
 import 'package:arena_chain_flutter/navigation.dart';
 import 'package:arena_chain_flutter/core/services/friends_presence_service.dart';
 import 'package:arena_chain_flutter/screens/player/feature_chat/ui/chat_list_screen.dart';
+=======
+import 'package:arena_chain_flutter/screens/leagues/player_leagues_screen.dart';
+import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
+import 'package:arena_chain_flutter/screens/player/feature_news/viewmodel/news_viewmodel.dart';
+import 'package:arena_chain_flutter/screens/player/feature_rank/viewmodel/rank_viewmodel.dart';
+import 'package:arena_chain_flutter/core/models/rank_model.dart';
+import 'package:arena_chain_flutter/core/models/news_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_viewmodel.dart';
+import 'package:arena_chain_flutter/navigation.dart';
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
 import 'package:arena_chain_flutter/screens/training/training_dashboard_screen.dart';
 import 'package:arena_chain_flutter/core/api/training_api_service.dart';
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 
+<<<<<<< HEAD
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/side_drawer.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_dialogs.dart';
+=======
+import 'package:arena_chain_flutter/screens/player/feature_home/_common/arena_chain_animated_title.dart';
+import 'package:arena_chain_flutter/screens/player/feature_home/_common/side_drawer.dart';
+import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_dialogs.dart';
+import 'package:arena_chain_flutter/screens/player/feature_messages/ui/messages_screen.dart';
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
 class PlayerHomeScreen extends StatefulWidget {
   const PlayerHomeScreen({super.key});
@@ -29,6 +48,11 @@ class PlayerHomeScreen extends StatefulWidget {
 }
 
 class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
+<<<<<<< HEAD
+=======
+  static const Color _neon = Color(0xFF39FF14);
+
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   int _currentIndex = 0;
 
   // ── Global matchmaking dialog tracking ────────────────────────────────
@@ -44,7 +68,10 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+<<<<<<< HEAD
       context.read<FriendsPresenceNotifier>().connect();
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       context.read<NewsViewModel>().fetchNews(refresh: true);
       context.read<RankViewModel>().fetchMyRanks();
       context.read<LevelViewModel>().fetchMyLevel();
@@ -123,7 +150,16 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+<<<<<<< HEAD
       backgroundColor: const Color(0xFF0A0E1A),
+=======
+      backgroundColor: _currentIndex == 0 ||
+              _currentIndex == 2 ||
+              _currentIndex == 3 ||
+              _currentIndex == 5
+          ? Colors.black
+          : const Color(0xFF0A0E1A),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       drawer: const SideDrawer(),
       body: SafeArea(
         bottom: false,
@@ -143,6 +179,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       case 1:
         return const ScheduledStreamsScreen();
       case 2:
+<<<<<<< HEAD
         return const TournamentsListScreen();
       case 3:
         return _buildTrainingScreen();
@@ -150,6 +187,15 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
         return const NewsListScreen();
       case 5:
         return ChatListScreen();
+=======
+        return const PlayerLeaguesScreen(embeddedInPlayerShell: true);
+      case 3:
+        return const TournamentsListScreen();
+      case 4:
+        return _buildTrainingScreen();
+      case 5:
+        return const MessagesScreen(embeddedInPlayerShell: true);
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       default:
         return _buildHomeContent();
     }
@@ -169,6 +215,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       child: Column(
         children: [
           _buildHeader(),
+<<<<<<< HEAD
           const SizedBox(height: 16),
           _buildLevelProgression(),
           const SizedBox(height: 24),
@@ -180,21 +227,38 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
           const SizedBox(height: 32),
           _buildRecentGames(),
           const SizedBox(height: 24),
+=======
+          const SizedBox(height: 20),
+          _buildQuickActions(),
+          const SizedBox(height: 28),
+          _buildNexusFeed(),
+          const SizedBox(height: 28),
+          _buildRecentMatchesComingSoon(),
+          const SizedBox(height: 32),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         ],
       ),
     );
   }
 
   Widget _buildHeader() {
+<<<<<<< HEAD
     return Container(
       padding: const EdgeInsets.all(20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+=======
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 12, 8, 8),
+      child: Stack(
+        alignment: Alignment.center,
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         children: [
           Row(
             children: [
               Builder(
                 builder: (context) => IconButton(
+<<<<<<< HEAD
                   icon: const Icon(Icons.menu, color: Colors.white),
                   onPressed: () {
                     Scaffold.of(context).openDrawer();
@@ -240,16 +304,55 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                         shape: BoxShape.circle,
                       ),
                     ),
+=======
+                  icon: Icon(Icons.menu_rounded, color: Colors.white.withValues(alpha: 0.9)),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
+              const Spacer(),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.search_rounded, color: _neon.withValues(alpha: 0.95)),
+                    onPressed: () {},
+                  ),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.notifications_none_rounded, color: _neon.withValues(alpha: 0.95)),
+                        onPressed: () => Navigator.pushNamed(context, AppRoutes.notifications),
+                      ),
+                      Positioned(
+                        right: 10,
+                        top: 10,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFF0055),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ],
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                   ),
                 ],
               ),
             ],
           ),
+<<<<<<< HEAD
+=======
+          const ArenaChainAnimatedTitle(),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         ],
       ),
     );
   }
 
+<<<<<<< HEAD
   Widget _buildLevelProgression() {
     return Consumer<LevelViewModel>(
       builder: (context, levelVM, child) {
@@ -377,6 +480,8 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   Widget _buildNexusFeed() {
     return Consumer<NewsViewModel>(
       builder: (context, newsVM, child) {
@@ -391,21 +496,37 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+<<<<<<< HEAD
                   const Text(
+=======
+                  Text(
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                     'Nexus Feed',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
+<<<<<<< HEAD
                     ),
                   ),
                   TextButton(
                     onPressed: () => _onNavTap(4), // Navigate to News tab
                     child: const Text('Explore All', style: TextStyle(color: Color(0xFF00FF00))),
+=======
+                      shadows: [
+                        Shadow(color: _neon.withValues(alpha: 0.35), blurRadius: 8),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pushNamed(context, AppRoutes.news),
+                    child: Text('Explore All', style: TextStyle(color: _neon.withValues(alpha: 0.95), fontWeight: FontWeight.w600)),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                   ),
                 ],
               ),
             ),
+<<<<<<< HEAD
             const SizedBox(height: 12),
             SizedBox(
               height: 150,
@@ -461,6 +582,26 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                       );
                     },
                   ),
+=======
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 210,
+              child: newsVM.isLoading
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF39FF14)))
+                  : ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: news.length > 8 ? 8 : news.length,
+                      itemBuilder: (context, index) {
+                        final item = news[index];
+                        final gameLabel = item.game.isNotEmpty ? item.game : 'News';
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: _buildNexusCard(item, gameLabel: gameLabel),
+                        );
+                      },
+                    ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
             ),
           ],
         );
@@ -468,24 +609,158 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildQuickActions() {
     return Consumer<AuthViewModel>(
       builder: (context, authViewModel, child) {
         final user = authViewModel.currentUser;
         final nickname = user?.nickname ?? 'Player';
+=======
+  Widget _buildNexusCard(NewsItem item, {required String gameLabel}) {
+    final title = item.title;
+    final imageUrl = item.imageUrl;
+    final publishedAt = item.publishedAt;
+
+    return Container(
+      width: 300,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(color: _neon.withValues(alpha: 0.14), blurRadius: 18, spreadRadius: 0),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _neon.withValues(alpha: 0.28), width: 1),
+          ),
+          child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (imageUrl != null && imageUrl.isNotEmpty)
+              Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFF121212)),
+              )
+            else
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF1A2A1A),
+                      Colors.black,
+                    ],
+                  ),
+                ),
+              ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.15),
+                    Colors.black.withValues(alpha: 0.75),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 12,
+              top: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: _neon.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _neon.withValues(alpha: 0.55)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.fiber_manual_record, size: 10, color: _neon.withValues(alpha: 0.95)),
+                    const SizedBox(width: 6),
+                    Text(
+                      '((o)) LIVE',
+                      style: TextStyle(
+                        color: _neon.withValues(alpha: 0.95),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 14,
+              right: 14,
+              bottom: 14,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '$gameLabel • ${_timeAgo(publishedAt)}',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.55),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions() {
+    return Consumer<RankViewModel>(
+      builder: (context, rankVM, child) {
+        final primary = rankVM.primaryRank;
+        final kdLine = 'K/D: --';
+        final winLine = _winRateLabel(primary);
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+<<<<<<< HEAD
 
               const Text(
+=======
+              Text(
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 'Quick Actions',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+<<<<<<< HEAD
                 ),
               ),
           const SizedBox(height: 16),
@@ -521,11 +796,47 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
           ),
         ],
           ),
+=======
+                  shadows: [
+                    Shadow(color: _neon.withValues(alpha: 0.3), blurRadius: 6),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildCyberActionCard(
+                      icon: Icons.sports_esports_outlined,
+                      title: 'MATCHMAKING',
+                      subtitle: 'Find a game quickly',
+                      kdLine: kdLine,
+                      winRateLine: 'Win Rate: $winLine',
+                      onTap: () => Navigator.pushNamed(context, AppRoutes.matchmaking),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildCyberActionCard(
+                      icon: Icons.emoji_events_outlined,
+                      title: 'RANKED MATCH',
+                      subtitle: 'Compete for glory',
+                      kdLine: kdLine,
+                      winRateLine: 'Win Rate: $winLine',
+                      onTap: () => _onNavTap(3),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         );
       },
     );
   }
 
+<<<<<<< HEAD
   Widget _buildActionCard({
     required IconData icon,
     required String label,
@@ -560,6 +871,98 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
+=======
+  String _winRateLabel(Rank? primaryRank) {
+    if (primaryRank == null) return '--';
+    final wins = primaryRank.wins;
+    final losses = primaryRank.losses;
+    final total = wins + losses;
+    if (total == 0) return '--';
+    return '${((wins / total) * 100).round()}%';
+  }
+
+  Widget _buildCyberActionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String kdLine,
+    required String winRateLine,
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          height: 138,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A0A0A),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _neon.withValues(alpha: 0.35), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: _neon.withValues(alpha: 0.08),
+                blurRadius: 14,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(icon, color: _neon.withValues(alpha: 0.9), size: 30),
+                    const Spacer(),
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            kdLine,
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.45),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            winRateLine,
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.45),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                   ),
                 ),
               ],
@@ -570,6 +973,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildCurrentRank() {
     return Consumer<RankViewModel>(
       builder: (context, rankVM, child) {
@@ -815,12 +1219,95 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
               ),
               _buildMiniStat('Rank', rank),
             ],
+=======
+  Widget _buildRecentMatchesComingSoon() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Recent Matches',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              shadows: [
+                Shadow(color: _neon.withValues(alpha: 0.3), blurRadius: 6),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0A0A0A),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _neon.withValues(alpha: 0.3)),
+              boxShadow: [
+                BoxShadow(color: _neon.withValues(alpha: 0.06), blurRadius: 18),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: _neon.withValues(alpha: 0.45), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(color: _neon.withValues(alpha: 0.25), blurRadius: 16),
+                    ],
+                  ),
+                  child: Icon(Icons.sports_esports_rounded, color: _neon.withValues(alpha: 0.95), size: 36),
+                ),
+                const SizedBox(width: 18),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _neon.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: _neon.withValues(alpha: 0.35)),
+                        ),
+                        child: Text(
+                          'COMING SOON',
+                          style: TextStyle(
+                            color: _neon.withValues(alpha: 0.95),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Your match history and performance data.',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.55),
+                          fontSize: 13,
+                          height: 1.35,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           ),
         ],
       ),
     );
   }
 
+<<<<<<< HEAD
   Widget _buildLargeStat(String label, String value) {
     return Column(
       children: [
@@ -831,6 +1318,8 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   String _timeAgo(DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date);

@@ -4,10 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/core/config/api_config.dart';
 import 'package:arena_chain_flutter/core/models/feature_scouter/scouter_models.dart';
+<<<<<<< HEAD
 import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_player_detail_view_model.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/create_report_bottom_sheet.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/create_recommendation_bottom_sheet.dart';
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/video_player_screen.dart';
+=======
+import 'package:arena_chain_flutter/core/models/video_model.dart';
+import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_player_detail_view_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_profile/ui/video_player_screen.dart';
+import 'package:arena_chain_flutter/screens/scouter/ui/scouter_highlight_detail_screen.dart';
+import 'package:arena_chain_flutter/core/repositories/feature_scouter/scouter_repository.dart';
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
 // ─────────────────────────────────────────────────────────────
 // Shared helpers
@@ -59,6 +67,7 @@ class ScouterPlayerDetailScreen extends StatefulWidget {
       _ScouterPlayerDetailScreenState();
 }
 
+<<<<<<< HEAD
 class _ScouterPlayerDetailScreenState
     extends State<ScouterPlayerDetailScreen>
     with SingleTickerProviderStateMixin {
@@ -76,10 +85,20 @@ class _ScouterPlayerDetailScreenState
   void initState() {
     super.initState();
     _tab = TabController(length: 3, vsync: this);
+=======
+class _ScouterPlayerDetailScreenState extends State<ScouterPlayerDetailScreen> {
+  late final ScouterPlayerDetailViewModel _vm;
+  bool _expandBio = false;
+
+  @override
+  void initState() {
+    super.initState();
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     _vm = ScouterPlayerDetailViewModel(
       scouterId: widget.scouterId,
       initialPlayer: widget.initialPlayer,
     );
+<<<<<<< HEAD
     _vm.loadPlayer(widget.playerUserId).then((_) {
       if (_vm.prospect != null && mounted) {
         setState(() => _wlLevel = _vm.prospect!.prospectLevel);
@@ -110,6 +129,9 @@ class _ScouterPlayerDetailScreenState
       case 'SIGNED': return const Color(0xFF00FF00);
       default: return const Color(0xFF4A5568);
     }
+=======
+    _vm.loadPlayer(widget.playerUserId);
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   }
 
   @override
@@ -146,6 +168,7 @@ class _ScouterPlayerDetailScreenState
             backgroundColor: const Color(0xFF0A0E1A),
             body: vm.isLoading
                 ? _loading()
+<<<<<<< HEAD
                 : Stack(
                     children: [
                       SingleChildScrollView(
@@ -170,6 +193,24 @@ class _ScouterPlayerDetailScreenState
                         child: _bottomBar(ctx, vm),
                       ),
                     ],
+=======
+                : SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _heroSection(ctx, vm),
+                        _playerMeta(vm),
+                        _pillTags(vm),
+                        _aboutSection(vm),
+                        _statsRow(vm),
+                        _channelVideosSection(ctx, vm),
+                        _streamingClipsSection(ctx, vm),
+                        if (vm.ranks.isNotEmpty) _ranksSection(vm),
+                        _matchHistorySection(vm),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                   ),
           );
         },
@@ -276,9 +317,16 @@ class _ScouterPlayerDetailScreenState
                 children: [
                   _navCircleBtn(icon: Icons.arrow_back_ios_new, onTap: () => Navigator.pop(ctx)),
                   _navCircleBtn(
+<<<<<<< HEAD
                     icon: _wlLevel == 'UNKNOWN' ? Icons.bookmark_border_rounded : Icons.bookmark_rounded,
                     color: _wlColor(_wlLevel),
                     onTap: _savingWl ? null : _cycleWatchlist,
+=======
+                    icon: Icons.refresh_rounded,
+                    onTap: vm.isLoading
+                        ? null
+                        : () => vm.loadPlayer(widget.playerUserId),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                   ),
                 ],
               ),
@@ -491,8 +539,11 @@ class _ScouterPlayerDetailScreenState
     final tags = <String>[
       vm.player?.region ?? 'GLOBAL',
       vm.player?.isPro == true ? 'PRO' : 'AMATEUR',
+<<<<<<< HEAD
       if (_wlLevel != 'UNKNOWN') _wlLevel.replaceAll('_', ' '),
       if (vm.isOnWatchlist && _wlLevel == 'UNKNOWN') 'ON WATCHLIST',
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     ];
 
     return Transform.translate(
@@ -542,7 +593,11 @@ class _ScouterPlayerDetailScreenState
       if (team != null) 'Currently playing for $team.',
       if (riotName != null && riotName.isNotEmpty) 'Riot ID: $riotName.',
       if (!linked) 'Riot account not linked.',
+<<<<<<< HEAD
       'Use the tabs below to explore their match history, scouting reports, and performance stats.',
+=======
+      'Browse their channel videos and short clips below — ranked by community reactions.',
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     ];
     final bio = bioParts.join(' ');
 
@@ -683,13 +738,21 @@ class _ScouterPlayerDetailScreenState
     );
   }
 
+<<<<<<< HEAD
   // ── Match Highlights horizontal scroll ─────────────────────
 
   Widget _matchHighlights(ScouterPlayerDetailViewModel vm) {
+=======
+  // ── Channel videos (VODs) ──────────────────────────────────
+
+  Widget _channelVideosSection(BuildContext context, ScouterPlayerDetailViewModel vm) {
+    final vods = vm.playerVideos.where((v) => v.status == VideoStatus.approved).toList();
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
+<<<<<<< HEAD
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
           child: Row(
             children: [
@@ -715,6 +778,251 @@ class _ScouterPlayerDetailScreenState
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.4),
                   fontSize: 12,
+=======
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+          child: Row(
+            children: [
+              const Icon(Icons.video_library_rounded, color: Color(0xFF00FF00), size: 22),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Videos',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    Text(
+                      'Full uploads from this player',
+                      style: TextStyle(
+                        color: Color(0xFF8B95A5),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${vods.length}',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.35),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (vods.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+              ),
+              child: Center(
+                child: Text(
+                  'No published videos yet',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 13),
+                ),
+              ),
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            itemCount: vods.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 14),
+            itemBuilder: (ctx, i) {
+              final v = vods[i];
+              final url = _resolveVideoUrl(v.videoUrl);
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: url == null
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => VideoPlayerScreen(
+                                videoUrl: url,
+                                title: v.title,
+                              ),
+                            ),
+                          );
+                        },
+                  borderRadius: BorderRadius.circular(18),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      color: Colors.white.withValues(alpha: 0.04),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AspectRatio(
+                          aspectRatio: 16 / 9,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              ColoredBox(color: Colors.black.withValues(alpha: 0.5)),
+                              if (v.thumbnailUrl != null && v.thumbnailUrl!.isNotEmpty)
+                                Image.network(
+                                  v.thumbnailUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const SizedBox(),
+                                ),
+                              Center(
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.45),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.play_arrow_rounded,
+                                    color: Colors.white,
+                                    size: 40,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                right: 10,
+                                bottom: 10,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.75),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    _formatVideoDuration(v.duration),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      v.title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      '${v.views} views',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(alpha: 0.45),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (url == null)
+                                Text(
+                                  'No URL',
+                                  style: TextStyle(
+                                    color: Colors.red.withValues(alpha: 0.7),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  String _formatVideoDuration(int? sec) {
+    if (sec == null || sec <= 0) return '—';
+    final m = sec ~/ 60;
+    final s = sec % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  // ── Short clips (highlights) — pro streaming style ─────────
+
+  Widget _streamingClipsSection(BuildContext context, ScouterPlayerDetailViewModel vm) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              const Icon(Icons.bolt_rounded, color: Color(0xFF00FF88), size: 22),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Highlight clips',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    Text(
+                      'Short moments · ranked by likes & comments',
+                      style: TextStyle(
+                        color: Color(0xFF8B95A5),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${vm.highlights.length}',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.35),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 ),
               ),
             ],
@@ -724,7 +1032,11 @@ class _ScouterPlayerDetailScreenState
             ? Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Container(
+<<<<<<< HEAD
                   height: 100,
+=======
+                  height: 120,
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.03),
                     borderRadius: BorderRadius.circular(16),
@@ -732,22 +1044,148 @@ class _ScouterPlayerDetailScreenState
                   ),
                   child: Center(
                     child: Text(
+<<<<<<< HEAD
                       'No highlights posted yet',
+=======
+                      'No clips yet',
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                       style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 13),
                     ),
                   ),
                 ),
               )
             : SizedBox(
+<<<<<<< HEAD
                 height: 130,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.only(left: 24, right: 24),
+=======
+                height: 220,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                   itemCount: vm.highlights.length,
                   itemBuilder: (ctx, i) => _highlightCard(ctx, vm.highlights[i]),
                 ),
               ),
+<<<<<<< HEAD
         const SizedBox(height: 24),
+=======
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  // ── Match history (compact, no scouting tabs) ───────────────
+
+  Widget _matchHistorySection(ScouterPlayerDetailViewModel vm) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+          child: Row(
+            children: [
+              Icon(Icons.sports_esports_rounded, color: Colors.white.withValues(alpha: 0.5), size: 20),
+              const SizedBox(width: 10),
+              const Text(
+                'Match history',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${vm.matches.length}',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.35),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (vm.matches.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              'No recorded matches',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 13),
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            itemCount: vm.matches.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (_, i) {
+              final m = vm.matches[i];
+              final win = m.team1GamesWon > m.team2GamesWon;
+              final c = win ? const Color(0xFF00FF00) : const Color(0xFFFF0055);
+              return Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: c.withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 3,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: c,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            win ? 'Victory' : 'Defeat',
+                            style: TextStyle(
+                              color: c,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          if (m.scheduledStart != null)
+                            Text(
+                              m.scheduledStart!.length >= 10
+                                  ? m.scheduledStart!.substring(0, 10)
+                                  : m.scheduledStart!,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.45),
+                                fontSize: 11,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '${m.team1GamesWon} – ${m.team2GamesWon}',
+                      style: TextStyle(
+                        color: c,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        const SizedBox(height: 20),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ],
     );
   }
@@ -780,6 +1218,7 @@ class _ScouterPlayerDetailScreenState
   }
 
   Widget _highlightCard(BuildContext context, HighlightItem h) {
+<<<<<<< HEAD
     final playableUrl = _resolveVideoUrl(h.videoUrl);
     return GestureDetector(
       onTap: playableUrl == null
@@ -798,6 +1237,39 @@ class _ScouterPlayerDetailScreenState
       child: Container(
       width: 150,
       margin: const EdgeInsets.only(right: 14),
+=======
+    final isProcessedClip =
+        h.clipUrl != null && h.clipUrl!.trim().isNotEmpty;
+    final playableUrl = resolveHighlightMediaUrl(h.playableUrl) ??
+        _resolveVideoUrl(h.videoUrl);
+
+    void open() {
+      if (isProcessedClip) {
+        Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+            builder: (_) => ScouterHighlightDetailScreen(highlight: h),
+          ),
+        );
+      } else if (playableUrl != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+            builder: (_) => VideoPlayerScreen(
+              videoUrl: playableUrl,
+              title: h.title,
+            ),
+          ),
+        );
+      }
+    }
+
+    return GestureDetector(
+      onTap: (isProcessedClip || playableUrl != null) ? open : null,
+      child: Container(
+      width: 148,
+      margin: const EdgeInsets.only(right: 12),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
@@ -810,6 +1282,7 @@ class _ScouterPlayerDetailScreenState
         ),
         border: Border.all(color: const Color(0xFF00FF00).withValues(alpha: 0.3)),
       ),
+<<<<<<< HEAD
       child: Stack(
         children: [
           if (h.thumbnailUrl != null)
@@ -869,6 +1342,103 @@ class _ScouterPlayerDetailScreenState
               ],
             ),
           ),
+=======
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 138,
+            child: Stack(
+              children: [
+                if (h.thumbnailUrl != null)
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: Image.network(
+                      h.thumbnailUrl!,
+                      fit: BoxFit.cover,
+                      width: 148,
+                      height: 138,
+                      errorBuilder: (_, __, ___) => const SizedBox(),
+                    ),
+                  ),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    gradient: LinearGradient(
+                      colors: [Colors.transparent, Colors.black.withValues(alpha: 0.55)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                ),
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00FF00).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF00FF00), width: 2),
+                    ),
+                    child: const Icon(Icons.play_arrow_rounded, color: Color(0xFF00FF00), size: 26),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+            child: Text(
+              h.title.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (isProcessedClip)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+              child: FutureBuilder<Map<String, dynamic>>(
+                future: ScouterRepository().getHighlightEngagement(h.id),
+                builder: (ctx, snap) {
+                  final likes = (snap.data?['likeCount'] as num?)?.toInt();
+                  final comments = (snap.data?['commentCount'] as num?)?.toInt();
+                  if (likes == null && comments == null) {
+                    return const SizedBox(height: 14);
+                  }
+                  return Row(
+                    children: [
+                      Icon(Icons.favorite, size: 12, color: Colors.pinkAccent.withValues(alpha: 0.9)),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${likes ?? 0}',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.65),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Icon(Icons.chat_bubble_outline, size: 11, color: Colors.white.withValues(alpha: 0.5)),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${comments ?? 0}',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.65),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         ],
       ),
     ));
@@ -971,6 +1541,7 @@ class _ScouterPlayerDetailScreenState
       ),
     );
   }
+<<<<<<< HEAD
 
   // ── Tabs ────────────────────────────────────────────────────
 
@@ -1679,4 +2250,6 @@ class _ScoutingTab extends StatelessWidget {
       ),
     );
   }
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 }

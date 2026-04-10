@@ -11,10 +11,16 @@ import 'package:arena_chain_flutter/screens/player/feature_profile/ui/settings_s
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/my_channel_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/subscriptions_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/my_account_screen.dart';
+<<<<<<< HEAD
 import 'package:arena_chain_flutter/screens/leagues/player_leagues_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/ui/add_friend_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/ui/friends_list_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/ui/player_public_profile_screen.dart';
+=======
+import 'package:arena_chain_flutter/screens/player/feature_leagues/ui/leagues_list_screen.dart';
+import 'package:arena_chain_flutter/screens/leagues/player_leagues_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_friends/ui/add_friend_screen.dart';
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/create_tournament_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/booking_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/ticket_screen.dart';
@@ -22,6 +28,10 @@ import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_m
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/game_room_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_news/ui/news_list_screen.dart';
+<<<<<<< HEAD
+=======
+import 'package:arena_chain_flutter/screens/player/feature_messages/ui/messages_screen.dart';
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 import 'package:arena_chain_flutter/screens/Team_Manager/manager_application_screen.dart';
 import 'package:arena_chain_flutter/screens/admin/admin_manager_approval_screen.dart';
 import 'package:arena_chain_flutter/screens/Team_Manager/team_manager_dashboard.dart';
@@ -33,8 +43,11 @@ import 'package:arena_chain_flutter/screens/Team_Manager/team_profile_screen.dar
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/live_stream_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/scheduled_streams_screen.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/scouter_home_screen.dart';
+<<<<<<< HEAD
 import 'package:arena_chain_flutter/screens/player/feature_chat/ui/chat_list_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_chat/ui/chat_detail_screen.dart';
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
 class AppRoutes {
   static const String splash = '/';
@@ -52,16 +65,24 @@ class AppRoutes {
   static const String subscriptions = '/player/subscriptions';
   static const String leagues = '/player/leagues';
   static const String news = '/player/news';
+<<<<<<< HEAD
   static const String addFriend = '/player/friends/add';
   static const String friendsList = '/player/friends';
   static const String playerPublicProfile = '/player/profile/public';
+=======
+  static const String messages = '/player/messages';
+  static const String addFriend = '/player/friends/add';
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   static const String createTournament = '/tournaments/create';
   static const String tournamentBooking = '/tournaments/booking';
   static const String tournamentTicket = '/tournaments/ticket';
   static const String matchmaking = '/player/matchmaking';
   static const String gameRoom = '/player/game-room';
+<<<<<<< HEAD
   static const String chatList = '/player/chat';
   static const String chatDetail = '/player/chat/detail';
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
   // Team & Manager Routes
   static const String managerApplication = '/manager/apply';
@@ -91,6 +112,7 @@ class AppRoutes {
         subscriptions: (context) => const SubscriptionsScreen(),
         leagues: (context) => const PlayerLeaguesScreen(),
         news: (context) => const NewsListScreen(),
+<<<<<<< HEAD
         addFriend: (context) => const AddFriendScreen(),
         friendsList: (context) => const FriendsListScreen(),
         playerPublicProfile: (context) {
@@ -114,6 +136,10 @@ class AppRoutes {
             prefillAvatarUrl: preAvatar,
           );
         },
+=======
+        messages: (context) => const MessagesScreen(),
+        addFriend: (context) => const AddFriendScreen(),
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         createTournament: (context) => const CreateTournamentScreen(),
         tournamentBooking: (context) {
           final args = ModalRoute.of(context)!.settings.arguments as TournamentModel;
@@ -128,6 +154,7 @@ class AppRoutes {
         },
         matchmaking: (context) => const MatchmakingScreen(),
         gameRoom: (context) => const GameRoomScreen(),
+<<<<<<< HEAD
         chatList: (context) => const ChatListScreen(),
         chatDetail: (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
@@ -137,6 +164,8 @@ class AppRoutes {
             avatar: args['avatar'] as String?,
           );
         },
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
         // Team & Manager Screen mappings
         managerApplication: (context) => const ManagerApplicationScreen(),

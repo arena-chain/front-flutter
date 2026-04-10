@@ -3,6 +3,7 @@ import 'package:arena_chain_flutter/core/models/feature_friends/friendship_model
 import 'package:arena_chain_flutter/core/repositories/feature_friends/friends_repository.dart';
 import 'package:flutter/material.dart';
 
+<<<<<<< HEAD
 enum FriendSearchRelation {
   none,
   friends,
@@ -22,10 +23,21 @@ class FriendsViewModel extends ChangeNotifier {
   List<FriendUser> _searchResults = [];
   bool _isLoading = false;
   bool _isSearchLoading = false;
+=======
+class FriendsViewModel extends ChangeNotifier {
+  final FriendsRepository _repository;
+  final String currentUserId; // We need the current user ID for context
+
+  List<FriendshipModel> _friends = [];
+  List<FriendshipModel> _pendingRequests = [];
+  List<FriendUser> _searchResults = [];
+  bool _isLoading = false;
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   String? _error;
 
   List<FriendshipModel> get friends => _friends;
   List<FriendshipModel> get pendingRequests => _pendingRequests;
+<<<<<<< HEAD
   List<FriendshipModel> get sentRequests => _sentRequests;
   List<FriendshipModel> get blocked => _blocked;
   List<FriendUser> get searchResults => _searchResults;
@@ -33,12 +45,18 @@ class FriendsViewModel extends ChangeNotifier {
   bool get isSearchLoading => _isSearchLoading;
   String? get error => _error;
   int get pendingCount => _pendingRequests.length;
+=======
+  List<FriendUser> get searchResults => _searchResults;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
   FriendsViewModel({
     required this.currentUserId,
     FriendsRepository? repository,
   }) : _repository = repository ?? FriendsRepository();
 
+<<<<<<< HEAD
   Set<String> get _friendIds => _friends.map(_otherUserId).whereType<String>().toSet();
   Set<String> get _pendingIncomingIds =>
       _pendingRequests.map(_otherUserId).whereType<String>().toSet();
@@ -135,6 +153,8 @@ class FriendsViewModel extends ChangeNotifier {
     }
   }
 
+=======
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   Future<void> loadFriends() async {
     _setLoading(true);
     try {
@@ -148,10 +168,15 @@ class FriendsViewModel extends ChangeNotifier {
   }
 
   Future<void> loadPendingRequests() async {
+<<<<<<< HEAD
+=======
+    // Note: Don't set global loading here to avoid blocking UI if done in background
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     try {
       _pendingRequests = await _repository.getPendingRequests(currentUserId);
       notifyListeners();
     } catch (e) {
+<<<<<<< HEAD
       debugPrint('loadPendingRequests: $e');
     }
   }
@@ -162,10 +187,20 @@ class FriendsViewModel extends ChangeNotifier {
     if (trimmed.length < 2) {
       _searchResults = [];
       _isSearchLoading = false;
+=======
+      print('Error loading pending requests: $e');
+    }
+  }
+
+  Future<void> searchUsers(String query) async {
+    if (query.isEmpty) {
+      _searchResults = [];
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       notifyListeners();
       return;
     }
 
+<<<<<<< HEAD
     _isSearchLoading = true;
     _error = null;
     notifyListeners();
@@ -182,10 +217,21 @@ class FriendsViewModel extends ChangeNotifier {
     } finally {
       _isSearchLoading = false;
       notifyListeners();
+=======
+    _setLoading(true);
+    try {
+      _searchResults = await _repository.searchUsers(query, excludeUserId: currentUserId);
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _setLoading(false);
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     }
   }
 
   Future<void> sendFriendRequest(String recipientId) async {
+<<<<<<< HEAD
     await _repository.sendFriendRequest(currentUserId, recipientId);
     await loadAllFriendData();
     notifyListeners();
@@ -199,11 +245,32 @@ class FriendsViewModel extends ChangeNotifier {
     FriendshipModel? removed;
     if (index != -1) {
       removed = _pendingRequests[index];
+=======
+    try {
+      await _repository.sendFriendRequest(currentUserId, recipientId);
+      // Optionally update some state or show success message
+      // We might want to remove the user from search results or change their status UI
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> acceptRequest(String friendshipId) async {
+    // 1. Optimistic Update: Remove from pending immediately
+    final index = _pendingRequests.indexWhere((r) => r.id == friendshipId);
+    FriendshipModel? removedRequest;
+    
+    if (index != -1) {
+      removedRequest = _pendingRequests[index];
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       _pendingRequests.removeAt(index);
       notifyListeners();
     }
 
     try {
+<<<<<<< HEAD
       await _repository.acceptRequest(friendshipId, currentUserId);
       await loadAllFriendData();
     } catch (e) {
@@ -213,10 +280,29 @@ class FriendsViewModel extends ChangeNotifier {
       }
       _error = e.toString();
       rethrow;
+=======
+      // 2. Make API Call
+      await _repository.acceptRequest(friendshipId, currentUserId);
+      
+      // 3. Refresh Data to ensure sync (especially for the friends list)
+      await Future.wait([
+        loadFriends(),
+        // loadPendingRequests(), // Already removed locally, but good to sync
+      ]);
+    } catch (e) {
+      // 4. Revert on Error
+      if (removedRequest != null) {
+        _pendingRequests.insert(index, removedRequest);
+        notifyListeners();
+      }
+      _error = e.toString();
+      notifyListeners();
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     }
   }
 
   Future<void> rejectRequest(String friendshipId) async {
+<<<<<<< HEAD
     await _repository.rejectRequest(friendshipId, currentUserId);
     await loadAllFriendData();
   }
@@ -239,10 +325,28 @@ class FriendsViewModel extends ChangeNotifier {
   void clearSearch() {
     _searchResults = [];
     notifyListeners();
+=======
+    try {
+      await _repository.rejectRequest(friendshipId, currentUserId);
+      await loadPendingRequests();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   }
 
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
   }
+<<<<<<< HEAD
+=======
+  
+  // Helper to clear search results
+  void clearSearch() {
+    _searchResults = [];
+    notifyListeners();
+  }
+>>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 }
