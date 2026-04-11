@@ -6,6 +6,7 @@ import 'package:arena_chain_flutter/features/lol_control/lol_queue_screen.dart';
 import 'package:arena_chain_flutter/features/lol_control/lol_champ_select_screen.dart';
 import 'package:arena_chain_flutter/features/lol_control/lol_in_game_screen.dart';
 import 'package:arena_chain_flutter/features/lol_control/lol_control_pairing_screen.dart';
+import 'package:arena_chain_flutter/features/lol_control/widgets/role_picker.dart';
 
 const _kBg = Color(0xFF0A0E1A);
 const _kGold = Color(0xFFC89B3C);
@@ -37,7 +38,7 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
     _GameModeOption(queueId: 420, title: 'Ranked Solo/Duo', icon: Icons.military_tech),
     _GameModeOption(queueId: 450, title: 'ARAM', icon: Icons.bolt),
     _GameModeOption(queueId: 1090, title: 'Teamfight Tactics', icon: Icons.grid_view),
-    _GameModeOption(queueId: 400, title: 'Normal (Blind)', icon: Icons.sports_esports),
+    _GameModeOption(queueId: 400, title: 'Normal (Draft)', icon: Icons.sports_esports),
   ];
 
   @override
@@ -73,6 +74,30 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
     if (uri == null || uri.isEmpty) return false;
     return uri.contains('/lol-gameflow/v1/gameflow-phase') ||
         uri.contains('/lol-gameflow/v1/session');
+  }
+
+  Map<String, dynamic>? _localMemberFromLobby(Map<String, dynamic> lobby) {
+    final lm = lobby['localMember'];
+    if (lm is Map<String, dynamic>) return Map<String, dynamic>.from(lm);
+    if (lm is Map) return Map<String, dynamic>.from(lm);
+    final members = lobby['members'] as List<dynamic>? ?? [];
+    for (final raw in members) {
+      if (raw is Map<String, dynamic> && raw['isLocalMember'] == true) {
+        return Map<String, dynamic>.from(raw);
+      }
+      if (raw is Map && raw['isLocalMember'] == true) {
+        return Map<String, dynamic>.from(raw);
+      }
+    }
+    return null;
+  }
+
+  int? _queueIdFromLobby(Map<String, dynamic> lobby) {
+    final gc = lobby['gameConfig'] as Map<String, dynamic>?;
+    final q = gc?['queueId'];
+    if (q is int) return q;
+    if (q is num) return q.toInt();
+    return null;
   }
 
   // ── event routing ───────────────────────────────────────────
@@ -340,6 +365,13 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
     final gameMode = gameConfig['gameMode']?.toString() ?? 'Unknown';
     final mapId = gameConfig['mapId']?.toString() ?? '—';
     final members = lobby['members'] as List<dynamic>? ?? [];
+    final queueId = _queueIdFromLobby(lobby);
+    final showRolePicker = queueId == 420 || queueId == 400;
+    final localMember = _localMemberFromLobby(lobby);
+    final initialPrimary =
+        localMember?['firstPositionPreference']?.toString() ?? 'UNSELECTED';
+    final initialSecondary =
+        localMember?['secondPositionPreference']?.toString() ?? 'UNSELECTED';
 
     return Column(
       children: [
@@ -377,6 +409,14 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
                     ],
                   ),
                 ),
+                if (showRolePicker) ...[
+                  const Divider(height: 28, thickness: 1, color: Colors.white12),
+                  RolePicker(
+                    initialPrimary: initialPrimary,
+                    initialSecondary: initialSecondary,
+                  ),
+                  const Divider(height: 28, thickness: 1, color: Colors.white12),
+                ],
                 const SizedBox(height: 20),
                 const Text('Players',
                     style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600)),

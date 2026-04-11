@@ -442,12 +442,16 @@ class RiftService extends ChangeNotifier {
     final id = _nextRequestId++;
     _pendingRequests[id] = path;
 
-    // Conduit expects: [7, id, path, method, bodyString]
-    // bodyString must be a JSON string for POST/PUT, or null for GET/DELETE
-    final String? bodyString =
-        (body != null && body.isNotEmpty) ? jsonEncode(body) : null;
+    // Mimic Conduit (MobileConnectionHandler): decrypted inner payload is a JSON
+    // array matching the web client: JSON.stringify([REQUEST, id, path, method, body])
+    //   [0] = MobileOpcode.Request (7)
+    //   [1] = request id (int, echoed on LCU response [8, id, ...])
+    //   [2] = LCU path (string)
+    //   [3] = HTTP method (string)
+    //   [4] = body: null for GET/DELETE with no body, or ONE jsonEncode of the Map
+    //         as a JSON string value (e.g. "{\"a\":1}"), never a nested object here.
+    final String? bodyString = body != null ? jsonEncode(body) : null;
 
-    // Build the inner array manually to support null body element
     final innerList = <dynamic>[_mobileRequest, id, path, method, bodyString];
     final innerMsg = jsonEncode(innerList);
 
