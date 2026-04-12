@@ -357,7 +357,9 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildStatsCard(gs, timeStr),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
+                  _buildTeamScoreBar(gs),
+                  const SizedBox(height: 8),
                   _buildTeamScoresCard(gs),
                   const SizedBox(height: 16),
                   const Text(
@@ -483,8 +485,149 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
     return NumberFormat('#,###').format(n);
   }
 
+  String _normalizeDDragonName(String name) {
+    const overrides = <String, String>{
+      'Nunu & Willump': 'Nunu',
+      'Wukong': 'MonkeyKing',
+      'Renata Glasc': 'Renata',
+      "K'Sante": 'KSante',
+      "Bel'Veth": 'Belveth',
+      "Kog'Maw": 'KogMaw',
+      "Kha'Zix": 'Khazix',
+      "Vel'Koz": 'Velkoz',
+      "Cho'Gath": 'Chogath',
+      'LeBlanc': 'Leblanc',
+      "Kai'Sa": 'Kaisa',
+      "Rek'Sai": 'RekSai',
+      'Fiddlesticks': 'FiddleSticks',
+    };
+    return overrides[name] ?? name.replaceAll(' ', '').replaceAll("'", '');
+  }
+
+  int _sumTeamKills(List<dynamic> team) {
+    return team.fold<int>(0, (sum, p) {
+      if (p is! Map) return sum;
+      return sum + ((p['kills'] as num?)?.toInt() ?? 0);
+    });
+  }
+
+  Widget _buildTeamScoreBar(Map<String, dynamic>? gs) {
+    if (gs == null) return const SizedBox.shrink();
+    final orderTeam = (gs['orderTeam'] as List?) ?? [];
+    final chaosTeam = (gs['chaosTeam'] as List?) ?? [];
+    final localTeam = _localSideTeam(gs);
+    final myScore =
+        localTeam == 'ORDER' ? _sumTeamKills(orderTeam) : _sumTeamKills(chaosTeam);
+    final enemyScore =
+        localTeam == 'ORDER' ? _sumTeamKills(chaosTeam) : _sumTeamKills(orderTeam);
+    if (myScore == 0 && enemyScore == 0) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111827),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '$myScore',
+            style: const TextStyle(
+              color: _kGold,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              '—',
+              style: TextStyle(
+                color: Colors.white38,
+                fontSize: 18,
+              ),
+            ),
+          ),
+          Text(
+            '$enemyScore',
+            style: TextStyle(
+              color: Colors.red.shade400,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyItemSlot() {
+    return Container(
+      width: 12,
+      height: 12,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1F2E),
+        borderRadius: BorderRadius.circular(2),
+        border: Border.all(color: Colors.white12, width: 0.5),
+      ),
+    );
+  }
+
+  /// Up to 6 inventory slots; maps items by `slot` (0–5) when present.
+  Widget _buildItemSlots(List<dynamic> items) {
+    final bySlot = <int, Map<String, dynamic>>{};
+    final overflow = <Map<String, dynamic>>[];
+    for (final raw in items) {
+      if (raw is! Map) continue;
+      final m = Map<String, dynamic>.from(raw);
+      final s = (m['slot'] as num?)?.toInt();
+      if (s != null && s >= 0 && s < 6) {
+        bySlot[s] = m;
+      } else {
+        overflow.add(m);
+      }
+    }
+    var oi = 0;
+    for (var i = 0; i < 6; i++) {
+      if (!bySlot.containsKey(i) && oi < overflow.length) {
+        bySlot[i] = overflow[oi++];
+      }
+    }
+
+    final slotWidgets = <Widget>[];
+    for (int i = 0; i < 6; i++) {
+      if (i > 0) slotWidgets.add(const SizedBox(width: 1));
+      final m = bySlot[i];
+      final id = m != null ? ((m['itemID'] as num?)?.toInt() ?? 0) : 0;
+      if (id > 0) {
+        slotWidgets.add(
+          Image.network(
+            'https://ddragon.leagueoflegends.com/cdn/14.10.1/img/item/$id.png',
+            width: 12,
+            height: 12,
+            errorBuilder: (context, error, stackTrace) => _emptyItemSlot(),
+          ),
+        );
+      } else {
+        slotWidgets.add(_emptyItemSlot());
+      }
+    }
+
+    return SizedBox(
+      width: 75,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: slotWidgets,
+      ),
+    );
+  }
+
   Widget _teamScoreRow(Map<String, dynamic> p, {required bool highlightLocal, required bool showPosition}) {
     final name = p['summonerName']?.toString() ?? '';
+    final champName = p['championName']?.toString() ?? '';
     final isLocal = p['isLocalPlayer'] == true;
     final prefix = isLocal ? '★ ' : '';
     final k = p['kills'] ?? 0;
@@ -492,17 +635,84 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
     final a = p['assists'] ?? 0;
     final pos = p['position']?.toString() ?? '';
     final posBit = (showPosition && pos.isNotEmpty) ? ' · $pos' : '';
+    final isDead = p['isDead'] == true;
+    final respawnTimer = (p['respawnTimer'] as num?)?.toDouble() ?? 0.0;
+    final rawItems = p['items'];
+    final items = rawItems is List ? rawItems : <dynamic>[];
+
+    final ddragonChamp = _normalizeDDragonName(champName);
+
+    final nameStyle = TextStyle(
+      color: isDead
+          ? Colors.white24
+          : (highlightLocal && isLocal)
+              ? _kGold
+              : Colors.white70,
+      fontSize: 12,
+      fontWeight: (highlightLocal && isLocal && !isDead) ? FontWeight.w700 : FontWeight.w400,
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Text(
-        '$prefix$name  $k/$d/$a$posBit',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: (highlightLocal && isLocal) ? _kGold : Colors.white70,
-          fontSize: 12,
-          fontWeight: (highlightLocal && isLocal) ? FontWeight.w700 : FontWeight.w400,
-        ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: champName.isEmpty
+                  ? Container(
+                      width: 20,
+                      height: 20,
+                      color: const Color(0xFF1A1F2E),
+                      child: const Icon(Icons.person, size: 12, color: Colors.white38),
+                    )
+                  : Image.network(
+                      'https://ddragon.leagueoflegends.com/cdn/14.10.1/img/champion/$ddragonChamp.png',
+                      width: 20,
+                      height: 20,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        width: 20,
+                        height: 20,
+                        color: const Color(0xFF1A1F2E),
+                        child: const Icon(Icons.person, size: 12, color: Colors.white38),
+                      ),
+                    ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '$prefix$name  $k/$d/$a$posBit',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: nameStyle,
+            ),
+          ),
+          SizedBox(
+            width: 28,
+            child: isDead
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.close, color: Colors.red, size: 10),
+                      if (respawnTimer > 0) ...[
+                        const SizedBox(width: 2),
+                        Text(
+                          '${respawnTimer.toStringAsFixed(0)}s',
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ],
+                    ],
+                  )
+                : const SizedBox.shrink(),
+          ),
+          _buildItemSlots(items),
+        ],
       ),
     );
   }

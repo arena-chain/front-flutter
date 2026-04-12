@@ -15,10 +15,10 @@ class ApiConfig {
 
   // Set to your machine's Wi-Fi IP for physical device testing.
   // Use 'ipconfig' (Windows) or 'ifconfig' (Mac/Linux) to find it.
-  static const String _lanIp = '192.168.1.12';
+  static const String _lanIp = '192.168.1.156';
 
   // Set to true when running on an Android emulator, false for a physical device.
-  static const bool _isEmulator = true;
+  static const bool _isEmulator = false;
 
   static String get baseUrl {
     final override = _apiBaseUrlOverride.trim();
