@@ -7,6 +7,7 @@ import 'package:arena_chain_flutter/features/lol_control/lol_champ_select_screen
 import 'package:arena_chain_flutter/features/lol_control/lol_in_game_screen.dart';
 import 'package:arena_chain_flutter/features/lol_control/lol_control_pairing_screen.dart';
 import 'package:arena_chain_flutter/features/lol_control/widgets/role_picker.dart';
+import 'package:arena_chain_flutter/features/lol_control/widgets/invite_overlay.dart';
 
 const _kBg = Color(0xFF0A0E1A);
 const _kGold = Color(0xFFC89B3C);
@@ -28,6 +29,9 @@ class LolLobbyScreen extends StatefulWidget {
 
 class _LolLobbyScreenState extends State<LolLobbyScreen> {
   StreamSubscription<LcuEvent>? _sub;
+  RiftService? _rift;
+  bool _hadRiftConnection = false;
+  bool _disconnectNavigationScheduled = false;
   Map<String, dynamic>? _lobbyState;
   String _gameflowPhase = '';
   int? _creatingQueueId;
@@ -41,10 +45,43 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
     _GameModeOption(queueId: 400, title: 'Normal (Draft)', icon: Icons.sports_esports),
   ];
 
+  void _onRiftConnectionChanged() {
+    final r = _rift;
+    if (r == null || !mounted || _disconnectNavigationScheduled) return;
+    if (r.status == RiftConnectionStatus.connected) {
+      _hadRiftConnection = true;
+      return;
+    }
+    if (_hadRiftConnection &&
+        (r.status == RiftConnectionStatus.disconnected ||
+            r.status == RiftConnectionStatus.error)) {
+      _disconnectNavigationScheduled = true;
+      r.removeListener(_onRiftConnectionChanged);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Connection lost. Please reconnect from the pairing screen.'),
+          ),
+        );
+        Future.delayed(const Duration(seconds: 2), () {
+          if (!mounted) return;
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LolControlPairingScreen()),
+          );
+        });
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    final rift = context.read<RiftService>();
+    _rift = context.read<RiftService>();
+    _hadRiftConnection = _rift!.status == RiftConnectionStatus.connected;
+    _rift!.addListener(_onRiftConnectionChanged);
+
+    final rift = _rift!;
     _sub = rift.lcuEvents.listen(_onLcuEvent);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -98,6 +135,12 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
     if (q is int) return q;
     if (q is num) return q.toInt();
     return null;
+  }
+
+  List<dynamic> _invitationsFromLobby(Map<String, dynamic> lobby) {
+    final inv = lobby['invitations'];
+    if (inv is List) return List<dynamic>.from(inv);
+    return [];
   }
 
   // ── event routing ───────────────────────────────────────────
@@ -185,6 +228,7 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
 
   @override
   void dispose() {
+    _rift?.removeListener(_onRiftConnectionChanged);
     _sub?.cancel();
     super.dispose();
   }
@@ -391,11 +435,43 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Game Mode', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-                      const SizedBox(height: 2),
-                      Text(gameMode,
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Game Mode',
+                                    style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                                const SizedBox(height: 2),
+                                Text(gameMode,
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                          if (localMember?['isLeader'] == true)
+                            TextButton.icon(
+                              onPressed: () {
+                                showInviteFriendsBottomSheet(
+                                  context,
+                                  riftService: context.read<RiftService>(),
+                                  invitations: _invitationsFromLobby(lobby),
+                                );
+                              },
+                              icon: const Icon(Icons.person_add, color: _kGold, size: 20),
+                              label: const Text('Invite', style: TextStyle(color: _kGold)),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
+                        ],
+                      ),
                       const SizedBox(height: 12),
                       Text('Map ID', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
                       const SizedBox(height: 2),

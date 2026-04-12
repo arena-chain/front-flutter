@@ -19,16 +19,17 @@ class LcuEvent {
   final String uri;
   final String eventType;
   final dynamic data;
-  final int? httpStatus;
+  final int httpStatus;
 
   LcuEvent({
     required this.uri,
     this.eventType = 'Update',
     this.data,
-    this.httpStatus,
+    required this.httpStatus,
   });
 
-  Map<String, dynamic> get asMap => {'uri': uri, 'data': data};
+  Map<String, dynamic> get asMap =>
+      {'uri': uri, 'data': data, 'httpStatus': httpStatus};
 }
 
 class RiftService extends ChangeNotifier {
@@ -83,6 +84,47 @@ class RiftService extends ChangeNotifier {
 
   void _log(String msg) => debugPrint('[RiftService] $msg');
 
+  /// When the socket drops (e.g. closeCode 1005), clear crypto state and pending
+  /// requests. No auto-reconnect — user must pair again from the pairing screen.
+  void _onTransportClosed({required bool clearAsError}) {
+    _subscription?.cancel();
+    _subscription = null;
+    _channel = null;
+    _aesKey = null;
+    _conduitPublicKey = null;
+    _pendingRequests.clear();
+    if (clearAsError) {
+      _status = RiftConnectionStatus.error;
+    } else if (_status != RiftConnectionStatus.error) {
+      _status = RiftConnectionStatus.disconnected;
+    } else {
+      _status = RiftConnectionStatus.disconnected;
+    }
+    if (!clearAsError) {
+      _errorMessage = '';
+    }
+    notifyListeners();
+  }
+
+  /// Conduit sometimes sends pseudo-JSON where the last array element is a bare
+  /// word (e.g. `...,Lobby]`). Quote those tokens so [jsonDecode] succeeds.
+  String _sanitizeLcuDecryptedPayload(String decrypted) {
+    final re = RegExp(r',([A-Za-z][A-Za-z0-9_]*)\]$');
+    var s = decrypted;
+    while (true) {
+      final m = re.firstMatch(s);
+      if (m == null) {
+        break;
+      }
+      final word = m.group(1)!;
+      if (word == 'true' || word == 'false' || word == 'null') {
+        break;
+      }
+      s = s.replaceRange(m.start, m.end, ',"$word"]');
+    }
+    return s;
+  }
+
   // ── connection ──────────────────────────────────────────────
 
   Future<void> connect(String ip, String port, String code) async {
@@ -113,16 +155,12 @@ class RiftService extends ChangeNotifier {
       _onMessage,
       onError: (e) {
         _log('WebSocket stream error: $e');
-        _status = RiftConnectionStatus.error;
         _errorMessage = 'WebSocket error: $e';
-        notifyListeners();
+        _onTransportClosed(clearAsError: true);
       },
       onDone: () {
         _log('WebSocket closed — closeCode=${_channel?.closeCode}, closeReason=${_channel?.closeReason}');
-        if (_status != RiftConnectionStatus.error) {
-          _status = RiftConnectionStatus.disconnected;
-        }
-        notifyListeners();
+        _onTransportClosed(clearAsError: false);
       },
     );
 
@@ -301,16 +339,52 @@ class RiftService extends ChangeNotifier {
 
     _log('Decrypted: ${decrypted.substring(0, min(200, decrypted.length))}');
 
+    dynamic inner;
     try {
-      final inner = jsonDecode(decrypted);
-      if (inner is! List || inner.isEmpty) {
-        _log('Inner message is not a non-empty List');
+      final sanitized = _sanitizeLcuDecryptedPayload(decrypted);
+      inner = jsonDecode(sanitized);
+    } catch (e, st) {
+      _log('LCU inner jsonDecode failed (after bare-word sanitize): $e\n$st\nraw=$decrypted');
+      return;
+    }
+
+    try {
+      // JSON-object push (alternate wire format): { "uri", "data", optional "status" }
+      if (inner is Map) {
+        final m = Map<String, dynamic>.from(inner);
+        final uri = m['uri']?.toString();
+        if (uri != null && uri.isNotEmpty && m.containsKey('data')) {
+          final statusRaw = m['status'];
+          final statusCode = statusRaw is num
+              ? statusRaw.toInt()
+              : (statusRaw is String ? int.tryParse(statusRaw) : null) ?? 200;
+          _log('LCU push (map): uri=$uri status=$statusCode');
+          _lcuController.add(LcuEvent(
+            uri: uri,
+            data: _decodeLcuPayload(m['data']),
+            httpStatus: statusCode,
+            eventType: statusCode == 200 ? 'Update' : 'Delete',
+          ));
+          return;
+        }
+        _log('Inner JSON map not handled as LCU push: keys=${m.keys.toList()}');
         return;
       }
 
-      final innerOp = (inner[0] as num).toInt();
+      if (inner is! List || inner.isEmpty) {
+        _log('Inner message is not a List or map we handle: ${inner.runtimeType}');
+        return;
+      }
+
+      final innerOp = _readInt(inner[0], -1);
+      if (innerOp < 0) {
+        _log('Inner opcode not a number: ${inner[0]}');
+        return;
+      }
       _log('Inner opcode=$innerOp');
 
+      // Inbound LCU reply to a mobile request (Mimic Conduit: MobileOpcode.Response = 8)
+      // Wire: [8, requestId, httpStatus, responseData]
       switch (innerOp) {
         case _mobileSecretResponse:
           final approved = inner.length > 1 && inner[1] == true;
@@ -331,16 +405,65 @@ class RiftService extends ChangeNotifier {
           _handleLcuResponse(inner);
           break;
 
+        // Mimic Conduit: MobileOpcode.Update = 9 — LCU subscription push
         case _mobileUpdate:
           _handleLcuUpdate(inner);
+          break;
+
+        // Some relays use opcode 3 for push-style updates [3, uri, data] or [3, uri, status, data]
+        case 3:
+          _handleLcuPushOpcode3(inner);
           break;
 
         default:
           _log('Unhandled inner opcode $innerOp: $decrypted');
       }
     } catch (e, st) {
-      _log('Inner JSON decode error: $e\n$st');
+      _log('LCU inner routing error: $e\n$st');
     }
+  }
+
+  int _readInt(dynamic v, int fallback) {
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v) ?? fallback;
+    return fallback;
+  }
+
+  dynamic _decodeLcuPayload(dynamic rawData) {
+    if (rawData is String) {
+      try {
+        return jsonDecode(rawData);
+      } catch (_) {
+        return rawData;
+      }
+    }
+    return rawData;
+  }
+
+  void _handleLcuPushOpcode3(List inner) {
+    if (inner.length < 3) {
+      _log('LCU push opcode 3 too short: $inner');
+      return;
+    }
+    final uri = inner[1].toString();
+    final int statusCode;
+    final dynamic rawData;
+    if (inner.length >= 4) {
+      statusCode = _readInt(inner[2], 200);
+      rawData = inner[3];
+    } else {
+      statusCode = 200;
+      rawData = inner[2];
+    }
+    final data = _decodeLcuPayload(rawData);
+    _log('LCU push [3]: uri=$uri status=$statusCode');
+    _lcuController.add(LcuEvent(
+      uri: uri,
+      data: data,
+      httpStatus: statusCode,
+      eventType: statusCode == 200 ? 'Update' : 'Delete',
+    ));
   }
 
   // ── LCU Response [8, id, statusCode, data] ──────────────────
@@ -350,23 +473,17 @@ class RiftService extends ChangeNotifier {
       _log('LCU Response too short: $inner');
       return;
     }
-    final requestId = (inner[1] as num).toInt();
-    final statusCode = (inner[2] as num).toInt();
-    final rawData = inner.length > 3 ? inner[3] : null;
-
-    dynamic data;
-    if (rawData is String) {
-      try {
-        data = jsonDecode(rawData);
-      } catch (_) {
-        data = rawData;
-      }
-    } else {
-      data = rawData;
+    final requestId = _readInt(inner[1], -1);
+    final statusCode = _readInt(inner[2], -1);
+    if (requestId < 0 || statusCode < 0) {
+      _log('LCU Response bad id/status: inner=$inner');
+      return;
     }
+    final rawData = inner.length > 3 ? inner[3] : null;
+    final data = _decodeLcuPayload(rawData);
 
     final pending = _pendingRequests.remove(requestId);
-    _log('LCU Response: id=$requestId status=$statusCode path=$pending dataType=${data.runtimeType}');
+    _log('LCU Response [8]: id=$requestId status=$statusCode path=$pending dataType=${data.runtimeType}');
 
     if (pending != null) {
       _lcuController.add(LcuEvent(
@@ -374,6 +491,8 @@ class RiftService extends ChangeNotifier {
         data: data,
         httpStatus: statusCode,
       ));
+    } else {
+      _log('LCU Response [8]: no pending entry for id=$requestId — reply dropped');
     }
   }
 
@@ -385,21 +504,11 @@ class RiftService extends ChangeNotifier {
       return;
     }
     final uri = inner[1].toString();
-    final statusCode = (inner[2] as num).toInt();
+    final statusCode = _readInt(inner[2], 200);
     final rawData = inner.length > 3 ? inner[3] : null;
+    final data = _decodeLcuPayload(rawData);
 
-    dynamic data;
-    if (rawData is String) {
-      try {
-        data = jsonDecode(rawData);
-      } catch (_) {
-        data = rawData;
-      }
-    } else {
-      data = rawData;
-    }
-
-    _log('LCU Update: uri=$uri status=$statusCode');
+    _log('LCU Update [9]: uri=$uri status=$statusCode');
 
     final eventType = (statusCode == 200) ? 'Update' : 'Delete';
     _lcuController.add(LcuEvent(
@@ -420,6 +529,8 @@ class RiftService extends ChangeNotifier {
       '/lol-matchmaking/v1/ready-check',
       '/lol-champ-select/v1/session',
       '/lol-gameflow/v1/session',
+      '/lol-chat/v1/friends',
+      '/lol-chat/v1/me',
     ];
     for (final path in paths) {
       final innerMsg = jsonEncode([_mobileSubscribe, path]);
@@ -433,7 +544,7 @@ class RiftService extends ChangeNotifier {
 
   final Map<int, String> _pendingRequests = {};
 
-  void sendLcuRequest(String method, String path, [Map<String, dynamic>? body]) {
+  void sendLcuRequest(String method, String path, [dynamic body]) {
     if (_status != RiftConnectionStatus.connected || _aesKey == null) {
       _log('sendLcuRequest BLOCKED: status=$_status hasKey=${_aesKey != null}');
       return;
@@ -442,14 +553,10 @@ class RiftService extends ChangeNotifier {
     final id = _nextRequestId++;
     _pendingRequests[id] = path;
 
-    // Mimic Conduit (MobileConnectionHandler): decrypted inner payload is a JSON
-    // array matching the web client: JSON.stringify([REQUEST, id, path, method, body])
-    //   [0] = MobileOpcode.Request (7)
-    //   [1] = request id (int, echoed on LCU response [8, id, ...])
-    //   [2] = LCU path (string)
-    //   [3] = HTTP method (string)
-    //   [4] = body: null for GET/DELETE with no body, or ONE jsonEncode of the Map
-    //         as a JSON string value (e.g. "{\"a\":1}"), never a nested object here.
+    // Mimic Conduit (MobileConnectionHandler): inner encrypted payload is a JSON array:
+    //   [7, requestId, path, method, bodyStringOrNull]  (MobileOpcode.Request = 7)
+    // Rift *outer* WS opcode 4 is CONNECT only — do not confuse with this inner opcode.
+    // Inbound: [8, requestId, httpStatus, data] = LCU HTTP reply; [9, uri, status, data] = subscription push.
     final String? bodyString = body != null ? jsonEncode(body) : null;
 
     final innerList = <dynamic>[_mobileRequest, id, path, method, bodyString];
