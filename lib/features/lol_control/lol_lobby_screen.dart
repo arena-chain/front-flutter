@@ -204,7 +204,14 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
         break;
       case 'InProgress':
       case 'GameStart':
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LolInGameScreen()));
+        final rift = context.read<RiftService>();
+        final ip = rift.lastRelayHostIp ?? '127.0.0.1';
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => LolInGameScreen(serverIp: ip, serverPort: 3000),
+          ),
+        );
         break;
       default:
         break;

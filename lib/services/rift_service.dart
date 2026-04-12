@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:pointycastle/export.dart';
 import 'package:pointycastle/asn1.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -51,6 +52,13 @@ class RiftService extends ChangeNotifier {
   Uint8List? _aesKey;
   final _lcuController = StreamController<LcuEvent>.broadcast();
   Stream<LcuEvent> get lcuEvents => _lcuController.stream;
+
+  /// Host/IP last used in [connect] (Rift relay). Use for Nest/Socket.io on the same machine.
+  String? _lastRelayHostIp;
+  String? get lastRelayHostIp => _lastRelayHostIp;
+
+  static const String _kGameflowPhaseUri = '/lol-gameflow/v1/gameflow-phase';
+  static const int _nestLiveGameApiPort = 3000;
 
   final _random = Random.secure();
   int _nextRequestId = 1;
@@ -128,6 +136,7 @@ class RiftService extends ChangeNotifier {
   // ── connection ──────────────────────────────────────────────
 
   Future<void> connect(String ip, String port, String code) async {
+    _lastRelayHostIp = ip;
     _closeSocketOnly();
     _conduitPublicKey = null;
     _aesKey = null;
@@ -359,12 +368,14 @@ class RiftService extends ChangeNotifier {
               ? statusRaw.toInt()
               : (statusRaw is String ? int.tryParse(statusRaw) : null) ?? 200;
           _log('LCU push (map): uri=$uri status=$statusCode');
+          final decodedData = _decodeLcuPayload(m['data']);
           _lcuController.add(LcuEvent(
             uri: uri,
-            data: _decodeLcuPayload(m['data']),
+            data: decodedData,
             httpStatus: statusCode,
             eventType: statusCode == 200 ? 'Update' : 'Delete',
           ));
+          _notifyNestGameflowPhaseIfNeeded(uri, decodedData);
           return;
         }
         _log('Inner JSON map not handled as LCU push: keys=${m.keys.toList()}');
@@ -430,6 +441,52 @@ class RiftService extends ChangeNotifier {
     return fallback;
   }
 
+  String? _phaseStringFromGameflowData(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is String) {
+      final s = raw.replaceAll('"', '').trim();
+      if (s.isEmpty || s == 'null') return null;
+      return s;
+    }
+    if (raw is Map) {
+      final p = (raw['phase'] ?? raw['gameflowPhase'] ?? '').toString().trim();
+      return p.isEmpty ? null : p;
+    }
+    return null;
+  }
+
+  void _notifyNestGameflowPhaseIfNeeded(String uri, dynamic data) {
+    if (uri != _kGameflowPhaseUri) return;
+    final phase = _phaseStringFromGameflowData(data);
+    if (phase == null || phase.isEmpty) return;
+    _postGameflowPhaseToNest(phase);
+  }
+
+  void _postGameflowPhaseToNest(String phase) {
+    final host = _lastRelayHostIp;
+    if (host == null || host.isEmpty) {
+      _log('Nest gameflow phase POST skipped (no relay host yet)');
+      return;
+    }
+    final url = Uri.parse('http://$host:$_nestLiveGameApiPort/api/live-game/phase');
+    http
+        .post(
+          url,
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+          body: jsonEncode({'phase': phase}),
+        )
+        .then((response) {
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            _log(
+              'Nest POST /api/live-game/phase failed: ${response.statusCode} ${response.body}',
+            );
+          }
+        })
+        .catchError((Object e) {
+          _log('Nest POST /api/live-game/phase error: $e');
+        });
+  }
+
   dynamic _decodeLcuPayload(dynamic rawData) {
     if (rawData is String) {
       try {
@@ -464,6 +521,7 @@ class RiftService extends ChangeNotifier {
       httpStatus: statusCode,
       eventType: statusCode == 200 ? 'Update' : 'Delete',
     ));
+    _notifyNestGameflowPhaseIfNeeded(uri, data);
   }
 
   // ── LCU Response [8, id, statusCode, data] ──────────────────
@@ -491,6 +549,7 @@ class RiftService extends ChangeNotifier {
         data: data,
         httpStatus: statusCode,
       ));
+      _notifyNestGameflowPhaseIfNeeded(pending, data);
     } else {
       _log('LCU Response [8]: no pending entry for id=$requestId — reply dropped');
     }
@@ -517,6 +576,7 @@ class RiftService extends ChangeNotifier {
       httpStatus: statusCode,
       eventType: eventType,
     ));
+    _notifyNestGameflowPhaseIfNeeded(uri, data);
   }
 
   // ── Subscribe to LCU endpoints ──────────────────────────────
