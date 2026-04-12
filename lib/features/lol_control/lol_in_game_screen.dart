@@ -11,6 +11,9 @@ import 'package:arena_chain_flutter/features/lol_control/lol_control_pairing_scr
 const _kBg = Color(0xFF0A0E1A);
 const _kGold = Color(0xFFC89B3C);
 const _kSurface = Color(0xFF111827);
+const _kEnemyRed = Color(0xFFC84B4B);
+
+enum _EventRowSide { myTeam, enemyTeam, neutral }
 
 /// In-game live stats via Nest Socket.IO (`/live-game`). [serverIp] defaults from [RiftService.lastRelayHostIp].
 class LolInGameScreen extends StatefulWidget {
@@ -54,44 +57,146 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
     return n.toString();
   }
 
-  String _describeEvent(Map<String, dynamic> e) {
-    final name = e['EventName']?.toString() ?? '';
-    final local = _localSummonerFromState() ?? '';
+  List<Map<String, dynamic>> _teamPlayersList(Map<String, dynamic>? gs, String key) {
+    final v = gs?[key];
+    if (v is! List) return [];
+    return v.map((e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{}).toList();
+  }
 
-    String killer = e['KillerName']?.toString() ?? '';
-    String victim = e['VictimName']?.toString() ?? '';
+  /// ORDER or CHAOS — which side the local summoner is on.
+  String _localSideTeam(Map<String, dynamic>? gs) {
+    if (gs == null) return 'ORDER';
+    final order = _teamPlayersList(gs, 'orderTeam');
+    for (final p in order) {
+      if (p['isLocalPlayer'] == true) return 'ORDER';
+    }
+    final chaos = _teamPlayersList(gs, 'chaosTeam');
+    for (final p in chaos) {
+      if (p['isLocalPlayer'] == true) return 'CHAOS';
+    }
+    return 'ORDER';
+  }
+
+  Set<String> _summonerNamesOnSide(Map<String, dynamic>? gs, String orderOrChaos) {
+    final key = orderOrChaos == 'ORDER' ? 'orderTeam' : 'chaosTeam';
+    return _teamPlayersList(gs, key)
+        .map((p) => p['summonerName']?.toString() ?? '')
+        .where((s) => s.isNotEmpty)
+        .toSet();
+  }
+
+  _EventRowSide _sideForKiller(String killer, Set<String> myNames, Set<String> enemyNames) {
+    if (killer.isEmpty) return _EventRowSide.neutral;
+    if (myNames.contains(killer)) return _EventRowSide.myTeam;
+    if (enemyNames.contains(killer)) return _EventRowSide.enemyTeam;
+    return _EventRowSide.neutral;
+  }
+
+  _EventRowSide _eventRowSide(Map<String, dynamic> e) {
+    final name = e['EventName']?.toString() ?? '';
+    final gs = _gameState;
+    final localTeam = _localSideTeam(gs);
+    final orderNames = _summonerNamesOnSide(gs, 'ORDER');
+    final chaosNames = _summonerNamesOnSide(gs, 'CHAOS');
+    final myNames = localTeam == 'ORDER' ? orderNames : chaosNames;
+    final enemyNames = localTeam == 'ORDER' ? chaosNames : orderNames;
+    final killer = e['KillerName']?.toString() ?? '';
 
     switch (name) {
       case 'ChampionKill':
-        if (local.isNotEmpty && killer == local) {
-          return '⚔️ You killed $victim';
-        }
-        if (local.isNotEmpty && victim == local) {
-          return '💀 You were killed by $killer';
-        }
-        return '⚔️ $killer slayed $victim';
       case 'Multikill':
-        final kt = e['KillType']?.toString() ?? 'Multikill';
-        final streak = e['KillStreak']?.toString() ?? '';
-        return '🔥 $kt! ($streak kills)';
+      case 'DragonKill':
+      case 'BaronKill':
+      case 'HeraldKill':
+        return _sideForKiller(killer, myNames, enemyNames);
+      case 'TowerKill':
+        if (killer.isNotEmpty) return _sideForKiller(killer, myNames, enemyNames);
+        final tid = e['TeamID']?.toString().toUpperCase() ?? '';
+        if (tid.contains('ORDER') || tid == '100') {
+          return localTeam == 'ORDER' ? _EventRowSide.myTeam : _EventRowSide.enemyTeam;
+        }
+        if (tid.contains('CHAOS') || tid == '200') {
+          return localTeam == 'CHAOS' ? _EventRowSide.myTeam : _EventRowSide.enemyTeam;
+        }
+        return _EventRowSide.neutral;
+      case 'FirstBlood':
+      case 'FirstBrick':
+        return _sideForKiller(killer, myNames, enemyNames);
+      case 'Ace':
+      case 'GameEnd':
+      case 'GameStart':
+      default:
+        return _EventRowSide.neutral;
+    }
+  }
+
+  String _formatEventTime(Map<String, dynamic> e) {
+    final t = e['EventTime'];
+    final sec = t is num ? t.toDouble() : double.tryParse('$t') ?? 0;
+    return _formatGameTime(sec);
+  }
+
+  String _assistersSuffix(Map<String, dynamic> e) {
+    final a = e['Assisters'];
+    if (a is! List || a.isEmpty) return '';
+    final names = <String>[];
+    for (final x in a) {
+      if (x is String) {
+        names.add(x);
+      } else if (x is Map) {
+        names.add((x['summonerName'] ?? x['name'] ?? '').toString());
+      }
+    }
+    names.removeWhere((s) => s.isEmpty);
+    if (names.isEmpty) return '';
+    return ' (+ ${names.join(', ')})';
+  }
+
+  String _multikillDisplayName(String? raw) {
+    switch (raw) {
+      case 'DoubleKill':
+        return 'Double Kill';
+      case 'TripleKill':
+        return 'Triple Kill';
+      case 'QuadraKill':
+        return 'Quadra Kill';
+      case 'PentaKill':
+        return 'PENTA KILL 🎉';
+      default:
+        return raw ?? 'Multikill';
+    }
+  }
+
+  String _eventLineText(Map<String, dynamic> e) {
+    final name = e['EventName']?.toString() ?? '';
+    final killer = e['KillerName']?.toString() ?? '';
+    final victim = e['VictimName']?.toString() ?? '';
+
+    switch (name) {
+      case 'ChampionKill':
+        return '⚔️ $killer slew $victim${_assistersSuffix(e)}';
+      case 'Multikill':
+        final kt = _multikillDisplayName(e['KillType']?.toString());
+        return '🔥 $killer — $kt!';
+      case 'FirstBlood':
+        return '🩸 First Blood — $killer';
       case 'DragonKill':
         final dt = e['DragonType']?.toString() ?? 'Dragon';
-        return '🐉 $dt Dragon slain';
+        return '🐉 $dt Dragon';
       case 'BaronKill':
-        return '👁️ Baron Nashor slain';
+        return '👁️ Baron Nashor';
       case 'HeraldKill':
-        return '🏔️ Rift Herald slain';
+        return '🏔️ Rift Herald';
       case 'TowerKill':
         return '🏰 Tower destroyed';
-      case 'FirstBlood':
-        return '🩸 First Blood!';
       case 'FirstBrick':
-        return '🧱 First turret blood!';
+        return '🧱 First turret blood';
       case 'Ace':
         return '👑 Ace!';
       case 'GameStart':
         return '▶️ Game started';
       case 'GameEnd':
+        final local = _localSummonerFromState() ?? '';
         final win = _parseVictory(e, local);
         if (win == true) return '🏆 Victory!';
         if (win == false) return '💀 Defeat';
@@ -253,6 +358,8 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
                 children: [
                   _buildStatsCard(gs, timeStr),
                   const SizedBox(height: 16),
+                  _buildTeamScoresCard(gs),
+                  const SizedBox(height: 16),
                   const Text(
                     'Live events',
                     style: TextStyle(
@@ -376,6 +483,104 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
     return NumberFormat('#,###').format(n);
   }
 
+  Widget _teamScoreRow(Map<String, dynamic> p, {required bool highlightLocal, required bool showPosition}) {
+    final name = p['summonerName']?.toString() ?? '';
+    final isLocal = p['isLocalPlayer'] == true;
+    final prefix = isLocal ? '★ ' : '';
+    final k = p['kills'] ?? 0;
+    final d = p['deaths'] ?? 0;
+    final a = p['assists'] ?? 0;
+    final pos = p['position']?.toString() ?? '';
+    final posBit = (showPosition && pos.isNotEmpty) ? ' · $pos' : '';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Text(
+        '$prefix$name  $k/$d/$a$posBit',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: (highlightLocal && isLocal) ? _kGold : Colors.white70,
+          fontSize: 12,
+          fontWeight: (highlightLocal && isLocal) ? FontWeight.w700 : FontWeight.w400,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTeamScoresCard(Map<String, dynamic>? gs) {
+    if (gs == null) return const SizedBox.shrink();
+    final localTeam = _localSideTeam(gs);
+    final myList =
+        localTeam == 'ORDER' ? _teamPlayersList(gs, 'orderTeam') : _teamPlayersList(gs, 'chaosTeam');
+    final enemyList =
+        localTeam == 'ORDER' ? _teamPlayersList(gs, 'chaosTeam') : _teamPlayersList(gs, 'orderTeam');
+    if (myList.isEmpty && enemyList.isEmpty) return const SizedBox.shrink();
+
+    final mode = gs['gameMode']?.toString() ?? '';
+    final showPosition = !mode.toUpperCase().contains('ARAM');
+
+    return Card(
+      color: _kSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: Color(0x44C89B3C), width: 0.6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'YOUR TEAM',
+                      style: TextStyle(color: _kGold, fontSize: 11, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 8),
+                    ...myList.map(
+                      (p) => _teamScoreRow(
+                        p,
+                        highlightLocal: true,
+                        showPosition: showPosition,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 1,
+                color: Colors.white12,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ENEMY TEAM',
+                      style: TextStyle(color: _kEnemyRed, fontSize: 11, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 8),
+                    ...enemyList.map(
+                      (p) => _teamScoreRow(
+                        p,
+                        highlightLocal: false,
+                        showPosition: showPosition,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildEventList() {
     if (_events.isEmpty) {
       return Center(
@@ -386,19 +591,97 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
       );
     }
     return ListView.separated(
+      padding: EdgeInsets.zero,
       itemCount: _events.length,
       separatorBuilder: (context, _) => const Divider(color: Colors.white12, height: 1),
-      itemBuilder: (ctx, i) {
-        final e = _events[i];
-        return ListTile(
-          dense: true,
-          leading: const Icon(Icons.bolt, color: _kGold, size: 22),
-          title: Text(
-            _describeEvent(e),
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
+      itemBuilder: (ctx, i) => _buildEventRow(_events[i]),
+    );
+  }
+
+  Widget _buildEventRow(Map<String, dynamic> e) {
+    final isGameEnd = e['EventName']?.toString() == 'GameEnd';
+    if (isGameEnd) {
+      final local = _localSummonerFromState() ?? '';
+      final win = _parseVictory(e, local);
+      final text =
+          win == true ? '🏆 Victory!' : (win == false ? '💀 Defeat' : '🏁 Game ended');
+      final color = win == true ? _kGold : (win == false ? _kEnemyRed : Colors.white70);
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Center(
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w800),
           ),
-        );
-      },
+        ),
+      );
+    }
+
+    final side = _eventRowSide(e);
+    final time = _formatEventTime(e);
+    final line = _eventLineText(e);
+    final timeStyle = TextStyle(color: Colors.grey[600], fontSize: 10);
+
+    if (side == _EventRowSide.neutral) {
+      return SizedBox(
+        height: 28,
+        child: Row(
+          children: [
+            SizedBox(width: 40, child: Text(time, style: timeStyle)),
+            Expanded(
+              child: Text(
+                line,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ),
+            const SizedBox(width: 40),
+          ],
+        ),
+      );
+    }
+
+    if (side == _EventRowSide.myTeam) {
+      return SizedBox(
+        height: 28,
+        child: Row(
+          children: [
+            SizedBox(width: 40, child: Text(time, style: timeStyle)),
+            Expanded(
+              child: Text(
+                line,
+                textAlign: TextAlign.left,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: _kGold, fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ),
+            const Expanded(child: SizedBox()),
+          ],
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 28,
+      child: Row(
+        children: [
+          const Expanded(child: SizedBox()),
+          Expanded(
+            child: Text(
+              line,
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: _kEnemyRed, fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ),
+          SizedBox(width: 40, child: Text(time, textAlign: TextAlign.right, style: timeStyle)),
+        ],
+      ),
     );
   }
 
