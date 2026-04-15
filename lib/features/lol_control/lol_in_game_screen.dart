@@ -9,7 +9,7 @@ import 'package:arena_chain_flutter/services/rift_service.dart';
 import 'package:arena_chain_flutter/features/lol_control/lol_control_pairing_screen.dart';
 
 const _kBg = Color(0xFF0A0E1A);
-const _kGold = Color(0xFFC89B3C);
+const _kGold = Color(0xFF14452F);
 const _kSurface = Color(0xFF111827);
 const _kEnemyRed = Color(0xFFC84B4B);
 
@@ -353,38 +353,63 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildStatsCard(gs, timeStr),
-                  const SizedBox(height: 8),
-                  _buildTeamScoreBar(gs),
-                  const SizedBox(height: 8),
-                  _buildTeamScoresCard(gs),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Live events',
-                    style: TextStyle(
-                      color: _kGold,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(child: _buildEventList()),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 48,
-                    child: OutlinedButton.icon(
-                      onPressed: _disconnectToPairing,
-                      icon: const Icon(Icons.link_off, color: Colors.redAccent),
-                      label: const Text('Disconnect', style: TextStyle(color: Colors.redAccent)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.redAccent),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(child: _buildStatsCard(gs, timeStr)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                  SliverToBoxAdapter(child: _buildTeamScoreBar(gs)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                  SliverToBoxAdapter(child: _buildTeamScoresCard(gs)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                  const SliverToBoxAdapter(
+                    child: Text(
+                      'Live events',
+                      style: TextStyle(
+                        color: _kGold,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                  if (_events.isEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text(
+                            'Waiting for game events…',
+                            style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _buildEventItem(index),
+                        childCount: _events.length,
+                      ),
+                    ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _disconnectToPairing,
+                        icon: const Icon(Icons.link_off, size: 16),
+                        label: const Text('Disconnect'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _kEnemyRed,
+                          side: const BorderSide(color: _kEnemyRed),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
                 ],
               ),
             ),
@@ -625,93 +650,104 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
     );
   }
 
-  Widget _teamScoreRow(Map<String, dynamic> p, {required bool highlightLocal, required bool showPosition}) {
+  Widget _buildPlayerRow(
+    Map<String, dynamic> p, {
+    required bool highlightLocal,
+    required bool showPosition,
+    required bool isMyTeam,
+  }) {
     final name = p['summonerName']?.toString() ?? '';
-    final champName = p['championName']?.toString() ?? '';
     final isLocal = p['isLocalPlayer'] == true;
-    final prefix = isLocal ? '★ ' : '';
-    final k = p['kills'] ?? 0;
-    final d = p['deaths'] ?? 0;
-    final a = p['assists'] ?? 0;
-    final pos = p['position']?.toString() ?? '';
-    final posBit = (showPosition && pos.isNotEmpty) ? ' · $pos' : '';
     final isDead = p['isDead'] == true;
     final respawnTimer = (p['respawnTimer'] as num?)?.toDouble() ?? 0.0;
     final rawItems = p['items'];
     final items = rawItems is List ? rawItems : <dynamic>[];
+    final k = p['kills'] ?? 0;
+    final d = p['deaths'] ?? 0;
+    final a = p['assists'] ?? 0;
+    final champName = p['championName']?.toString() ?? '';
+    final ddKey = _normalizeDDragonName(champName);
+    final pos = p['position']?.toString() ?? '';
+    final posBit = (showPosition && pos.isNotEmpty) ? ' · $pos' : '';
 
-    final ddragonChamp = _normalizeDDragonName(champName);
-
-    final nameStyle = TextStyle(
-      color: isDead
-          ? Colors.white24
-          : (highlightLocal && isLocal)
-              ? _kGold
-              : Colors.white70,
-      fontSize: 12,
-      fontWeight: (highlightLocal && isLocal && !isDead) ? FontWeight.w700 : FontWeight.w400,
-    );
+    final nameColor = isDead
+        ? Colors.white24
+        : (highlightLocal && isLocal)
+            ? _kGold
+            : Colors.white70;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: champName.isEmpty
-                  ? Container(
-                      width: 20,
-                      height: 20,
-                      color: const Color(0xFF1A1F2E),
-                      child: const Icon(Icons.person, size: 12, color: Colors.white38),
-                    )
-                  : Image.network(
-                      'https://ddragon.leagueoflegends.com/cdn/14.10.1/img/champion/$ddragonChamp.png',
-                      width: 20,
-                      height: 20,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        width: 20,
-                        height: 20,
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: champName.isEmpty
+                    ? Container(
+                        width: 22,
+                        height: 22,
                         color: const Color(0xFF1A1F2E),
-                        child: const Icon(Icons.person, size: 12, color: Colors.white38),
-                      ),
-                    ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              '$prefix$name  $k/$d/$a$posBit',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: nameStyle,
-            ),
-          ),
-          SizedBox(
-            width: 28,
-            child: isDead
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.close, color: Colors.red, size: 10),
-                      if (respawnTimer > 0) ...[
-                        const SizedBox(width: 2),
-                        Text(
-                          '${respawnTimer.toStringAsFixed(0)}s',
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontSize: 9,
-                          ),
+                        child: const Icon(Icons.person, size: 14, color: Colors.white38),
+                      )
+                    : Image.network(
+                        'https://ddragon.leagueoflegends.com/cdn/14.10.1/img/champion/$ddKey.png',
+                        width: 22,
+                        height: 22,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 22,
+                          height: 22,
+                          color: const Color(0xFF1A1F2E),
+                          child: const Icon(Icons.person, size: 14, color: Colors.white38),
                         ),
-                      ],
-                    ],
-                  )
-                : const SizedBox.shrink(),
+                      ),
+              ),
+              const SizedBox(width: 6),
+              if (highlightLocal && isLocal)
+                const Text('★ ', style: TextStyle(color: _kGold, fontSize: 11)),
+              Expanded(
+                child: Text(
+                  '$name$posBit',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: nameColor,
+                    fontSize: 12,
+                    fontWeight: isLocal ? FontWeight.w700 : FontWeight.w400,
+                  ),
+                ),
+              ),
+              Text(
+                '$k / $d / $a',
+                style: TextStyle(
+                  color: isMyTeam ? _kGold : _kEnemyRed,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-          _buildItemSlots(items),
+          Padding(
+            padding: const EdgeInsets.only(left: 28, top: 2),
+            child: Row(
+              children: [
+                _buildItemSlots(items),
+                const Spacer(),
+                if (isDead) ...[
+                  const Icon(Icons.close, color: Colors.red, size: 10),
+                  if (respawnTimer > 0)
+                    Text(
+                      ' ${respawnTimer.toStringAsFixed(0)}s',
+                      style: const TextStyle(color: Colors.red, fontSize: 9),
+                    ),
+                ],
+              ],
+            ),
+          ),
+          const Divider(height: 6, thickness: 0.3, color: Colors.white12),
         ],
       ),
     );
@@ -729,82 +765,88 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
     final mode = gs['gameMode']?.toString() ?? '';
     final showPosition = !mode.toUpperCase().contains('ARAM');
 
-    return Card(
-      color: _kSurface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: Color(0x44C89B3C), width: 0.6),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'YOUR TEAM',
-                      style: TextStyle(color: _kGold, fontSize: 11, fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 8),
-                    ...myList.map(
-                      (p) => _teamScoreRow(
-                        p,
-                        highlightLocal: true,
-                        showPosition: showPosition,
-                      ),
-                    ),
-                  ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Card(
+          color: _kSurface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: _kGold.withValues(alpha: 0.3), width: 0.6),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'MY TEAM',
+                  style: TextStyle(
+                    color: _kGold,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                  ),
                 ),
-              ),
-              Container(
-                width: 1,
-                color: Colors.white12,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'ENEMY TEAM',
-                      style: TextStyle(color: _kEnemyRed, fontSize: 11, fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 8),
-                    ...enemyList.map(
-                      (p) => _teamScoreRow(
-                        p,
-                        highlightLocal: false,
-                        showPosition: showPosition,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 6),
+                ...myList.map(
+                  (p) => _buildPlayerRow(
+                    p,
+                    highlightLocal: true,
+                    showPosition: showPosition,
+                    isMyTeam: true,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
+        const SizedBox(height: 8),
+        Card(
+          color: _kSurface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: _kEnemyRed.withValues(alpha: 0.3), width: 0.6),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ENEMY TEAM',
+                  style: TextStyle(
+                    color: _kEnemyRed,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ...enemyList.map(
+                  (p) => _buildPlayerRow(
+                    p,
+                    highlightLocal: false,
+                    showPosition: showPosition,
+                    isMyTeam: false,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildEventList() {
-    if (_events.isEmpty) {
-      return Center(
-        child: Text(
-          'Waiting for game events…',
-          style: TextStyle(color: Colors.grey[600], fontSize: 14),
-        ),
-      );
-    }
-    return ListView.separated(
-      padding: EdgeInsets.zero,
-      itemCount: _events.length,
-      separatorBuilder: (context, _) => const Divider(color: Colors.white12, height: 1),
-      itemBuilder: (ctx, i) => _buildEventRow(_events[i]),
+  Widget _buildEventItem(int index) {
+    final e = _events[index];
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildEventRow(e),
+        if (index < _events.length - 1) const Divider(color: Colors.white12, height: 1),
+      ],
     );
   }
 

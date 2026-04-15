@@ -6,7 +6,7 @@ import 'package:arena_chain_flutter/features/lol_control/lol_lobby_screen.dart';
 import 'package:arena_chain_flutter/features/lol_control/lol_champ_select_screen.dart';
 
 const _kBg = Color(0xFF0A0E1A);
-const _kGold = Color(0xFFC89B3C);
+const _kGold = Color(0xFF14452F);
 
 class LolQueueScreen extends StatefulWidget {
   const LolQueueScreen({super.key});
@@ -20,6 +20,7 @@ class _LolQueueScreenState extends State<LolQueueScreen> {
   Timer? _timer;
   int _elapsedSeconds = 0;
   bool _matchFound = false;
+  bool _accepted = false;
   String _gameflowPhase = '';
 
   @override
@@ -69,6 +70,7 @@ class _LolQueueScreenState extends State<LolQueueScreen> {
 
   void _accept() {
     context.read<RiftService>().sendLcuRequest('POST', '/lol-matchmaking/v1/ready-check/accept');
+    setState(() => _accepted = true);
   }
 
   void _decline() {
@@ -140,7 +142,49 @@ class _LolQueueScreenState extends State<LolQueueScreen> {
     );
   }
 
+  Widget _buildWaitingForGame() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 72,
+          height: 72,
+          child: CircularProgressIndicator(
+            color: _kGold,
+            strokeWidth: 3,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Match Accepted!',
+          style: TextStyle(
+            color: _kGold,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Waiting for all players...',
+          style: TextStyle(
+            color: Colors.white54,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 32),
+        TextButton(
+          onPressed: _decline,
+          child: const Text(
+            'Cancel',
+            style: TextStyle(color: Colors.white38, fontSize: 13),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildMatchFound() {
+    if (_accepted) return _buildWaitingForGame();
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [

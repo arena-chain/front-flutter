@@ -16,9 +16,11 @@ import 'package:arena_chain_flutter/screens/feature_auth/ui/splash_screen.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/scouter_home_screen.dart';
 import 'package:arena_chain_flutter/screens/admin/ui/admin_home_screen.dart';
 import 'package:arena_chain_flutter/services/rift_service.dart';
+import 'package:arena_chain_flutter/core/config/api_config.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 void main() {
+  ApiConfig.printDebugInfo();
   runApp(const MyApp());
 }
 
