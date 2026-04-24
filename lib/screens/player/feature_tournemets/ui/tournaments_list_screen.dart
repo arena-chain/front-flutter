@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/view_model/tournaments_view_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/tournament_details_screen.dart';
 import 'package:intl/intl.dart';
 
 class TournamentsListScreen extends StatefulWidget {
@@ -238,20 +239,27 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
     final dateFormat = DateFormat('MMM dd, yyyy');
     final isFull = tournament.participants.length >= tournament.maxTeams;
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _neon.withValues(alpha: 0.28)),
-        boxShadow: [
-          BoxShadow(
-            color: _neon.withValues(alpha: 0.06),
-            blurRadius: 16,
-          ),
-        ],
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TournamentDetailsScreen(tournament: tournament),
+        ),
       ),
-      child: Column(
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: _card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _neon.withValues(alpha: 0.28)),
+          boxShadow: [
+            BoxShadow(
+              color: _neon.withValues(alpha: 0.06),
+              blurRadius: 16,
+            ),
+          ],
+        ),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header with title and status
@@ -274,22 +282,28 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: tournament.type == 'RANKED'
+                  color: tournament.status.toUpperCase() == 'OPEN_REGISTRATION'
                       ? _neon.withValues(alpha: 0.12)
-                      : _danger.withValues(alpha: 0.12),
+                      : tournament.status.toUpperCase() == 'ONGOING'
+                          ? Colors.cyan.withValues(alpha: 0.12)
+                          : _danger.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: tournament.type == 'RANKED'
+                    color: tournament.status.toUpperCase() == 'OPEN_REGISTRATION'
                         ? _neon.withValues(alpha: 0.45)
-                        : _danger.withValues(alpha: 0.45),
+                        : tournament.status.toUpperCase() == 'ONGOING'
+                            ? Colors.cyan.withValues(alpha: 0.45)
+                            : _danger.withValues(alpha: 0.45),
                   ),
                 ),
                 child: Text(
-                  tournament.type,
+                  tournament.status,
                   style: TextStyle(
-                    color: tournament.type == 'RANKED'
+                    color: tournament.status.toUpperCase() == 'OPEN_REGISTRATION'
                         ? _neon.withValues(alpha: 0.95)
-                        : _danger,
+                        : tournament.status.toUpperCase() == 'ONGOING'
+                            ? Colors.cyanAccent
+                            : _danger,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -360,8 +374,8 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
 
           SizedBox(
             width: double.infinity,
-            child: FilledButton(
-              onPressed: isFull
+              child: FilledButton(
+              onPressed: (isFull || !tournament.canRegisterNow)
                   ? null
                   : () {
                       Navigator.pushNamed(
@@ -384,7 +398,9 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
                     : BorderSide.none,
               ),
               child: Text(
-                isFull ? 'Registration Full' : 'Reserve',
+                isFull
+                    ? 'Registration Full'
+                    : (tournament.canRegisterNow ? 'Reserve' : 'Registration Unavailable'),
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
@@ -393,6 +409,7 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

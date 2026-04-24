@@ -15,6 +15,16 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
   Timer? _debounce;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final vm = context.read<FriendsViewModel>();
+      vm.loadPendingRequests();
+      vm.loadSentRequests();
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     _debounce?.cancel();
@@ -47,7 +57,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'Search by nickname...',
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                 prefixIcon: const Icon(Icons.search, color: Color(0xFF00FF00)),
                 filled: true,
                 fillColor: const Color(0xFF1A1F36),
@@ -66,6 +76,34 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
               ),
             ),
             const SizedBox(height: 20),
+            Consumer<FriendsViewModel>(
+              builder: (context, vm, _) {
+                if (vm.pendingRequests.isEmpty && vm.sentRequests.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1F36),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF00FF00).withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.mark_email_unread_rounded, color: Color(0xFF00FF00), size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${vm.pendingRequests.length} received · ${vm.sentRequests.length} sent request(s)',
+                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
             Expanded(
               child: Consumer<FriendsViewModel>(
                 builder: (context, viewModel, child) {
@@ -98,7 +136,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF00FF00).withOpacity(0.2),
+                                color: const Color(0xFF00FF00).withValues(alpha: 0.2),
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
@@ -126,26 +164,39 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                                   Text(
                                     user.email,
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.5),
+                                      color: Colors.white.withValues(alpha: 0.5),
                                       fontSize: 12,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.person_add, color: Color(0xFF00FF00)),
-                              onPressed: () {
-                                context.read<FriendsViewModel>().sendFriendRequest(user.id).then((_) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                            FilledButton.icon(
+                              onPressed: () async {
+                                final vm = context.read<FriendsViewModel>();
+                                final messenger = ScaffoldMessenger.of(context);
+                                try {
+                                  await vm.sendFriendRequest(user.id);
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(
                                     const SnackBar(content: Text('Friend request sent!')),
                                   );
-                                }).catchError((e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  await vm.loadPendingRequests();
+                                  await vm.loadSentRequests();
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(
                                     SnackBar(content: Text('Error: $e')),
                                   );
-                                });
+                                }
                               },
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF00FF00).withValues(alpha: 0.15),
+                                foregroundColor: const Color(0xFF00FF00),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              ),
+                              icon: const Icon(Icons.person_add, size: 16),
+                              label: const Text('Add'),
                             ),
                           ],
                         ),

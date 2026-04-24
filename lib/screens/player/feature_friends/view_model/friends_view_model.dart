@@ -9,12 +9,14 @@ class FriendsViewModel extends ChangeNotifier {
 
   List<FriendshipModel> _friends = [];
   List<FriendshipModel> _pendingRequests = [];
+  List<FriendshipModel> _sentRequests = [];
   List<FriendUser> _searchResults = [];
   bool _isLoading = false;
   String? _error;
 
   List<FriendshipModel> get friends => _friends;
   List<FriendshipModel> get pendingRequests => _pendingRequests;
+  List<FriendshipModel> get sentRequests => _sentRequests;
   List<FriendUser> get searchResults => _searchResults;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -40,9 +42,22 @@ class FriendsViewModel extends ChangeNotifier {
     // Note: Don't set global loading here to avoid blocking UI if done in background
     try {
       _pendingRequests = await _repository.getPendingRequests(currentUserId);
+      _error = null;
       notifyListeners();
     } catch (e) {
-      print('Error loading pending requests: $e');
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadSentRequests() async {
+    try {
+      _sentRequests = await _repository.getSentRequests(currentUserId);
+      _error = null;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
     }
   }
 

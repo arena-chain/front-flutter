@@ -47,7 +47,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<NewsViewModel>().fetchNews(refresh: true);
+      context.read<NewsViewModel>().fetchNews();
       context.read<RankViewModel>().fetchMyRanks();
       context.read<LevelViewModel>().fetchMyLevel();
 

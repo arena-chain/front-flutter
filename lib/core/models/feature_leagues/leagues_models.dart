@@ -1,4 +1,4 @@
-/// Models for the player-facing Leagues feature.
+// Models for the player-facing leagues feature.
 
 class LeagueItem {
   final String id;
@@ -52,6 +52,8 @@ class MatchItem {
 
   String get status => (raw['status'] ?? 'SCHEDULED').toString();
   String? get scheduledStart => raw['scheduledStart']?.toString();
+  String? get streamId => (raw['streamId'] ?? raw['liveStreamId'])?.toString();
+  String? get playbackUrl => (raw['playbackUrl'] ?? raw['streamUrl'] ?? raw['liveUrl'])?.toString();
 
   bool get isLive => status.toUpperCase() == 'ONGOING';
   bool get isCompleted =>
@@ -100,7 +102,9 @@ class StandingItem {
   int get wins => (raw['wins'] as num?)?.toInt() ?? 0;
   int get losses => (raw['losses'] as num?)?.toInt() ?? 0;
   int get draws => (raw['draws'] as num?)?.toInt() ?? 0;
+  int get forfeits => (raw['forfeits'] as num?)?.toInt() ?? 0;
   int get points => (raw['points'] as num?)?.toInt() ?? 0;
+  int get gameDiff => (raw['gameDiff'] as num?)?.toInt() ?? 0;
 
   factory StandingItem.fromJson(Map<String, dynamic> json) {
     final teamId = json['teamId'];

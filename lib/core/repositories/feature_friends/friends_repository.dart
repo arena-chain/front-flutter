@@ -8,26 +8,58 @@ class FriendsRepository {
   FriendsRepository({FriendsApi? api}) : _api = api ?? FriendsApi();
 
   Future<List<FriendUser>> searchUsers(String query, {String? excludeUserId}) async {
-    return await _api.searchUsers(query, excludeUserId: excludeUserId);
+    try {
+      return await _api.searchUsers(query, excludeUserId: excludeUserId);
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 
   Future<FriendshipModel> sendFriendRequest(String requesterId, String recipientId) async {
-    return await _api.sendFriendRequest(requesterId, recipientId);
+    try {
+      return await _api.sendFriendRequest(requesterId, recipientId);
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 
   Future<List<FriendshipModel>> getFriends(String userId) async {
-    return await _api.getFriends(userId);
+    try {
+      return await _api.getFriends(userId);
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 
   Future<List<FriendshipModel>> getPendingRequests(String userId) async {
-    return await _api.getPendingRequests(userId);
+    try {
+      return await _api.getPendingRequests(userId);
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  Future<List<FriendshipModel>> getSentRequests(String userId) async {
+    try {
+      return await _api.getSentRequests(userId);
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 
   Future<FriendshipModel> acceptRequest(String friendshipId, String userId) async {
-    return await _api.acceptRequest(friendshipId, userId);
+    try {
+      return await _api.acceptRequest(friendshipId, userId);
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 
   Future<void> rejectRequest(String friendshipId, String userId) async {
-    return await _api.rejectRequest(friendshipId, userId);
+    try {
+      return await _api.rejectRequest(friendshipId, userId);
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 }

@@ -19,7 +19,7 @@ class TournamentsRepository {
     try {
       return await _api.getTournaments();
     } catch (e) {
-      throw Exception('Failed to load tournaments: ${e.toString()}');
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
     }
   }
 }

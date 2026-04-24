@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 class BottomNavBar extends StatelessWidget {
   static const Color _accent = Color(0xFF39FF14);
-  static const Color _slotBg = Color(0xFF0A0A0A);
   static const Color _muted = Color(0xFF5C6570);
 
   final int currentIndex;
@@ -28,7 +27,7 @@ class BottomNavBar extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: _accent.withValues(alpha: 0.06),
-            blurRadius: 20,
+            blurRadius: 18,
             offset: const Offset(0, -4),
           ),
         ],
@@ -36,11 +35,11 @@ class BottomNavBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
           // Scaffold gives bottom bar unbounded max height; without a fixed
           // height, Row + Expanded can expand and steal the whole screen.
           child: SizedBox(
-            height: 58,
+            height: 64,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -135,89 +134,65 @@ class BottomNavBar extends StatelessWidget {
   }) {
     final isSelected = currentIndex == index;
     final IconData resolvedIcon = isSelected ? (activeIcon ?? icon) : icon;
-
-    const double iconBase = 26.0;
-    final iconScale = isSelected ? 1.0 : 18.0 / iconBase;
-    final labelSize = isSelected ? 9.5 : 7.5;
-    final borderAlpha = isSelected ? 0.72 : 0.14;
-    final fillAlpha = isSelected ? 0.14 : 0.0;
-
-    // Same width + stadium radius for every tab so long labels (e.g. Tournaments)
-    // don't become a "rounded square" while others stay pill-shaped.
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 1),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final pillW = (constraints.maxWidth - 4).clamp(46.0, 58.0);
-          return SizedBox(
-            width: pillW,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-              decoration: BoxDecoration(
-                color: fillAlpha > 0
-                    ? _accent.withValues(alpha: fillAlpha)
-                    : _slotBg,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: _accent.withValues(alpha: borderAlpha),
-                  width: isSelected ? 1.65 : 1,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemW = (constraints.maxWidth - 4).clamp(48.0, 64.0);
+        return SizedBox(
+          width: itemW,
+          child: Stack(
+            alignment: Alignment.topCenter,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                width: 22,
+                height: 3,
+                margin: const EdgeInsets.only(top: 1),
+                decoration: BoxDecoration(
+                  color: isSelected ? _accent : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: _accent.withValues(alpha: 0.5),
+                            blurRadius: 10,
+                          ),
+                        ]
+                      : null,
                 ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: _accent.withValues(alpha: 0.38),
-                          blurRadius: 14,
-                          spreadRadius: 0,
-                        ),
-                        BoxShadow(
-                          color: _accent.withValues(alpha: 0.18),
-                          blurRadius: 6,
-                          spreadRadius: 0,
-                        ),
-                      ]
-                    : null,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  AnimatedScale(
-                    scale: iconScale,
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    alignment: Alignment.center,
-                    child: Icon(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                margin: const EdgeInsets.only(top: 10),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
                       resolvedIcon,
                       color: isSelected ? _accent : _muted,
-                      size: iconBase,
+                      size: isSelected ? 22 : 20,
                     ),
-                  ),
-                  SizedBox(height: isSelected ? 4 : 3),
-                  AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    style: TextStyle(
-                      color: isSelected ? _accent : _muted,
-                      fontSize: labelSize,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                      height: 1.05,
-                      letterSpacing: isSelected ? 0.15 : 0,
-                    ),
-                    child: Text(
+                    const SizedBox(height: 4),
+                    Text(
                       label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isSelected ? _accent : _muted,
+                        fontSize: 11,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        height: 1,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
