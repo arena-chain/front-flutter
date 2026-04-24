@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:arena_chain_flutter/core/repositories/feature_scouter/scouter_repository.dart';
 import 'package:arena_chain_flutter/core/models/feature_scouter/scouter_models.dart';
@@ -15,21 +17,38 @@ class ScouterReportsViewModel extends ChangeNotifier {
   bool isLoading = false;
   String? error;
   List<ScoutingReport> reports = [];
+  bool _inFlight = false;
 
-  Future<void> loadReports() async {
+  Future<void> loadReports({bool refresh = false}) async {
     if (scouterId.isEmpty) return;
-    isLoading = true;
-    error = null;
-    notifyListeners();
+    if (_inFlight) return;
+    _inFlight = true;
+    final blockUi = !refresh && reports.isEmpty;
+    if (blockUi) {
+      isLoading = true;
+      error = null;
+      notifyListeners();
+    } else if (refresh) {
+      error = null;
+    }
     try {
       final raw = await _repo.getMyReports(scouterId);
-      reports = await _enrichNicknames(raw);
+      reports = raw;
+      unawaited(_enrichAndApply(raw));
     } catch (e) {
       error = e.toString().replaceFirst('Exception: ', '');
     } finally {
       isLoading = false;
+      _inFlight = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _enrichAndApply(List<ScoutingReport> raw) async {
+    final enriched = await _enrichNicknames(raw);
+    if (identical(enriched, raw)) return;
+    reports = enriched;
+    notifyListeners();
   }
 
   Future<List<ScoutingReport>> _enrichNicknames(List<ScoutingReport> reps) async {
@@ -38,7 +57,9 @@ class ScouterReportsViewModel extends ChangeNotifier {
       // Build nickname lookup from merged players directory (no role filter)
       final byId = <String, String>{};
       try {
-        final players = await PlayersDirectoryApi().getPlayers();
+        final players = await PlayersDirectoryApi()
+            .getPlayers()
+            .timeout(const Duration(seconds: 4));
         for (final p in players) {
           final nick = p.nickname;
           if (nick.isEmpty || nick == 'Unknown') continue;
@@ -50,7 +71,9 @@ class ScouterReportsViewModel extends ChangeNotifier {
 
       // Also fetch raw scouter profiles for userId→nickname matching
       try {
-        final profiles = await PlayersDirectoryApi().getRawProfiles();
+        final profiles = await PlayersDirectoryApi()
+            .getRawProfiles()
+            .timeout(const Duration(seconds: 4));
         for (final p in profiles) {
           final nick = (p['nickname'] ?? p['displayName'] ?? '').toString();
           if (nick.isEmpty) continue;

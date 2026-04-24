@@ -66,7 +66,7 @@ class PlayerDetail {
   Map<String, dynamic>? get _userObj {
     for (final key in const ['userId', 'user', 'player', 'playerData']) {
       final u = raw[key];
-      if (u is Map) return Map<String, dynamic>.from(u as Map);
+      if (u is Map) return Map<String, dynamic>.from(Map<String, dynamic>.from(u));
     }
     return null;
   }
@@ -80,6 +80,15 @@ class PlayerDetail {
       return (u['nickname'] ?? u['displayName'] ?? u['username'] ?? u['name'] ?? 'Unknown').toString();
     }
     return 'Unknown';
+  }
+
+  String? get email {
+    final e = raw['email'];
+    if (e != null && e.toString().isNotEmpty) return e.toString();
+    final u = _userObj;
+    final ue = u?['email'];
+    if (ue != null && ue.toString().isNotEmpty) return ue.toString();
+    return null;
   }
 
   String? get avatar {
@@ -258,6 +267,94 @@ class ProspectStatus {
     if (injected != null && injected.toString().isNotEmpty) return injected.toString();
     return null;
   }
+
+  /// Snapshot merged from the players directory during list enrichment.
+  Map<String, dynamic>? get _enrichedProfile {
+    final e = raw['_enrichedProfile'];
+    if (e is Map) return Map<String, dynamic>.from(Map<String, dynamic>.from(e));
+    return null;
+  }
+
+  String? get displayEmail {
+    final e = _enrichedProfile?['email']?.toString();
+    if (e != null && e.isNotEmpty) return e;
+    for (final key in const ['playerId', 'player', 'playerProfileId']) {
+      final v = raw[key];
+      if (v is Map) {
+        final em = v['email'];
+        if (em != null && em.toString().isNotEmpty) return em.toString();
+        final u = v['userId'];
+        if (u is Map) {
+          final ue = u['email'];
+          if (ue != null && ue.toString().isNotEmpty) return ue.toString();
+        }
+      }
+    }
+    return null;
+  }
+
+  String? get displayAvatarUrl {
+    final u = _enrichedProfile?['avatar']?.toString();
+    if (u != null && u.isNotEmpty) return u;
+    for (final key in const ['playerId', 'player', 'playerProfileId']) {
+      final v = raw[key];
+      if (v is Map) {
+        final a = v['avatar'] ?? v['photo'];
+        if (a != null && a.toString().isNotEmpty) return a.toString();
+        final uid = v['userId'];
+        if (uid is Map) {
+          final au = uid['avatar'] ?? uid['photo'];
+          if (au != null && au.toString().isNotEmpty) return au.toString();
+        }
+      }
+    }
+    return null;
+  }
+
+  int get displayElo {
+    final e = _enrichedProfile?['elo'];
+    if (e is num) return e.toInt();
+    for (final key in const ['playerId', 'player', 'playerProfileId']) {
+      final v = raw[key];
+      if (v is Map) {
+        final elo = v['elo'] ?? v['eloRating'];
+        if (elo is num) return elo.toInt();
+      }
+    }
+    return 0;
+  }
+
+  String get displayRankLabel {
+    final r = _enrichedProfile?['rank']?.toString();
+    if (r != null && r.isNotEmpty) return r;
+    for (final key in const ['playerId', 'player', 'playerProfileId']) {
+      final v = raw[key];
+      if (v is Map) {
+        final rk = v['rank'] ?? v['tier'];
+        if (rk != null && rk.toString().isNotEmpty) return rk.toString();
+      }
+    }
+    return 'Unranked';
+  }
+
+  String get displayCountryLabel {
+    final c = _enrichedProfile?['country']?.toString();
+    if (c != null && c.isNotEmpty && c != 'Unknown') return c.toUpperCase();
+    for (final key in const ['playerId', 'player', 'playerProfileId']) {
+      final v = raw[key];
+      if (v is Map) {
+        final co = v['country'];
+        if (co != null && co.toString().isNotEmpty) return co.toString().toUpperCase();
+        final uid = v['userId'];
+        if (uid is Map) {
+          final uc = uid['country'];
+          if (uc != null && uc.toString().isNotEmpty) return uc.toString().toUpperCase();
+        }
+      }
+    }
+    return '—';
+  }
+
   String get prospectLevel => (raw['prospectLevel'] ?? 'WATCHLIST').toString();
   String? get priority => raw['priority']?.toString();
   String? get lastUpdated => raw['lastUpdated']?.toString();

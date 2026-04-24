@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -7,6 +8,7 @@ import 'package:arena_chain_flutter/core/models/feature_leagues/leagues_models.d
 class LeaguesApi {
   String get _base => '${ApiConfig.baseUrl}/api';
   String? _workingBase;
+  static const Duration _timeout = Duration(seconds: 8);
 
   // ── helper ────────────────────────────────────────────────────────────────
 
@@ -36,7 +38,7 @@ class LeaguesApi {
     for (final base in _candidateBases()) {
       final uri = Uri.parse('$base$endpoint');
       try {
-        final resp = await http.get(uri);
+        final resp = await http.get(uri).timeout(_timeout);
         if (resp.statusCode == 200) {
           _workingBase = base;
           return jsonDecode(resp.body);
@@ -48,6 +50,8 @@ class LeaguesApi {
         lastError = Exception(
           'Network is unreachable. Check backend host/IP and emulator networking.',
         );
+      } on TimeoutException {
+        lastError = Exception('Request timed out on ${uri.host}');
       } catch (e) {
         lastError = Exception(e.toString());
       }

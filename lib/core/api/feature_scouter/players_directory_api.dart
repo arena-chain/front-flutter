@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 import 'package:arena_chain_flutter/core/config/api_config.dart';
@@ -9,6 +11,7 @@ import 'package:arena_chain_flutter/core/models/feature_scouter/directory_models
 class PlayersDirectoryApi {
   static String get _base => ApiConfig.baseUrl;
   final TokenStorage _ts = TokenStorage();
+  String? _workingBase;
 
   Future<Map<String, String>> _headers() async {
     final token = await _ts.getAccessToken();
@@ -28,10 +31,48 @@ class PlayersDirectoryApi {
     throw Exception(msg);
   }
 
+  List<String> _candidateBases() {
+    final candidates = <String>[
+      if (_workingBase case final String working) working,
+      _base,
+      'http://10.0.2.2:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:3000',
+    ];
+    final seen = <String>{};
+    return candidates.where((b) => seen.add(b)).toList();
+  }
+
+  Future<http.Response> _getWithFallback(
+    String path, {
+    required Map<String, String> headers,
+  }) async {
+    Exception? lastError;
+    for (final base in _candidateBases()) {
+      try {
+        final r = await http
+            .get(Uri.parse('$base$path'), headers: headers)
+            .timeout(const Duration(seconds: 8));
+        if (r.statusCode < 500) {
+          _workingBase = base;
+        }
+        return r;
+      } on SocketException {
+        lastError = Exception('Network unreachable on $base');
+      } on TimeoutException {
+        lastError = Exception('Request timed out on $base');
+      } catch (e) {
+        lastError = Exception(e.toString());
+      }
+    }
+    throw lastError ?? Exception('Unable to reach players backend.');
+  }
+
   // ── GET /users ─────────────────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> _getRawUsers() async {
-    final r = await http.get(Uri.parse('$_base/api/users'), headers: await _headers());
+    final headers = await _headers();
+    final r = await _getWithFallback('/api/users', headers: headers);
     final data = _check(r, 'Failed to load users');
     if (data is List) return data.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
     return [];
@@ -41,7 +82,8 @@ class PlayersDirectoryApi {
 
   Future<List<PlayerDetail>> _getScouterProfiles() async {
     try {
-      final r = await http.get(Uri.parse('$_base/api/scouter/players'), headers: await _headers());
+      final headers = await _headers();
+      final r = await _getWithFallback('/api/scouter/players', headers: headers);
       final data = _check(r, 'Failed to load scouter profiles');
       if (data is List) return data.map((e) => PlayerDetail.fromJson(e as Map<String, dynamic>)).toList();
     } catch (_) {}
@@ -114,7 +156,8 @@ class PlayersDirectoryApi {
   // ── GET /scouter/players raw (with populated userId) ───────────────────────
 
   Future<List<Map<String, dynamic>>> getRawProfiles() async {
-    final r = await http.get(Uri.parse('$_base/api/scouter/players'), headers: await _headers());
+    final headers = await _headers();
+    final r = await _getWithFallback('/api/scouter/players', headers: headers);
     final data = _check(r, 'Failed to load profiles');
     if (data is List) return data.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
     return [];
@@ -123,7 +166,8 @@ class PlayersDirectoryApi {
   // ── GET /teams ─────────────────────────────────────────────────────────────
 
   Future<List<TeamItem>> getTeams() async {
-    final r = await http.get(Uri.parse('$_base/api/teams'), headers: await _headers());
+    final headers = await _headers();
+    final r = await _getWithFallback('/api/teams', headers: headers);
     final data = _check(r, 'Failed to load teams');
     if (data is List) return data.map((e) => TeamItem.fromJson(e as Map<String, dynamic>)).toList();
     return [];
@@ -132,9 +176,10 @@ class PlayersDirectoryApi {
   // ── GET /season-rosters/by-season?seasonId=... ─────────────────────────────
 
   Future<List<SeasonRosterItem>> getSeasonRoster(String seasonId) async {
-    final r = await http.get(
-      Uri.parse('$_base/api/season-rosters/by-season?seasonId=$seasonId'),
-      headers: await _headers(),
+    final headers = await _headers();
+    final r = await _getWithFallback(
+      '/api/season-rosters/by-season?seasonId=$seasonId',
+      headers: headers,
     );
     final data = _check(r, 'Failed to load roster');
     if (data is List) return data.map((e) => SeasonRosterItem.fromJson(e as Map<String, dynamic>)).toList();

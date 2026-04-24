@@ -106,7 +106,9 @@ class _ScouterPlayerDetailScreenState extends State<ScouterPlayerDetailScreen> {
 
           return Scaffold(
             backgroundColor: const Color(0xFF0A0E1A),
-            body: vm.isLoading
+            body: vm.isLoading &&
+                    vm.player == null &&
+                    vm.playerIdentity == null
                 ? _loading()
                 : SingleChildScrollView(
                     child: Column(

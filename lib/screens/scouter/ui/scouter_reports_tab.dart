@@ -85,7 +85,7 @@ class _ScouterReportsTabState extends State<ScouterReportsTab> {
           return RefreshIndicator(
             color: const Color(0xFF00FF00),
             backgroundColor: const Color(0xFF0F1221),
-            onRefresh: vm.loadReports,
+            onRefresh: () => vm.loadReports(refresh: true),
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -152,7 +152,7 @@ class _ScouterReportsTabState extends State<ScouterReportsTab> {
                 ),
 
               // Loading
-              if (vm.isLoading)
+              if (vm.isLoading && vm.reports.isEmpty)
                 const SliverToBoxAdapter(
                   child: Center(
                     child: Padding(

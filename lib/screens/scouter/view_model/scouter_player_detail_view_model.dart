@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:arena_chain_flutter/core/repositories/feature_scouter/scouter_repository.dart';
 import 'package:arena_chain_flutter/core/api/video_api.dart';
@@ -70,6 +72,9 @@ class ScouterPlayerDetailViewModel extends ChangeNotifier {
   Future<void> loadPlayer(String playerUserId) async {
     isLoading = true;
     error = null;
+    if (playerIdentity != null) {
+      player = playerIdentity;
+    }
     notifyListeners();
 
     try {
@@ -77,7 +82,10 @@ class ScouterPlayerDetailViewModel extends ChangeNotifier {
       final coreResults = await Future.wait([
         _repo.getPlayerDetail(playerUserId),
         _repo.getPlayerMatches(playerUserId),
-      ]);
+      ]).timeout(
+        const Duration(seconds: 14),
+        onTimeout: () => throw TimeoutException('Player load timed out'),
+      );
 
       player = coreResults[0] as PlayerDetail;
       matches = coreResults[1] as List<MatchSummary>;

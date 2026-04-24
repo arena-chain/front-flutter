@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:arena_chain_flutter/core/dto/auth/login_dto.dart';
 import 'package:arena_chain_flutter/core/dto/auth/register_player_dto.dart';
@@ -17,6 +18,7 @@ class AuthApi {
   static String get baseUrl => ApiConfig.baseUrl;
   static const Duration _timeout = Duration(seconds: 10);
   final TokenStorage _tokenStorage = TokenStorage();
+  String? _workingBaseUrl;
 
   /// Throws if the body is HTML (common when the wrong server/port is hit on Web).
   static dynamic _decodeResponseBody(http.Response response) {
@@ -34,6 +36,48 @@ class AuthApi {
       throw const FormatException('Empty response body from server.');
     }
     return jsonDecode(body);
+  }
+
+  List<String> _candidateBaseUrls() {
+    final candidates = <String>[
+      if (_workingBaseUrl case final String working) working,
+      baseUrl,
+      'http://10.0.2.2:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:3000',
+    ];
+    final seen = <String>{};
+    return candidates.where((b) => seen.add(b)).toList();
+  }
+
+  Future<http.Response> _postWithFallback({
+    required String path,
+    required Map<String, String> headers,
+    required String body,
+  }) async {
+    Exception? lastError;
+    for (final candidate in _candidateBaseUrls()) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$candidate$path'),
+              headers: headers,
+              body: body,
+            )
+            .timeout(_timeout);
+        if (response.statusCode < 500) {
+          _workingBaseUrl = candidate;
+        }
+        return response;
+      } on SocketException {
+        lastError = Exception('Network unreachable on $candidate');
+      } on TimeoutException {
+        lastError = Exception('Connection timed out on $candidate');
+      } catch (e) {
+        lastError = Exception(e.toString());
+      }
+    }
+    throw lastError ?? Exception('Unable to reach auth backend.');
   }
 
   Future<AuthResponse> registerPlayer(RegisterPlayerDto dto) async {
@@ -81,14 +125,12 @@ class AuthApi {
   }
 
   Future<AuthResponse> login(LoginDto dto) async {
-    final url = Uri.parse('$baseUrl/api/auth/login');
-
     try {
-      final response = await http.post(
-        url,
+      final response = await _postWithFallback(
+        path: '/api/auth/login',
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(dto.toJson()),
-      ).timeout(_timeout);
+      );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = _decodeResponseBody(response);
@@ -102,8 +144,6 @@ class AuthApi {
         final error = _decodeResponseBody(response);
         throw Exception(error['message'] ?? 'Login failed');
       }
-    } on TimeoutException {
-      throw Exception('Connection timed out. Check that the server is running and reachable.');
     } catch (e) {
       throw Exception('Failed to login: $e');
     }
@@ -290,9 +330,9 @@ class AuthApi {
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          if (nickname != null) 'nickname': nickname,
-          if (region != null) 'region': region,
-          if (avatar != null) 'avatar': avatar,
+          if (nickname case final String n) 'nickname': n,
+          if (region case final String r) 'region': r,
+          if (avatar case final String a) 'avatar': a,
         }),
       ).timeout(_timeout);
 
