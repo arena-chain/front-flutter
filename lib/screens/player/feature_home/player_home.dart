@@ -125,17 +125,15 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _currentIndex == 0 ||
+      backgroundColor:
+          _currentIndex == 0 ||
               _currentIndex == 2 ||
               _currentIndex == 3 ||
               _currentIndex == 5
           ? Colors.black
           : const Color(0xFF0A0E1A),
       drawer: const SideDrawer(),
-      body: SafeArea(
-        bottom: false,
-        child: _buildCurrentScreen(),
-      ),
+      body: SafeArea(bottom: false, child: _buildCurrentScreen()),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
         onTap: _onNavTap,
@@ -198,7 +196,10 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
             children: [
               Builder(
                 builder: (context) => IconButton(
-                  icon: Icon(Icons.menu_rounded, color: Colors.white.withValues(alpha: 0.9)),
+                  icon: Icon(
+                    Icons.menu_rounded,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
                   onPressed: () => Scaffold.of(context).openDrawer(),
                 ),
               ),
@@ -207,15 +208,24 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: Icon(Icons.search_rounded, color: _neon.withValues(alpha: 0.95)),
+                    icon: Icon(
+                      Icons.search_rounded,
+                      color: _neon.withValues(alpha: 0.95),
+                    ),
                     onPressed: () {},
                   ),
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
                       IconButton(
-                        icon: Icon(Icons.notifications_none_rounded, color: _neon.withValues(alpha: 0.95)),
-                        onPressed: () => Navigator.pushNamed(context, AppRoutes.notifications),
+                        icon: Icon(
+                          Icons.notifications_none_rounded,
+                          color: _neon.withValues(alpha: 0.95),
+                        ),
+                        onPressed: () => Navigator.pushNamed(
+                          context,
+                          AppRoutes.notifications,
+                        ),
                       ),
                       Positioned(
                         right: 10,
@@ -262,13 +272,23 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       shadows: [
-                        Shadow(color: _neon.withValues(alpha: 0.35), blurRadius: 8),
+                        Shadow(
+                          color: _neon.withValues(alpha: 0.35),
+                          blurRadius: 8,
+                        ),
                       ],
                     ),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.pushNamed(context, AppRoutes.news),
-                    child: Text('Explore All', style: TextStyle(color: _neon.withValues(alpha: 0.95), fontWeight: FontWeight.w600)),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, AppRoutes.news),
+                    child: Text(
+                      'Explore All',
+                      style: TextStyle(
+                        color: _neon.withValues(alpha: 0.95),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -277,14 +297,20 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
             SizedBox(
               height: 210,
               child: newsVM.isLoading
-                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF39FF14)))
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF39FF14),
+                      ),
+                    )
                   : ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: news.length > 8 ? 8 : news.length,
                       itemBuilder: (context, index) {
                         final item = news[index];
-                        final gameLabel = item.game.isNotEmpty ? item.game : 'News';
+                        final gameLabel = item.game.isNotEmpty
+                            ? item.game
+                            : 'News';
                         return Padding(
                           padding: const EdgeInsets.only(right: 12),
                           child: _buildNexusCard(item, gameLabel: gameLabel),
@@ -308,7 +334,11 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(color: _neon.withValues(alpha: 0.14), blurRadius: 18, spreadRadius: 0),
+          BoxShadow(
+            color: _neon.withValues(alpha: 0.14),
+            blurRadius: 18,
+            spreadRadius: 0,
+          ),
         ],
       ),
       child: ClipRRect(
@@ -319,100 +349,105 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
             border: Border.all(color: _neon.withValues(alpha: 0.28), width: 1),
           ),
           child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (imageUrl != null && imageUrl.isNotEmpty)
-              Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFF121212)),
-              )
-            else
+            fit: StackFit.expand,
+            children: [
+              if (imageUrl != null && imageUrl.isNotEmpty)
+                Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      Container(color: const Color(0xFF121212)),
+                )
+              else
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [const Color(0xFF1A2A1A), Colors.black],
+                    ),
+                  ),
+                ),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                     colors: [
-                      const Color(0xFF1A2A1A),
-                      Colors.black,
+                      Colors.black.withValues(alpha: 0.15),
+                      Colors.black.withValues(alpha: 0.75),
                     ],
                   ),
                 ),
               ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.15),
-                    Colors.black.withValues(alpha: 0.75),
-                  ],
+              Positioned(
+                left: 12,
+                top: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _neon.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _neon.withValues(alpha: 0.55)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.fiber_manual_record,
+                        size: 10,
+                        color: _neon.withValues(alpha: 0.95),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '((o)) LIVE',
+                        style: TextStyle(
+                          color: _neon.withValues(alpha: 0.95),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              left: 12,
-              top: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: _neon.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _neon.withValues(alpha: 0.55)),
-                ),
-                child: Row(
+              Positioned(
+                left: 14,
+                right: 14,
+                bottom: 14,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.fiber_manual_record, size: 10, color: _neon.withValues(alpha: 0.95)),
-                    const SizedBox(width: 6),
                     Text(
-                      '((o)) LIVE',
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '$gameLabel • ${_timeAgo(publishedAt)}',
                       style: TextStyle(
-                        color: _neon.withValues(alpha: 0.95),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.3,
+                        color: Colors.white.withValues(alpha: 0.55),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-            Positioned(
-              left: 14,
-              right: 14,
-              bottom: 14,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '$gameLabel • ${_timeAgo(publishedAt)}',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.55),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );
@@ -422,8 +457,12 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     return Consumer<RankViewModel>(
       builder: (context, rankVM, child) {
         final primary = rankVM.primaryRank;
-        final kdLine = 'K/D: --';
+        final playerName =
+            context.read<AuthViewModel>().currentUser?.nickname.toUpperCase() ??
+            'COMMANDER_7';
+        final kdLine = '2.41';
         final winLine = _winRateLabel(primary);
+        final rankLabel = _primaryTierLabel(primary);
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -442,30 +481,22 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildCyberActionCard(
-                      icon: Icons.sports_esports_outlined,
-                      title: 'MATCHMAKING',
-                      subtitle: 'Find a game quickly',
-                      kdLine: kdLine,
-                      winRateLine: 'Win Rate: $winLine',
-                      onTap: () => Navigator.pushNamed(context, AppRoutes.matchmaking),
+              _buildPuzzleQuickActions(
+                playerName: playerName,
+                rankLabel: rankLabel,
+                kdLine: kdLine,
+                winRateLine: winLine,
+                onMatchmakingTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Connect Riot account'),
+                      duration: Duration(milliseconds: 900),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildCyberActionCard(
-                      icon: Icons.emoji_events_outlined,
-                      title: 'RANKED MATCH',
-                      subtitle: 'Compete for glory',
-                      kdLine: kdLine,
-                      winRateLine: 'Win Rate: $winLine',
-                      onTap: () => _onNavTap(3),
-                    ),
-                  ),
-                ],
+                  );
+                  Navigator.pushNamed(context, AppRoutes.myAccount);
+                },
+                onRankedTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.matchmaking),
               ),
             ],
           ),
@@ -483,91 +514,191 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     return '${((wins / total) * 100).round()}%';
   }
 
-  Widget _buildCyberActionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
+  String _primaryTierLabel(Rank? primaryRank) {
+    final tier = primaryRank?.tier;
+    if (tier == null || tier.isEmpty) return 'ELITE TIER III';
+    return tier.toUpperCase();
+  }
+
+  Widget _buildPuzzleQuickActions({
+    required String playerName,
+    required String rankLabel,
     required String kdLine,
     required String winRateLine,
-    VoidCallback? onTap,
+    required VoidCallback onMatchmakingTap,
+    required VoidCallback onRankedTap,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
+    final displayWinRate = winRateLine == '--' ? '--' : winRateLine;
+    return SizedBox(
+      height: 210,
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          height: 138,
+        child: Container(
           decoration: BoxDecoration(
             color: const Color(0xFF0A0A0A),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _neon.withValues(alpha: 0.35), width: 1),
+            border: Border.all(
+              color: _neon.withValues(alpha: 0.42),
+              width: 1.2,
+            ),
             boxShadow: [
-              BoxShadow(
-                color: _neon.withValues(alpha: 0.08),
-                blurRadius: 14,
-                spreadRadius: 0,
-              ),
+              BoxShadow(color: _neon.withValues(alpha: 0.12), blurRadius: 16),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
+            children: [
+              Center(
+                child: SizedBox(
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: CustomPaint(
+                    painter: _DiagonalDividerPainter(
+                      color: _neon.withValues(alpha: 0.82),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ClipRect(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: _neon.withValues(alpha: 0.8),
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.person_rounded,
+                                    size: 20,
+                                    color: _neon.withValues(alpha: 0.9),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  playerName,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: ClipRect(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(22, 18, 12, 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.sports_esports_outlined,
+                                      color: _neon.withValues(alpha: 0.92),
+                                      size: 30,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'K/D: $kdLine\nWin Rate: $displayWinRate',
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.5,
+                                          ),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          height: 1.25,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const Spacer(),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      'MATCHMAKING',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.92,
+                                        ),
+                                        fontSize: 23,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.25,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Find a game quickly',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.45),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: Row(
                   children: [
-                    Icon(icon, color: _neon.withValues(alpha: 0.9), size: 30),
-                    const Spacer(),
-                    Flexible(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            kdLine,
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.45),
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            winRateLine,
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.45),
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                    Expanded(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: onMatchmakingTap,
+                          splashColor: _neon.withValues(alpha: 0.1),
+                          highlightColor: Colors.transparent,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: onRankedTap,
+                          splashColor: _neon.withValues(alpha: 0.1),
+                          highlightColor: Colors.transparent,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const Spacer(),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.45),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -610,12 +741,22 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                   height: 72,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: _neon.withValues(alpha: 0.45), width: 1.5),
+                    border: Border.all(
+                      color: _neon.withValues(alpha: 0.45),
+                      width: 1.5,
+                    ),
                     boxShadow: [
-                      BoxShadow(color: _neon.withValues(alpha: 0.25), blurRadius: 16),
+                      BoxShadow(
+                        color: _neon.withValues(alpha: 0.25),
+                        blurRadius: 16,
+                      ),
                     ],
                   ),
-                  child: Icon(Icons.sports_esports_rounded, color: _neon.withValues(alpha: 0.95), size: 36),
+                  child: Icon(
+                    Icons.sports_esports_rounded,
+                    color: _neon.withValues(alpha: 0.95),
+                    size: 36,
+                  ),
                 ),
                 const SizedBox(width: 18),
                 Expanded(
@@ -623,11 +764,16 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: _neon.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: _neon.withValues(alpha: 0.35)),
+                          border: Border.all(
+                            color: _neon.withValues(alpha: 0.35),
+                          ),
                         ),
                         child: Text(
                           'COMING SOON',
@@ -667,5 +813,31 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     if (diff.inHours > 0) return '${diff.inHours}h ago';
     if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
     return 'Just now';
+  }
+}
+
+class _DiagonalDividerPainter extends CustomPainter {
+  final Color color;
+
+  _DiagonalDividerPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.6
+      ..style = PaintingStyle.stroke;
+
+    // Draw directly from top edge to bottom edge.
+    canvas.drawLine(
+      Offset(size.width * 0.40, 0),
+      Offset(size.width * 0.60, size.height),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _DiagonalDividerPainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }
