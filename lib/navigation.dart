@@ -42,6 +42,7 @@ import 'package:arena_chain_flutter/screens/player/feature_ticketing/event_brows
 import 'package:arena_chain_flutter/screens/player/feature_ticketing/ticket_wallet_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_ticketing/event_details_screen.dart';
 import 'package:arena_chain_flutter/core/models/feature_ticketing/ticketing_models.dart';
+import 'package:arena_chain_flutter/features/lol_control/lol_control_pairing_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -87,6 +88,7 @@ class AppRoutes {
   static const String liveStream = '/player/live-stream';
   static const String scheduledStreams = '/player/scheduled-streams';
   static const String scouterHome = '/scouter/home';
+  static const String lolControl = '/lol-control';
 
   static Map<String, WidgetBuilder> get routes => {
         splash: (context) => const SplashScreen(),
@@ -188,5 +190,6 @@ class AppRoutes {
           final args = ModalRoute.of(context)!.settings.arguments as EventModel;
           return EventDetailsScreen(event: args);
         },
+        lolControl: (context) => const LolControlPairingScreen(),
       };
 }

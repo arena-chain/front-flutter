@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:arena_chain_flutter/core/repositories/feature_scouter/scouter_repository.dart';
 import 'package:arena_chain_flutter/core/models/feature_scouter/scouter_models.dart';
 import 'package:arena_chain_flutter/core/api/feature_scouter/players_directory_api.dart';
+import 'dart:async';
 
 class ScouterWatchlistViewModel extends ChangeNotifier {
   final ScouterRepository _repo;
@@ -13,7 +14,9 @@ class ScouterWatchlistViewModel extends ChangeNotifier {
   }) : _repo = repo ?? ScouterRepository();
 
   bool isLoading = false;
+  bool hasLoadedOnce = false;
   String? error;
+  bool _loadInFlight = false;
 
   // All prospects cached for every level
   List<ProspectStatus> allProspects = [];
@@ -30,39 +33,67 @@ class ScouterWatchlistViewModel extends ChangeNotifier {
     'SIGNED': 'SIGNED',
   };
 
-  Future<void> loadWatchlist() async {
-    isLoading = true;
-    error = null;
-    notifyListeners();
+  Future<void> loadWatchlist({bool refresh = false}) async {
+    if (_loadInFlight) return;
+    _loadInFlight = true;
+    final blockFullSpinner = !refresh && allProspects.isEmpty;
+    if (blockFullSpinner) {
+      isLoading = true;
+      error = null;
+      notifyListeners();
+    } else if (refresh) {
+      error = null;
+    }
     try {
-      final raw = await _repo.getProspects();
-      allProspects = await _enrichNicknames(raw);
+      final raw = await _repo
+          .getProspects()
+          .timeout(const Duration(seconds: 12));
+      allProspects = raw;
+      unawaited(_enrichAndApply(raw));
     } catch (e) {
       error = e.toString().replaceFirst('Exception: ', '');
     } finally {
       isLoading = false;
+      hasLoadedOnce = true;
+      _loadInFlight = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _enrichAndApply(List<ProspectStatus> raw) async {
+    final enriched = await _enrichNicknames(raw);
+    if (identical(enriched, raw)) return;
+    allProspects = enriched;
+    notifyListeners();
   }
 
   Future<List<ProspectStatus>> _enrichNicknames(List<ProspectStatus> prospects) async {
     if (prospects.isEmpty) return prospects;
     try {
       final byId = <String, String>{};
+      final profileByKey = <String, PlayerDetail>{};
 
       try {
-        final players = await PlayersDirectoryApi().getPlayers();
+        final players = await PlayersDirectoryApi()
+            .getPlayers()
+            .timeout(const Duration(seconds: 4));
         for (final p in players) {
           final nick = p.nickname;
-          if (nick.isEmpty || nick == 'Unknown') continue;
-          if (p.id.isNotEmpty) byId[p.id] = nick;
+          if (nick.isNotEmpty && nick != 'Unknown') {
+            if (p.id.isNotEmpty) byId[p.id] = nick;
+            final uid = p.effectiveUserId;
+            if (uid.isNotEmpty) byId[uid] = nick;
+          }
+          if (p.id.isNotEmpty) profileByKey[p.id] = p;
           final uid = p.effectiveUserId;
-          if (uid.isNotEmpty) byId[uid] = nick;
+          if (uid.isNotEmpty) profileByKey[uid] = p;
         }
       } catch (_) {}
 
       try {
-        final profiles = await PlayersDirectoryApi().getRawProfiles();
+        final profiles = await PlayersDirectoryApi()
+            .getRawProfiles()
+            .timeout(const Duration(seconds: 4));
         for (final p in profiles) {
           final nick = (p['nickname'] ?? p['displayName'] ?? '').toString();
           final pid = (p['_id'] ?? p['id'] ?? '').toString();
@@ -80,19 +111,81 @@ class ScouterWatchlistViewModel extends ChangeNotifier {
       } catch (_) {}
 
       return prospects.map((p) {
-        if (p.playerNickname != null && p.playerNickname!.isNotEmpty) return p;
-        final pid = p.playerId;
-        final found = byId[pid];
-        if (found == null || found.isEmpty) return p;
+        final hasNick =
+            p.playerNickname != null && p.playerNickname!.isNotEmpty;
+        String? foundNick = hasNick ? p.playerNickname : null;
+        if (!hasNick) {
+          for (final key in _nicknameLookupKeys(p)) {
+            final v = byId[key];
+            if (v != null && v.isNotEmpty) {
+              foundNick = v;
+              break;
+            }
+          }
+        }
+
+        PlayerDetail? match;
+        for (final key in _nicknameLookupKeys(p)) {
+          match = profileByKey[key];
+          if (match != null) break;
+        }
+
+        if (!hasNick && foundNick == null && match == null) return p;
+
         final enriched = Map<String, dynamic>.from(p.raw);
-        // Store under the 'playerId' map key so the getter picks it up,
-        // or inject directly as a helper key
-        enriched['_enrichedNickname'] = found;
+        if (match != null) {
+          enriched['_enrichedProfile'] = {
+            'nickname': match.nickname,
+            'email': match.email,
+            'avatar': match.avatar,
+            'elo': match.elo,
+            'rank': match.rank,
+            'country': match.country,
+          };
+        }
+        if (!hasNick) {
+          final nick = foundNick ??
+              (match != null &&
+                      match.nickname.isNotEmpty &&
+                      match.nickname != 'Unknown'
+                  ? match.nickname
+                  : null);
+          if (nick != null && nick.isNotEmpty) {
+            enriched['_enrichedNickname'] = nick;
+          }
+        }
+        if (!enriched.containsKey('_enrichedProfile') &&
+            !enriched.containsKey('_enrichedNickname')) {
+          return p;
+        }
         return ProspectStatus(id: p.id, raw: enriched);
       }).toList();
     } catch (_) {
       return prospects;
     }
+  }
+
+  /// Ids to match against the merged players directory (profile id, user id, doc id).
+  static List<String> _nicknameLookupKeys(ProspectStatus p) {
+    final keys = <String>{};
+    void add(String? s) {
+      if (s == null || s.isEmpty) return;
+      keys.add(s);
+    }
+
+    add(p.playerId);
+    add(p.id);
+    final rawPid = p.raw['playerId'];
+    if (rawPid is Map) {
+      add((rawPid['_id'] ?? rawPid['id'])?.toString());
+      final u = rawPid['userId'];
+      if (u is Map) {
+        add((u['_id'] ?? u['id'])?.toString());
+      } else if (u is String) {
+        add(u);
+      }
+    }
+    return keys.toList();
   }
 
   void setLevel(String level) {

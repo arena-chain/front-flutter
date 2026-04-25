@@ -10,28 +10,25 @@ class RankApi {
 
   Future<List<Rank>> getMyRanks() async {
     final token = await _tokenStorage.getAccessToken();
-    final endpoints = [
-      '$baseUrl/api/ranks/me',
-      '$baseUrl/ranks/me',
-    ];
+    final url = Uri.parse('$baseUrl/api/ranks/me'); // Added /api
     
     try {
-      for (final endpoint in endpoints) {
-        final response = await http.get(
-          Uri.parse(endpoint),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-        );
-        if (response.statusCode == 200) {
-          final List data = jsonDecode(response.body);
-          return data.map((r) => Rank.fromJson(r)).toList();
-        }
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        return data.map((r) => Rank.fromJson(r)).toList();
+      } else {
+        throw Exception('Failed to load ranks');
       }
-      return [];
     } catch (e) {
-      return [];
+      throw Exception('Failed to load ranks: $e');
     }
   }
 }

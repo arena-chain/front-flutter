@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:arena_chain_flutter/core/api/feature_leagues/leagues_api.dart';
 import 'package:arena_chain_flutter/core/models/feature_leagues/leagues_models.dart';
 import 'package:arena_chain_flutter/navigation.dart';
+import 'package:video_player/video_player.dart';
 
 // ── Design tokens ────────────────────────────────────────────────────────────
 const _bg         = Color(0xFF060810);
@@ -264,37 +265,23 @@ class _Header extends StatelessWidget {
                       child: const Icon(Icons.shield_rounded, color: _accent, size: 22),
                     ),
                     const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Live Leagues',
-                            style: TextStyle(
-                              color: _textPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                            ),
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Live Leagues',
+                          style: TextStyle(
+                            color: _textPrimary,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
                           ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'Compete with the best players',
-                            style: TextStyle(color: _textSecondary, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pushNamed(context, AppRoutes.browseEvents),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _accent,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: const Text('TICKETS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Compete with the best players',
+                          style: TextStyle(color: _textSecondary, fontSize: 12),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -608,6 +595,15 @@ class _LeagueSeasonScreenState extends State<LeagueSeasonScreen>
     with SingleTickerProviderStateMixin {
   final _api = LeaguesApi();
   late TabController _tabs;
+  static const String _allStatuses = 'ALL';
+  static const List<String> _matchStatuses = [
+    _allStatuses,
+    'SCHEDULED',
+    'ONGOING',
+    'COMPLETED',
+    'FORFEIT',
+    'CANCELLED',
+  ];
 
   List<MatchItem> _matches = [];
   List<StandingItem> _standings = [];
@@ -615,6 +611,7 @@ class _LeagueSeasonScreenState extends State<LeagueSeasonScreen>
   bool _standingsLoading = false;
   String? _matchesError;
   String? _standingsError;
+  String _activeMatchStatus = _allStatuses;
 
   // For auto-refresh of live matches
   Timer? _refreshTimer;
@@ -641,7 +638,8 @@ class _LeagueSeasonScreenState extends State<LeagueSeasonScreen>
   Future<void> _loadMatches() async {
     try {
       setState(() { _matchesLoading = true; _matchesError = null; });
-      final list = await _api.getMatches(widget.season.id);
+      final status = _activeMatchStatus == _allStatuses ? null : _activeMatchStatus;
+      final list = await _api.getMatches(widget.season.id, status: status);
       if (mounted) setState(() => _matches = list);
       _scheduleRefreshIfNeeded(list);
     } catch (e) {
@@ -672,6 +670,35 @@ class _LeagueSeasonScreenState extends State<LeagueSeasonScreen>
     }
   }
 
+  Future<void> _setMatchStatus(String status) async {
+    if (_activeMatchStatus == status) return;
+    setState(() => _activeMatchStatus = status);
+    await _loadMatches();
+  }
+
+  void _openLiveMatch(MatchItem match) {
+    if (!match.isLive) return;
+    if (match.streamId != null && match.streamId!.isNotEmpty) {
+      Navigator.pushNamed(context, AppRoutes.liveStream, arguments: match.streamId!);
+      return;
+    }
+    if (match.playbackUrl != null && match.playbackUrl!.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => _LeagueLivePlayerScreen(
+            title: '${match.team1Name} vs ${match.team2Name}',
+            videoUrl: match.playbackUrl!,
+          ),
+        ),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('This live match has no stream URL yet.')),
+    );
+  }
+
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
@@ -689,6 +716,10 @@ class _LeagueSeasonScreenState extends State<LeagueSeasonScreen>
                   matches: _matches,
                   loading: _matchesLoading,
                   error: _matchesError,
+                  selectedStatus: _activeMatchStatus,
+                  statuses: _matchStatuses,
+                  onStatusChange: _setMatchStatus,
+                  onLiveMatchTap: _openLiveMatch,
                   onRefresh: _loadMatches,
                 ),
                 _StandingsTab(
@@ -797,19 +828,29 @@ class _MatchesTab extends StatelessWidget {
   final List<MatchItem> matches;
   final bool loading;
   final String? error;
+  final String selectedStatus;
+  final List<String> statuses;
+  final Future<void> Function(String status) onStatusChange;
+  final void Function(MatchItem match) onLiveMatchTap;
   final Future<void> Function() onRefresh;
 
   const _MatchesTab({
     required this.matches,
     required this.loading,
     required this.error,
+    required this.selectedStatus,
+    required this.statuses,
+    required this.onStatusChange,
+    required this.onLiveMatchTap,
     required this.onRefresh,
   });
 
   @override
   Widget build(BuildContext context) {
     if (loading) return const _Spinner();
-    if (error != null) return _ErrorState(error: error!, onRetry: onRefresh);
+    if (error case final String err) {
+      return _ErrorState(error: err, onRetry: onRefresh);
+    }
     if (matches.isEmpty) {
       return const Center(
         child: Column(
@@ -826,10 +867,65 @@ class _MatchesTab extends StatelessWidget {
       color: _accent,
       backgroundColor: _surface,
       onRefresh: onRefresh,
-      child: ListView.builder(
+      child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-        itemCount: matches.length,
-        itemBuilder: (_, i) => _MatchCard(match: matches[i]),
+        children: [
+          _MatchStatusFilters(
+            statuses: statuses,
+            selectedStatus: selectedStatus,
+            onStatusChange: onStatusChange,
+          ),
+          const SizedBox(height: 10),
+          ...matches.map((m) => _MatchCard(match: m, onLiveTap: onLiveMatchTap)),
+        ],
+      ),
+    );
+  }
+}
+
+class _MatchStatusFilters extends StatelessWidget {
+  final List<String> statuses;
+  final String selectedStatus;
+  final Future<void> Function(String status) onStatusChange;
+
+  const _MatchStatusFilters({
+    required this.statuses,
+    required this.selectedStatus,
+    required this.onStatusChange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: statuses.map((status) {
+          final selected = selectedStatus == status;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => onStatusChange(status),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected ? _accent.withOpacity(0.14) : _surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: selected ? _accent.withOpacity(0.45) : _border,
+                  ),
+                ),
+                child: Text(
+                  status == _LeagueSeasonScreenState._allStatuses ? 'ALL' : status,
+                  style: TextStyle(
+                    color: selected ? _accent : _textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -839,7 +935,8 @@ class _MatchesTab extends StatelessWidget {
 
 class _MatchCard extends StatelessWidget {
   final MatchItem match;
-  const _MatchCard({required this.match});
+  final void Function(MatchItem match) onLiveTap;
+  const _MatchCard({required this.match, required this.onLiveTap});
 
   @override
   Widget build(BuildContext context) {
@@ -848,7 +945,9 @@ class _MatchCard extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
+      child: GestureDetector(
+        onTap: isLive ? () => onLiveTap(match) : null,
+        child: Container(
         decoration: BoxDecoration(
           color: _card,
           borderRadius: BorderRadius.circular(18),
@@ -969,6 +1068,7 @@ class _MatchCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -979,6 +1079,187 @@ class _MatchCard extends StatelessWidget {
     final h = local.hour.toString().padLeft(2, '0');
     final m = local.minute.toString().padLeft(2, '0');
     return '${months[local.month - 1]} ${local.day}  ·  $h:$m';
+  }
+}
+
+class _LeagueLivePlayerScreen extends StatefulWidget {
+  final String title;
+  final String videoUrl;
+  const _LeagueLivePlayerScreen({required this.title, required this.videoUrl});
+
+  @override
+  State<_LeagueLivePlayerScreen> createState() => _LeagueLivePlayerScreenState();
+}
+
+class _LeagueLivePlayerScreenState extends State<_LeagueLivePlayerScreen> {
+  late final VideoPlayerController _controller;
+  bool _initialized = false;
+  String? _error;
+  bool _muted = false;
+  double _volume = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
+      ..initialize().then((_) {
+        if (!mounted) return;
+        setState(() => _initialized = true);
+        _controller.setLooping(true);
+        _controller.play();
+      }).catchError((e) {
+        if (!mounted) return;
+        setState(() => _error = e.toString());
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _togglePlayPause() {
+    if (!_initialized) return;
+    setState(() {
+      if (_controller.value.isPlaying) {
+        _controller.pause();
+      } else {
+        _controller.play();
+      }
+    });
+  }
+
+  void _toggleMute() {
+    if (!_initialized) return;
+    setState(() {
+      _muted = !_muted;
+      _controller.setVolume(_muted ? 0 : _volume);
+    });
+  }
+
+  void _setVolume(double value) {
+    if (!_initialized) return;
+    setState(() {
+      _volume = value;
+      if (_muted && value > 0) _muted = false;
+      _controller.setVolume(_muted ? 0 : _volume);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0A0E1A),
+        title: Text(widget.title, style: const TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: _error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  'Failed to open live stream.\n$_error',
+                  style: const TextStyle(color: Colors.white70),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          : !_initialized
+              ? const Center(
+                  child: CircularProgressIndicator(color: _accent),
+                )
+              : Column(
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: AspectRatio(
+                          aspectRatio: _controller.value.aspectRatio > 0
+                              ? _controller.value.aspectRatio
+                              : 16 / 9,
+                          child: Stack(
+                            children: [
+                              Positioned.fill(child: VideoPlayer(_controller)),
+                              Positioned(
+                                top: 14,
+                                left: 14,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: Colors.red.withValues(alpha: 0.6)),
+                                  ),
+                                  child: const Text(
+                                    'LIVE',
+                                    style: TextStyle(
+                                      color: Colors.redAccent,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        12,
+                        16,
+                        12 + MediaQuery.paddingOf(context).bottom,
+                      ),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF0A0E1A),
+                        border: Border(top: BorderSide(color: _border)),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              IconButton(
+                                onPressed: _togglePlayPause,
+                                icon: Icon(
+                                  _controller.value.isPlaying
+                                      ? Icons.pause_circle_filled
+                                      : Icons.play_circle_filled,
+                                  color: _accent,
+                                  size: 36,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                onPressed: _toggleMute,
+                                icon: Icon(
+                                  _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Text('Volume', style: TextStyle(color: _textSecondary)),
+                              Expanded(
+                                child: Slider(
+                                  value: _muted ? 0 : _volume,
+                                  min: 0,
+                                  max: 1,
+                                  activeColor: _accent,
+                                  inactiveColor: _border,
+                                  onChanged: _setVolume,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+    );
   }
 }
 
@@ -1094,7 +1375,7 @@ class _LiveButtonState extends State<_LiveButton>
     } else {
       // SCHEDULED — check if start time is very close (< 5 min)
       final dt = m.scheduledDateTime;
-      final diff = dt != null ? dt.toLocal().difference(DateTime.now()) : null;
+      final diff = dt?.toLocal().difference(DateTime.now());
       if (diff != null && !diff.isNegative && diff.inMinutes <= 5) {
         color = _orange;
         label = 'SOON';
@@ -1110,8 +1391,12 @@ class _LiveButtonState extends State<_LiveButton>
 
     return AnimatedBuilder(
       animation: _pulse,
-      builder: (_, __) => _badge(color, label,
-          opacity: _pulse.value, dotOpacity: _pulse.value),
+      builder: (context, child) => _badge(
+        color,
+        label,
+        opacity: _pulse.value,
+        dotOpacity: _pulse.value,
+      ),
     );
   }
 
@@ -1176,7 +1461,9 @@ class _StandingsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) return const _Spinner();
-    if (error != null) return _ErrorState(error: error!, onRetry: onRefresh);
+    if (error case final String err) {
+      return _ErrorState(error: err, onRetry: onRefresh);
+    }
     if (standings.isEmpty) {
       return const Center(
         child: Column(
@@ -1208,8 +1495,12 @@ class _StandingsTab extends StatelessWidget {
               children: [
                 SizedBox(width: 32, child: Text('#', style: TextStyle(color: _textMuted, fontSize: 11, fontWeight: FontWeight.w800))),
                 Expanded(child: Text('TEAM', style: TextStyle(color: _textMuted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1))),
+                SizedBox(width: 36, child: Text('P', textAlign: TextAlign.center, style: TextStyle(color: _textMuted, fontSize: 11, fontWeight: FontWeight.w800))),
                 SizedBox(width: 32, child: Text('W', textAlign: TextAlign.center, style: TextStyle(color: _textMuted, fontSize: 11, fontWeight: FontWeight.w800))),
+                SizedBox(width: 32, child: Text('D', textAlign: TextAlign.center, style: TextStyle(color: _textMuted, fontSize: 11, fontWeight: FontWeight.w800))),
                 SizedBox(width: 32, child: Text('L', textAlign: TextAlign.center, style: TextStyle(color: _textMuted, fontSize: 11, fontWeight: FontWeight.w800))),
+                SizedBox(width: 32, child: Text('FF', textAlign: TextAlign.center, style: TextStyle(color: _textMuted, fontSize: 11, fontWeight: FontWeight.w800))),
+                SizedBox(width: 42, child: Text('GD', textAlign: TextAlign.right, style: TextStyle(color: _textMuted, fontSize: 11, fontWeight: FontWeight.w800))),
                 SizedBox(width: 40, child: Text('PTS', textAlign: TextAlign.right, style: TextStyle(color: _accent, fontSize: 11, fontWeight: FontWeight.w800))),
               ],
             ),
@@ -1274,6 +1565,12 @@ class _StandingRow extends StatelessWidget {
               ),
             ),
             SizedBox(
+              width: 36,
+              child: Text('${standing.played}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: _textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+            ),
+            SizedBox(
               width: 32,
               child: Text('${standing.wins}',
                   textAlign: TextAlign.center,
@@ -1281,9 +1578,27 @@ class _StandingRow extends StatelessWidget {
             ),
             SizedBox(
               width: 32,
+              child: Text('${standing.draws}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: _textSecondary, fontSize: 13, fontWeight: FontWeight.w700)),
+            ),
+            SizedBox(
+              width: 32,
               child: Text('${standing.losses}',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: _red, fontSize: 13, fontWeight: FontWeight.w700)),
+            ),
+            SizedBox(
+              width: 32,
+              child: Text('${standing.forfeits}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: _orange, fontSize: 13, fontWeight: FontWeight.w700)),
+            ),
+            SizedBox(
+              width: 42,
+              child: Text('${standing.gameDiff}',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(color: _textSecondary, fontSize: 13, fontWeight: FontWeight.w700)),
             ),
             SizedBox(
               width: 40,

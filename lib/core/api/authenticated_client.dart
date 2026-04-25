@@ -124,24 +124,4 @@ class AuthenticatedClient {
     }
     return response;
   }
-
-  Future<http.Response> patch(Uri url, {Object? body}) async {
-    var response = await http.patch(
-      url,
-      headers: await _authHeaders(),
-      body: body is String ? body : jsonEncode(body),
-    );
-
-    if (response.statusCode == 401) {
-      final refreshed = await _refreshTokens();
-      if (refreshed) {
-        response = await http.patch(
-          url,
-          headers: await _authHeaders(),
-          body: body is String ? body : jsonEncode(body),
-        );
-      }
-    }
-    return response;
-  }
 }

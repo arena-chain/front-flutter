@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:arena_chain_flutter/core/dto/auth/login_dto.dart';
 import 'package:arena_chain_flutter/core/dto/auth/register_player_dto.dart';
@@ -17,6 +18,67 @@ class AuthApi {
   static String get baseUrl => ApiConfig.baseUrl;
   static const Duration _timeout = Duration(seconds: 10);
   final TokenStorage _tokenStorage = TokenStorage();
+  String? _workingBaseUrl;
+
+  /// Throws if the body is HTML (common when the wrong server/port is hit on Web).
+  static dynamic _decodeResponseBody(http.Response response) {
+    final body = response.body;
+    final trimmed = body.trimLeft();
+    if (trimmed.startsWith('<')) {
+      throw FormatException(
+        'Server returned HTML instead of JSON (HTTP ${response.statusCode}). '
+        'Expected your REST API at $baseUrl. On Flutter Web, set the correct URL with '
+        '--dart-define=API_BASE_URL=http://HOST:PORT (see ApiConfig), ensure CORS allows '
+        'this browser origin, and avoid running a non-API service on the same port.',
+      );
+    }
+    if (body.isEmpty) {
+      throw const FormatException('Empty response body from server.');
+    }
+    return jsonDecode(body);
+  }
+
+  List<String> _candidateBaseUrls() {
+    final candidates = <String>[
+      if (_workingBaseUrl case final String working) working,
+      baseUrl,
+      'http://10.0.2.2:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:3000',
+    ];
+    final seen = <String>{};
+    return candidates.where((b) => seen.add(b)).toList();
+  }
+
+  Future<http.Response> _postWithFallback({
+    required String path,
+    required Map<String, String> headers,
+    required String body,
+  }) async {
+    Exception? lastError;
+    for (final candidate in _candidateBaseUrls()) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$candidate$path'),
+              headers: headers,
+              body: body,
+            )
+            .timeout(_timeout);
+        if (response.statusCode < 500) {
+          _workingBaseUrl = candidate;
+        }
+        return response;
+      } on SocketException {
+        lastError = Exception('Network unreachable on $candidate');
+      } on TimeoutException {
+        lastError = Exception('Connection timed out on $candidate');
+      } catch (e) {
+        lastError = Exception(e.toString());
+      }
+    }
+    throw lastError ?? Exception('Unable to reach auth backend.');
+  }
 
   Future<AuthResponse> registerPlayer(RegisterPlayerDto dto) async {
     final url = Uri.parse('$baseUrl/api/auth/register/player');
@@ -29,10 +91,10 @@ class AuthApi {
       ).timeout(_timeout);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = _decodeResponseBody(response);
         return AuthResponse(message: data['message']);
       } else {
-        final error = jsonDecode(response.body);
+        final error = _decodeResponseBody(response);
         throw Exception(error['message'] ?? 'Registration failed');
       }
     } catch (e) {
@@ -51,10 +113,10 @@ class AuthApi {
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = _decodeResponseBody(response);
         return AuthResponse.fromJson(data);
       } else {
-        final error = jsonDecode(response.body);
+        final error = _decodeResponseBody(response);
         throw Exception(error['message'] ?? 'Registration failed');
       }
     } catch (e) {
@@ -63,17 +125,15 @@ class AuthApi {
   }
 
   Future<AuthResponse> login(LoginDto dto) async {
-    final url = Uri.parse('$baseUrl/api/auth/login');
-
     try {
-      final response = await http.post(
-        url,
+      final response = await _postWithFallback(
+        path: '/api/auth/login',
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(dto.toJson()),
-      ).timeout(_timeout);
+      );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
+        final data = _decodeResponseBody(response);
         final authResponse = AuthResponse.fromJson(data);
         await _tokenStorage.saveTokens(
           accessToken: authResponse.accessToken!,
@@ -81,11 +141,9 @@ class AuthApi {
         );
         return authResponse;
       } else {
-        final error = jsonDecode(response.body);
+        final error = _decodeResponseBody(response);
         throw Exception(error['message'] ?? 'Login failed');
       }
-    } on TimeoutException {
-      throw Exception('Connection timed out. Check that the server is running and reachable.');
     } catch (e) {
       throw Exception('Failed to login: $e');
     }
@@ -106,7 +164,7 @@ class AuthApi {
       ).timeout(_timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
+        final data = _decodeResponseBody(response);
         final authResponse = AuthResponse.fromJson(data);
 
         if (authResponse.accessToken != null) {
@@ -117,7 +175,7 @@ class AuthApi {
         }
         return authResponse;
       } else {
-        final error = jsonDecode(response.body);
+        final error = _decodeResponseBody(response);
         throw Exception(error['message'] ?? 'Verification failed');
       }
     } catch (e) {
@@ -136,7 +194,7 @@ class AuthApi {
       ).timeout(_timeout);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        final error = jsonDecode(response.body);
+        final error = _decodeResponseBody(response);
         throw Exception(error['message'] ?? 'Failed to resend OTP');
       }
     } catch (e) {
@@ -155,7 +213,7 @@ class AuthApi {
       ).timeout(_timeout);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        final error = jsonDecode(response.body);
+        final error = _decodeResponseBody(response);
         throw Exception(error['message'] ?? 'Request failed');
       }
     } catch (e) {
@@ -174,7 +232,7 @@ class AuthApi {
       ).timeout(_timeout);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        final error = jsonDecode(response.body);
+        final error = _decodeResponseBody(response);
         throw Exception(error['message'] ?? 'Reset failed');
       }
     } catch (e) {
@@ -193,7 +251,7 @@ class AuthApi {
       ).timeout(_timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
+        final data = _decodeResponseBody(response);
         final authResponse = AuthResponse.fromJson(data);
         await _tokenStorage.saveTokens(
           accessToken: authResponse.accessToken!,
@@ -201,7 +259,7 @@ class AuthApi {
         );
         return authResponse;
       } else {
-        final error = jsonDecode(response.body);
+        final error = _decodeResponseBody(response);
         throw Exception(error['message'] ?? 'Google login failed');
       }
     } catch (e) {
@@ -223,7 +281,7 @@ class AuthApi {
       ).timeout(_timeout);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        final error = jsonDecode(response.body);
+        final error = _decodeResponseBody(response);
         throw Exception(error['message'] ?? 'OTP verification failed');
       }
     } catch (e) {
@@ -245,10 +303,10 @@ class AuthApi {
       ).timeout(_timeout);
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = _decodeResponseBody(response);
         return User.fromJson(data);
       } else {
-        final error = jsonDecode(response.body);
+        final error = _decodeResponseBody(response);
         throw Exception(error['message'] ?? 'Failed to fetch profile');
       }
     } catch (e) {
@@ -272,20 +330,20 @@ class AuthApi {
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          if (nickname != null) 'nickname': nickname,
-          if (region != null) 'region': region,
-          if (avatar != null) 'avatar': avatar,
+          if (nickname case final String n) 'nickname': n,
+          if (region case final String r) 'region': r,
+          if (avatar case final String a) 'avatar': a,
         }),
       ).timeout(_timeout);
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = _decodeResponseBody(response);
         final dynamic userJson = data is Map<String, dynamic> && data['user'] != null
             ? data['user']
             : data;
         return User.fromJson(userJson as Map<String, dynamic>);
       } else {
-        final error = jsonDecode(response.body);
+        final error = _decodeResponseBody(response);
         throw Exception(error['message'] ?? 'Failed to update profile');
       }
     } catch (e) {

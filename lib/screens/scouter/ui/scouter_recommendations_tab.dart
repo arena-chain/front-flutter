@@ -79,7 +79,7 @@ class _ScouterRecommendationsTabState extends State<ScouterRecommendationsTab> {
                             fontSize: 13,
                           ),
                         ),
-                        if (!vm.recommendations.isEmpty) ...[
+                        if (vm.recommendations.isNotEmpty) ...[
                           const SizedBox(height: 14),
                           TextField(
                             controller: _searchCtrl,
@@ -143,7 +143,7 @@ class _ScouterRecommendationsTabState extends State<ScouterRecommendationsTab> {
                     ),
                   ),
                 ),
-                if (vm.isLoading)
+                if (vm.isLoading && vm.recommendations.isEmpty)
                   const SliverToBoxAdapter(
                     child: Center(
                       child: Padding(
@@ -197,9 +197,9 @@ class _ScouterRecommendationsTabState extends State<ScouterRecommendationsTab> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -257,7 +257,7 @@ class _ScouterRecommendationsTabState extends State<ScouterRecommendationsTab> {
           color: const Color(0xFF0F1221),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFF1A1F36)),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 8, offset: const Offset(0, 2))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 8, offset: const Offset(0, 2))],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
@@ -281,7 +281,7 @@ class _ScouterRecommendationsTabState extends State<ScouterRecommendationsTab> {
                             Container(
                               width: 42, height: 42,
                               decoration: BoxDecoration(
-                                color: levelColor.withOpacity(0.12),
+                                color: levelColor.withValues(alpha: 0.12),
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
@@ -319,9 +319,9 @@ class _ScouterRecommendationsTabState extends State<ScouterRecommendationsTab> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                               decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.12),
+                                color: statusColor.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: statusColor.withOpacity(0.3)),
+                                border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                               ),
                               child: Text(r.status as String,
                                   style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
@@ -335,7 +335,7 @@ class _ScouterRecommendationsTabState extends State<ScouterRecommendationsTab> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: levelColor.withOpacity(0.1),
+                                color: levelColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(levelLabel,
@@ -354,7 +354,7 @@ class _ScouterRecommendationsTabState extends State<ScouterRecommendationsTab> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.03),
+                              color: Colors.white.withValues(alpha: 0.03),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -398,14 +398,14 @@ class _ScouterRecommendationsTabState extends State<ScouterRecommendationsTab> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFFAA44FF).withOpacity(0.25),
-                  const Color(0xFF7B2FBE).withOpacity(0.12),
+                  const Color(0xFFAA44FF).withValues(alpha: 0.25),
+                  const Color(0xFF7B2FBE).withValues(alpha: 0.12),
                 ],
               ),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFAA44FF).withOpacity(0.15),
+                  color: const Color(0xFFAA44FF).withValues(alpha: 0.15),
                   blurRadius: 24,
                   spreadRadius: 2,
                 ),

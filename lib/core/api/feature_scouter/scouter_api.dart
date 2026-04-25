@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 import 'package:arena_chain_flutter/core/models/feature_scouter/scouter_models.dart';
@@ -7,7 +9,9 @@ import 'package:arena_chain_flutter/core/config/api_config.dart';
 /// HTTP client for all scouter + scouting endpoints.
 class ScouterApi {
   static String get baseUrl => ApiConfig.baseUrl;
+  static const Duration _timeout = Duration(seconds: 8);
   final TokenStorage _tokenStorage = TokenStorage();
+  String? _workingBaseUrl;
 
   // ── helpers ──────────────────────────────────────────────────────────────
 
@@ -32,6 +36,44 @@ class ScouterApi {
     throw Exception(msg);
   }
 
+  List<String> _candidateBaseUrls() {
+    final candidates = <String>[
+      if (_workingBaseUrl case final String working) working,
+      baseUrl,
+      'http://10.0.2.2:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:3000',
+    ];
+    final seen = <String>{};
+    return candidates.where((b) => seen.add(b)).toList();
+  }
+
+  Future<http.Response> _getWithFallback(
+    String path, {
+    required Map<String, String> headers,
+    String context = 'Request failed',
+  }) async {
+    Exception? lastError;
+    for (final candidate in _candidateBaseUrls()) {
+      try {
+        final resp = await http
+            .get(Uri.parse('$candidate$path'), headers: headers)
+            .timeout(_timeout);
+        if (resp.statusCode < 500) {
+          _workingBaseUrl = candidate;
+        }
+        return resp;
+      } on SocketException {
+        lastError = Exception('Network unreachable on $candidate');
+      } on TimeoutException {
+        lastError = Exception('Timeout on $candidate');
+      } catch (e) {
+        lastError = Exception(e.toString());
+      }
+    }
+    throw lastError ?? Exception(context);
+  }
+
   // ── Catalog ───────────────────────────────────────────────────────────────
 
   Future<List<GameModel>> getCatalog() async {
@@ -45,9 +87,10 @@ class ScouterApi {
 
   Future<ScouterProfile> getScouterProfile(String userId) async {
     final headers = await _authHeaders();
-    final resp = await http.get(
-      Uri.parse('$baseUrl/api/scouter/me/$userId'),
+    final resp = await _getWithFallback(
+      '/api/scouter/me/$userId',
       headers: headers,
+      context: 'Failed to load profile',
     );
     final data = _decode(resp, 'Failed to load profile') as Map<String, dynamic>;
     return ScouterProfile.fromJson(data);
@@ -57,9 +100,10 @@ class ScouterApi {
 
   Future<List<PlayerDetail>> getPlayers() async {
     final headers = await _authHeaders();
-    final resp = await http.get(
-      Uri.parse('$baseUrl/api/scouter/players'),
+    final resp = await _getWithFallback(
+      '/api/scouter/players',
       headers: headers,
+      context: 'Failed to load players',
     );
     final data = _decode(resp, 'Failed to load players') as List<dynamic>;
     return data
@@ -69,9 +113,11 @@ class ScouterApi {
 
   Future<PlayerDetail> getPlayerDetail(String playerUserId) async {
     final headers = await _authHeaders();
-    final resp = await http.get(
-      Uri.parse('$baseUrl/api/scouter/players/$playerUserId'),
+    final encoded = Uri.encodeComponent(playerUserId);
+    final resp = await _getWithFallback(
+      '/api/scouter/players/$encoded',
       headers: headers,
+      context: 'Failed to load player',
     );
     final data = _decode(resp, 'Failed to load player') as Map<String, dynamic>;
     return PlayerDetail.fromJson(data);
@@ -79,9 +125,10 @@ class ScouterApi {
 
   Future<List<MatchSummary>> getPlayerMatches(String playerUserId) async {
     final headers = await _authHeaders();
-    final resp = await http.get(
-      Uri.parse('$baseUrl/api/scouter/players/$playerUserId/matches'),
+    final resp = await _getWithFallback(
+      '/api/scouter/players/$playerUserId/matches',
       headers: headers,
+      context: 'Failed to load matches',
     );
     final data = _decode(resp, 'Failed to load matches') as List<dynamic>;
     return data
@@ -145,9 +192,10 @@ class ScouterApi {
 
   Future<List<ScoutingReport>> getMyReports(String scouterId) async {
     final headers = await _authHeaders();
-    final resp = await http.get(
-      Uri.parse('$baseUrl/api/scouting/reports/scouter/$scouterId'),
+    final resp = await _getWithFallback(
+      '/api/scouting/reports/scouter/${Uri.encodeComponent(scouterId)}',
       headers: headers,
+      context: 'Failed to load reports',
     );
     final data = _decode(resp, 'Failed to load reports') as List<dynamic>;
     return data
@@ -157,9 +205,10 @@ class ScouterApi {
 
   Future<List<ScoutingReport>> getPlayerReports(String playerId) async {
     final headers = await _authHeaders();
-    final resp = await http.get(
-      Uri.parse('$baseUrl/api/scouting/reports/player/$playerId'),
+    final resp = await _getWithFallback(
+      '/api/scouting/reports/player/${Uri.encodeComponent(playerId)}',
       headers: headers,
+      context: 'Failed to load reports',
     );
     final data = _decode(resp, 'Failed to load reports') as List<dynamic>;
     return data
@@ -207,10 +256,14 @@ class ScouterApi {
     if (prospectLevel != null) params['prospectLevel'] = prospectLevel;
     if (priority != null) params['priority'] = priority;
     final headers = await _authHeaders();
-    final resp = await http.get(
-      Uri.parse('$baseUrl/api/scouting/prospects')
-          .replace(queryParameters: params),
+    final query = Uri(queryParameters: params).query;
+    final path = query.isEmpty
+        ? '/api/scouting/prospects'
+        : '/api/scouting/prospects?$query';
+    final resp = await _getWithFallback(
+      path,
       headers: headers,
+      context: 'Failed to load prospects',
     );
     final data = _decode(resp, 'Failed to load prospects') as List<dynamic>;
     return data
@@ -246,9 +299,10 @@ class ScouterApi {
 
   Future<List<Recommendation>> getMyRecommendations(String scouterId) async {
     final headers = await _authHeaders();
-    final resp = await http.get(
-      Uri.parse('$baseUrl/api/scouting/recommendations/scouter/$scouterId'),
+    final resp = await _getWithFallback(
+      '/api/scouting/recommendations/scouter/$scouterId',
       headers: headers,
+      context: 'Failed to load recommendations',
     );
     final data =
         _decode(resp, 'Failed to load recommendations') as List<dynamic>;
@@ -260,9 +314,10 @@ class ScouterApi {
   Future<List<Recommendation>> getPlayerRecommendations(
       String playerId) async {
     final headers = await _authHeaders();
-    final resp = await http.get(
-      Uri.parse('$baseUrl/api/scouting/recommendations/player/$playerId'),
+    final resp = await _getWithFallback(
+      '/api/scouting/recommendations/player/$playerId',
       headers: headers,
+      context: 'Failed to load recommendations',
     );
     final data =
         _decode(resp, 'Failed to load recommendations') as List<dynamic>;
@@ -381,7 +436,7 @@ class ScouterApi {
       headers: headers,
       body: jsonEncode({
         'body': body,
-        if (parentCommentId != null) 'parentCommentId': parentCommentId,
+        if (parentCommentId case final String commentId) 'parentCommentId': commentId,
       }),
     );
     return _decode(resp, 'Failed to post comment') as Map<String, dynamic>;

@@ -8,18 +8,6 @@ class MatchmakingApi {
   static String get baseUrl => ApiConfig.baseUrl;
   final AuthenticatedClient _client = AuthenticatedClient();
 
-  Future<dynamic> _firstOkGetJson(List<String> endpoints) async {
-    for (final endpoint in endpoints) {
-      try {
-        final response = await _client.get(Uri.parse(endpoint));
-        if (response.statusCode == 200) {
-          return jsonDecode(response.body);
-        }
-      } catch (_) {}
-    }
-    return null;
-  }
-
   Future<TicketModel> joinQueue({
     required String game,
     required String mode,
@@ -86,18 +74,16 @@ class MatchmakingApi {
   }
 
   Future<TicketModel?> getActiveTicket() async {
-    final data = await _firstOkGetJson([
-      '$baseUrl/api/matchmaking/my-active-ticket',
-      '$baseUrl/matchmaking/my-active-ticket',
-      '$baseUrl/api/matchmaking/active-ticket',
-      '$baseUrl/matchmaking/active-ticket',
-    ]);
-    if (data == null) return null;
-    if (data is Map<String, dynamic>) {
-      final ticket = data['ticket'];
-      if (ticket is Map<String, dynamic>) return TicketModel.fromJson(ticket);
+    final url = Uri.parse('$baseUrl/api/matchmaking/my-active-ticket');
+    final response = await _client.get(url);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['ticket'] == null) return null;
+      return TicketModel.fromJson(data['ticket']);
+    } else {
+      throw Exception('Failed to get active ticket');
     }
-    return null;
   }
 
   Future<void> acknowledgeGame(String gameId) async {
@@ -111,40 +97,28 @@ class MatchmakingApi {
   }
 
   Future<GameMatchModel?> getActiveGame() async {
-    final data = await _firstOkGetJson([
-      '$baseUrl/api/matchmaking/my-active-game',
-      '$baseUrl/matchmaking/my-active-game',
-      '$baseUrl/api/matchmaking/active-game',
-      '$baseUrl/matchmaking/active-game',
-    ]);
-    if (data == null) return null;
-    if (data is Map<String, dynamic>) {
-      final game = data['game'];
-      if (game is Map<String, dynamic>) return GameMatchModel.fromJson(game);
+    final url = Uri.parse('$baseUrl/api/matchmaking/my-active-game');
+    final response = await _client.get(url);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['game'] == null) return null;
+      return GameMatchModel.fromJson(data['game']);
+    } else {
+      throw Exception('Failed to get active game');
     }
-    return null;
   }
 
   Future<List<TicketModel>> getScheduledTickets() async {
-    final data = await _firstOkGetJson([
-      '$baseUrl/api/matchmaking/my-scheduled-tickets',
-      '$baseUrl/matchmaking/my-scheduled-tickets',
-      '$baseUrl/api/matchmaking/scheduled-tickets',
-      '$baseUrl/matchmaking/scheduled-tickets',
-    ]);
-    if (data is Map<String, dynamic>) {
+    final url = Uri.parse('$baseUrl/api/matchmaking/my-scheduled-tickets');
+    final response = await _client.get(url);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
       final list = data['tickets'] as List<dynamic>? ?? [];
-      return list
-          .whereType<Map<String, dynamic>>()
-          .map((t) => TicketModel.fromJson(t))
-          .toList();
+      return list.map((t) => TicketModel.fromJson(t as Map<String, dynamic>)).toList();
+    } else {
+      throw Exception('Failed to get scheduled tickets');
     }
-    if (data is List) {
-      return data
-          .whereType<Map<String, dynamic>>()
-          .map((t) => TicketModel.fromJson(t))
-          .toList();
-    }
-    return [];
   }
 }

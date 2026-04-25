@@ -19,9 +19,13 @@ import 'package:arena_chain_flutter/screens/scouter/ui/scouter_home_screen.dart'
 import 'package:arena_chain_flutter/screens/admin/ui/admin_home_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:arena_chain_flutter/core/services/chat_webrtc_service.dart';
+import 'package:arena_chain_flutter/services/rift_service.dart';
+import 'package:arena_chain_flutter/core/config/api_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  ApiConfig.printDebugInfo();
 
   if (!kIsWeb) {
     // Initialize Stripe with public key (Mobile only)
@@ -67,6 +71,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => ChatWebRTCService(),
         ),
+        ChangeNotifierProvider(create: (_) => RiftService()),
       ],
       child: MaterialApp(
         title: 'Arena-Chain',

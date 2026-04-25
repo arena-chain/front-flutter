@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:arena_chain_flutter/core/repositories/feature_scouter/scouter_repository.dart';
 import 'package:arena_chain_flutter/core/models/feature_scouter/scouter_models.dart';
@@ -13,24 +15,40 @@ class ScouterRecommendationsViewModel extends ChangeNotifier {
   }) : _repo = repo ?? ScouterRepository();
 
   bool isLoading = false;
+  bool hasLoadedOnce = false;
   String? error;
   List<Recommendation> recommendations = [];
+  Future<void>? _inFlight;
 
   Future<void> loadRecommendations() async {
     if (scouterId.isEmpty) return;
+    if (_inFlight != null) return _inFlight!;
+    final completer = Completer<void>();
+    _inFlight = completer.future;
     isLoading = true;
     error = null;
     notifyListeners();
     try {
       final raw = await _repo.getMyRecommendations(scouterId);
-      // Enrich with real nicknames from the players directory
-      recommendations = await _enrichNicknames(raw);
+      // Show list immediately; nicknames load in background (was blocking UI).
+      recommendations = raw;
+      unawaited(_enrichAndApply(raw));
     } catch (e) {
       error = e.toString().replaceFirst('Exception: ', '');
     } finally {
       isLoading = false;
+      hasLoadedOnce = true;
+      completer.complete();
+      _inFlight = null;
       notifyListeners();
     }
+  }
+
+  Future<void> _enrichAndApply(List<Recommendation> raw) async {
+    final enriched = await _enrichNicknames(raw);
+    if (identical(enriched, raw)) return;
+    recommendations = enriched;
+    notifyListeners();
   }
 
   Future<List<Recommendation>> _enrichNicknames(List<Recommendation> recs) async {
@@ -40,7 +58,9 @@ class ScouterRecommendationsViewModel extends ChangeNotifier {
 
       // Source 1: merged players directory
       try {
-        final players = await PlayersDirectoryApi().getPlayers();
+        final players = await PlayersDirectoryApi()
+            .getPlayers()
+            .timeout(const Duration(seconds: 4));
         for (final p in players) {
           final nick = p.nickname;
           if (nick.isEmpty || nick == 'Unknown') continue;
@@ -52,7 +72,9 @@ class ScouterRecommendationsViewModel extends ChangeNotifier {
 
       // Source 2: raw scouter profiles (userId may be populated with user object)
       try {
-        final profiles = await PlayersDirectoryApi().getRawProfiles();
+        final profiles = await PlayersDirectoryApi()
+            .getRawProfiles()
+            .timeout(const Duration(seconds: 4));
         for (final p in profiles) {
           final nick = (p['nickname'] ?? p['displayName'] ?? '').toString();
           final pid = (p['_id'] ?? p['id'] ?? '').toString();

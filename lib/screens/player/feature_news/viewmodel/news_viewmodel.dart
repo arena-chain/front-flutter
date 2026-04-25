@@ -7,17 +7,30 @@ class NewsViewModel extends ChangeNotifier {
   NewsResponse? _newsResponse;
   bool _isLoading = false;
   String? _error;
+  Future<void>? _inFlight;
 
   NewsResponse? get newsResponse => _newsResponse;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
   Future<void> fetchNews({String? game, bool refresh = false}) async {
-    _isLoading = true;
-    _error = null;
-    if (refresh) notifyListeners();
+    if (_inFlight != null) {
+      await _inFlight;
+      return;
+    }
 
-    try {
+    // Keep existing content visible unless we have no data at all.
+    final shouldShowBlockingLoading = _newsResponse == null || refresh;
+    if (shouldShowBlockingLoading) {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+    } else {
+      _isLoading = false;
+      _error = null;
+    }
+
+    final task = () async {
       final response = await _newsApi.getNews(game: game);
       
       // If the backend returns an empty list, let's inject high-quality mock data 
@@ -32,6 +45,11 @@ class NewsViewModel extends ChangeNotifier {
       } else {
         _newsResponse = response;
       }
+    }();
+
+    _inFlight = task;
+    try {
+      await task;
     } catch (e) {
       _error = e.toString();
       // Even on error, show mock data so the app looks alive
@@ -42,6 +60,7 @@ class NewsViewModel extends ChangeNotifier {
         news: _getMockNews(game),
       );
     } finally {
+      _inFlight = null;
       _isLoading = false;
       notifyListeners();
     }

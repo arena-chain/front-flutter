@@ -7,13 +7,14 @@ import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_reports_v
 import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_matches_view_model.dart';
 import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_watchlist_view_model.dart';
 import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_home_view_model.dart';
-import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_public_highlights_view_model.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/scouter_feed_tab.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/scouter_side_drawer.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/view_all_players_screen.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/view_all_leagues_screen.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/view_all_tournaments_screen.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/scouter_teams_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_highlights/ui/player_highlights_feed_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_highlights/viewmodel/highlights_feed_view_model.dart';
 
 /// === Color Design System ===
 /// Background Top:    #040609
@@ -31,6 +32,15 @@ class ScouterHomeScreen extends StatefulWidget {
 
 class _ScouterHomeScreenState extends State<ScouterHomeScreen> {
   int _currentIndex = 0;
+  bool _bootstrapped = false;
+  String _scouterId = '';
+
+  ScouterPlayersViewModel? _playersVm;
+  ScouterReportsViewModel? _reportsVm;
+  ScouterMatchesViewModel? _matchesVm;
+  ScouterWatchlistViewModel? _watchlistVm;
+  ScouterHomeViewModel? _homeVm;
+  HighlightsFeedViewModel? _highlightsFeedVm;
 
   static const _bgTop = Color(0xFF040609);
   static const _bgBottom = Color(0xFF0A0D14);
@@ -38,24 +48,73 @@ class _ScouterHomeScreenState extends State<ScouterHomeScreen> {
   static const _accent = Color(0xFF00FF00);
 
   @override
-  Widget build(BuildContext context) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     final auth = context.read<AuthViewModel>();
-    final scouterId = auth.currentUser?.id ?? '';
+    final id = auth.currentUser?.id ?? '';
+    if (_bootstrapped && id == _scouterId) return;
 
-    final void Function(int) _goToTab = (i) => setState(() => _currentIndex = i);
+    _scouterId = id;
+    _playersVm?.dispose();
+    _reportsVm?.dispose();
+    _matchesVm?.dispose();
+    _watchlistVm?.dispose();
+    _homeVm?.dispose();
+    _highlightsFeedVm?.dispose();
+
+    _playersVm = ScouterPlayersViewModel()..loadGames();
+    _reportsVm = ScouterReportsViewModel(scouterId: _scouterId)..loadReports();
+    _matchesVm = ScouterMatchesViewModel(scouterId: _scouterId)..loadMatches();
+    _watchlistVm = ScouterWatchlistViewModel(scouterId: _scouterId)..loadWatchlist();
+    _homeVm = ScouterHomeViewModel(scouterId: _scouterId)..loadDashboard();
+    _highlightsFeedVm = HighlightsFeedViewModel();
+    _bootstrapped = true;
+  }
+
+  @override
+  void dispose() {
+    _playersVm?.dispose();
+    _reportsVm?.dispose();
+    _matchesVm?.dispose();
+    _watchlistVm?.dispose();
+    _homeVm?.dispose();
+    _highlightsFeedVm?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_bootstrapped ||
+        _playersVm == null ||
+        _reportsVm == null ||
+        _matchesVm == null ||
+        _watchlistVm == null ||
+        _homeVm == null ||
+        _highlightsFeedVm == null) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: CircularProgressIndicator(color: _accent),
+        ),
+      );
+    }
+
+    void goToTab(int i) => setState(() => _currentIndex = i);
     final List<Widget> pages = [
-      ScouterFeedTab(scouterId: scouterId),
+      ScouterFeedTab(scouterId: _scouterId),
+      const PlayerHighlightsFeedScreen(),
       ViewAllPlayersScreen(
-        scouterId: scouterId,
-        onBack: () => _goToTab(0),
+        scouterId: _scouterId,
+        onBack: () => goToTab(0),
       ),
-      ScouterTeamsScreen(onBack: () => _goToTab(0)),
-      ViewAllLeaguesScreen(onBack: () => _goToTab(0)),
-      ViewAllTournamentsScreen(onBack: () => _goToTab(0)),
+      ScouterTeamsScreen(onBack: () => goToTab(0)),
+      ViewAllLeaguesScreen(onBack: () => goToTab(0)),
+      ViewAllTournamentsScreen(onBack: () => goToTab(0)),
     ];
 
     final List<_NavItem> navItems = [
       _NavItem(icon: Icons.sports_esports_outlined, activeIcon: Icons.sports_esports, label: 'Matches'),
+      _NavItem(icon: Icons.auto_awesome_outlined, activeIcon: Icons.auto_awesome, label: 'Highlights'),
       _NavItem(icon: Icons.person_search_outlined, activeIcon: Icons.person_search, label: 'Players'),
       _NavItem(icon: Icons.group_outlined, activeIcon: Icons.group, label: 'Teams'),
       _NavItem(icon: Icons.shield_outlined, activeIcon: Icons.shield, label: 'Leagues'),
@@ -64,14 +123,12 @@ class _ScouterHomeScreenState extends State<ScouterHomeScreen> {
 
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ScouterPlayersViewModel()..loadGames()),
-        ChangeNotifierProvider(create: (_) => ScouterReportsViewModel(scouterId: scouterId)..loadReports()),
-        ChangeNotifierProvider(create: (_) => ScouterMatchesViewModel(scouterId: scouterId)..loadMatches()),
-        ChangeNotifierProvider(create: (_) => ScouterWatchlistViewModel(scouterId: scouterId)..loadWatchlist()),
-        ChangeNotifierProvider(create: (_) => ScouterHomeViewModel(scouterId: scouterId)..loadDashboard()),
-        ChangeNotifierProvider(
-          create: (_) => ScouterPublicHighlightsViewModel()..load(limit: 24),
-        ),
+        ChangeNotifierProvider.value(value: _playersVm!),
+        ChangeNotifierProvider.value(value: _reportsVm!),
+        ChangeNotifierProvider.value(value: _matchesVm!),
+        ChangeNotifierProvider.value(value: _watchlistVm!),
+        ChangeNotifierProvider.value(value: _homeVm!),
+        ChangeNotifierProvider.value(value: _highlightsFeedVm!),
       ],
       child: Container(
         decoration: const BoxDecoration(
@@ -87,7 +144,13 @@ class _ScouterHomeScreenState extends State<ScouterHomeScreen> {
           drawer: const ScouterSideDrawer(),
           body: Stack(
             children: [
-              SafeArea(bottom: false, child: pages[_currentIndex]),
+              SafeArea(
+                bottom: false,
+                child: IndexedStack(
+                  index: _currentIndex,
+                  children: pages,
+                ),
+              ),
               Positioned(
                 left: 0,
                 right: 0,

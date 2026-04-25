@@ -10,39 +10,25 @@ class LevelApi {
 
   Future<PlayerLevel> getMyLevel() async {
     final token = await _tokenStorage.getAccessToken();
-    final endpoints = [
-      '$baseUrl/api/level/me',
-      '$baseUrl/level/me',
-    ];
+    final url = Uri.parse('$baseUrl/api/level/me'); // Added /api
     
     try {
-      for (final endpoint in endpoints) {
-        final response = await http.get(
-          Uri.parse(endpoint),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-        );
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          return PlayerLevel.fromJson(data);
-        }
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return PlayerLevel.fromJson(data);
+      } else {
+        throw Exception('Failed to load level data');
       }
-      // Graceful fallback so app keeps working when endpoint is absent.
-      return PlayerLevel.fromJson(const {
-        'level': 1,
-        'xp': 0,
-        'xpToNextLevel': 1000,
-        'progressPct': 0.0,
-      });
     } catch (e) {
-      return PlayerLevel.fromJson(const {
-        'level': 1,
-        'xp': 0,
-        'xpToNextLevel': 1000,
-        'progressPct': 0.0,
-      });
+      throw Exception('Failed to load level progression: $e');
     }
   }
 }

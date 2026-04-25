@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
-import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_matches_view_model.dart';
-import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_public_highlights_view_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_scouter/scouter_models.dart';
-import 'package:arena_chain_flutter/screens/scouter/ui/scouter_highlight_detail_screen.dart';
+import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_matches_view_model.dart';
+import 'package:arena_chain_flutter/screens/scouter/ui/scouter_ui_tokens.dart';
 
 class ScouterFeedTab extends StatelessWidget {
   final String scouterId;
@@ -15,19 +14,18 @@ class ScouterFeedTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<ScouterMatchesViewModel, ScouterPublicHighlightsViewModel>(
-      builder: (context, vm, hlVm, _) {
+    return Consumer<ScouterMatchesViewModel>(
+      builder: (context, vm, _) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(context),
-            _buildTopHighlightsRow(context, hlVm),
             _buildFilterChips(vm),
             Expanded(
-              child: vm.isLoading
+              child: (vm.isLoading && vm.allMatches.isEmpty)
                   ? const Center(
                       child: CircularProgressIndicator(
-                          color: Color(0xFF00FF00)))
+                          color: ScouterUiTokens.accentGreen))
                   : vm.error != null
                       ? _errorState(vm)
                       : _buildMatchList(context, vm),
@@ -35,143 +33,6 @@ class ScouterFeedTab extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-
-  /// Public clips ranked by reactions (likes + comments + saves) — same idea as web scouter dashboard.
-  Widget _buildTopHighlightsRow(BuildContext context, ScouterPublicHighlightsViewModel hlVm) {
-    if (!hlVm.isLoading && hlVm.highlights.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-          child: Row(
-            children: [
-              const Icon(Icons.auto_awesome, color: Color(0xFF00FF00), size: 18),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Top highlights',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              if (hlVm.isLoading)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Color(0xFF00FF00),
-                  ),
-                )
-              else
-                Text(
-                  '${hlVm.highlights.length} clips',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.45),
-                    fontSize: 12,
-                  ),
-                ),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 200,
-          child: hlVm.isLoading && hlVm.highlights.isEmpty
-              ? const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF00FF00)),
-                )
-              : ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                  itemCount: hlVm.highlights.length,
-                  itemBuilder: (ctx, i) {
-                    final h = hlVm.highlights[i];
-                    return _feedHighlightCard(context, h);
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _feedHighlightCard(BuildContext context, HighlightItem h) {
-    final thumb = h.thumbnailUrl;
-    final clip = h.clipUrl;
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute<void>(
-              builder: (_) => ScouterHighlightDetailScreen(highlight: h),
-            ),
-          );
-        },
-        child: Container(
-          width: 120,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFF00FF00).withValues(alpha: 0.35)),
-            color: const Color(0xFF111625).withValues(alpha: 0.8),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (thumb != null && thumb.isNotEmpty)
-                Image.network(
-                  thumb,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const ColoredBox(color: Colors.black26),
-                )
-              else if (clip != null && clip.isNotEmpty)
-                const ColoredBox(color: Colors.black45)
-              else
-                const ColoredBox(color: Colors.black26),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.75),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-              ),
-              const Center(
-                child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 36),
-              ),
-              Positioned(
-                left: 8,
-                right: 8,
-                bottom: 8,
-                child: Text(
-                  h.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    height: 1.2,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -207,7 +68,8 @@ class ScouterFeedTab extends StatelessWidget {
                 ),
                 Text(
                   'Welcome, $nickname',
-                  style: const TextStyle(color: Color(0xFF8B95A5), fontSize: 13),
+                  style: const TextStyle(
+                      color: ScouterUiTokens.textSecondaryAlt, fontSize: 13),
                 ),
               ],
             ),
@@ -216,9 +78,9 @@ class ScouterFeedTab extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFF111625).withValues(alpha: 0.6),
+              color: ScouterUiTokens.card.withValues(alpha: 0.85),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              border: Border.all(color: ScouterUiTokens.cardBorder),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.2),
@@ -229,7 +91,7 @@ class ScouterFeedTab extends StatelessWidget {
             ),
             child: const Icon(
               Icons.notifications_outlined,
-              color: Color(0xFF8B95A5),
+              color: ScouterUiTokens.textSecondaryAlt,
               size: 20,
             ),
           ),
@@ -247,7 +109,7 @@ class ScouterFeedTab extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, index) => const SizedBox(width: 8),
         itemCount: _filters.length,
         itemBuilder: (context, i) {
           final f = _filters[i];
@@ -260,23 +122,14 @@ class ScouterFeedTab extends StatelessWidget {
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: isActive
-                    ? const Color(0xFF00FF00).withValues(alpha: 0.10)
-                    : const Color(0xFF111625).withValues(alpha: 0.6),
+                    ? ScouterUiTokens.accentGreen
+                    : ScouterUiTokens.chipInactiveBg,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isActive
-                      ? const Color(0xFF00FF00).withValues(alpha: 0.5)
-                      : Colors.white.withValues(alpha: 0.05),
+                      ? ScouterUiTokens.accentGreen
+                      : ScouterUiTokens.chipInactiveBorder,
                 ),
-                boxShadow: isActive
-                    ? [
-                        BoxShadow(
-                          color: const Color(0xFF00FF00).withValues(alpha: 0.15),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        )
-                      ]
-                    : [],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -289,12 +142,12 @@ class ScouterFeedTab extends StatelessWidget {
                     f,
                     style: TextStyle(
                       color: isActive
-                          ? const Color(0xFF00FF00)
-                          : const Color(0xFF8B95A5),
+                          ? ScouterUiTokens.scaffoldBg
+                          : ScouterUiTokens.textSecondary,
                       fontSize: 12,
                       fontWeight: isActive
                           ? FontWeight.bold
-                          : FontWeight.w600,
+                          : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -314,13 +167,13 @@ class ScouterFeedTab extends StatelessWidget {
       return _emptyState(vm.activeFilter);
     }
     return RefreshIndicator(
-      color: const Color(0xFF00FF00),
-      backgroundColor: const Color(0xFF111625),
+      color: ScouterUiTokens.accentGreen,
+      backgroundColor: ScouterUiTokens.card,
       onRefresh: vm.loadMatches,
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 100), // padding for floating nav
         itemCount: matches.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        separatorBuilder: (_, index) => const SizedBox(height: 12),
         itemBuilder: (context, i) => _matchCard(matches[i]),
       ),
     );
@@ -335,25 +188,25 @@ class ScouterFeedTab extends StatelessWidget {
         : (m.scheduledStart ?? '');
 
     final statusColor = isLive
-        ? const Color(0xFF00FF00)
+        ? ScouterUiTokens.accentGreen
         : status == 'UPCOMING'
-            ? const Color(0xFF00AAFF)
-            : const Color(0xFF8B95A5);
+            ? ScouterUiTokens.accentBlue
+            : ScouterUiTokens.textSecondaryAlt;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111625).withValues(alpha: 0.6),
+        color: ScouterUiTokens.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isLive
-              ? const Color(0xFF00FF00).withValues(alpha: 0.3)
-              : Colors.white.withValues(alpha: 0.05),
+              ? ScouterUiTokens.accentGreen.withValues(alpha: 0.35)
+              : ScouterUiTokens.cardBorder,
         ),
         boxShadow: [
           if (isLive)
             BoxShadow(
-              color: const Color(0xFF00FF00).withValues(alpha: 0.05),
+              color: ScouterUiTokens.accentGreen.withValues(alpha: 0.06),
               blurRadius: 10,
               spreadRadius: 1,
             ),
@@ -391,7 +244,7 @@ class ScouterFeedTab extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(date,
                     style: const TextStyle(
-                        color: Color(0xFF8B95A5), fontSize: 11)),
+                        color: ScouterUiTokens.textSecondaryAlt, fontSize: 11)),
               ],
             ],
           ),
@@ -400,14 +253,14 @@ class ScouterFeedTab extends StatelessWidget {
           Text(
             score,
             style: TextStyle(
-              color: isLive ? const Color(0xFF00FF00) : Colors.white,
+              color: isLive ? ScouterUiTokens.accentGreen : Colors.white,
               fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(width: 8),
           const Icon(Icons.chevron_right,
-              color: Color(0xFF8B95A5), size: 18),
+              color: ScouterUiTokens.textSecondaryAlt, size: 18),
         ],
       ),
     );
@@ -430,12 +283,12 @@ class ScouterFeedTab extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: const Color(0xFF111625).withValues(alpha: 0.6),
+              color: ScouterUiTokens.card,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              border: Border.all(color: ScouterUiTokens.cardBorder),
             ),
             child: const Icon(Icons.sports_esports_outlined,
-                color: Color(0xFF8B95A5), size: 36),
+                color: ScouterUiTokens.textSecondaryAlt, size: 36),
           ),
           const SizedBox(height: 16),
           Text(
@@ -445,8 +298,9 @@ class ScouterFeedTab extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Scout and evaluate players to\nsee their matches here.',
-            style: TextStyle(color: Color(0xFF8B95A5), fontSize: 13),
+            'League matches load automatically.\nAdd evaluated players for more coverage.',
+            style: TextStyle(
+                color: ScouterUiTokens.textSecondaryAlt, fontSize: 13),
             textAlign: TextAlign.center,
           ),
         ],
@@ -485,12 +339,15 @@ class ScouterFeedTab extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00FF00).withValues(alpha: 0.12),
+                  color: ScouterUiTokens.accentGreen.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF00FF00).withValues(alpha: 0.4)),
+                  border: Border.all(
+                      color: ScouterUiTokens.accentGreen.withValues(alpha: 0.4)),
                 ),
                 child: const Text('Retry',
-                    style: TextStyle(color: Color(0xFF00FF00), fontWeight: FontWeight.w700)),
+                    style: TextStyle(
+                        color: ScouterUiTokens.accentGreen,
+                        fontWeight: FontWeight.w700)),
               ),
             ),
           ),
@@ -544,15 +401,16 @@ class _SmallPulseDotState extends State<_SmallPulseDot>
           height: 8,
           decoration: BoxDecoration(
             color: widget.active
-                ? const Color(0xFF00FF00).withValues(alpha: _anim.value)
-                : const Color(0xFF00FF00).withValues(alpha: 0.5),
+                ? ScouterUiTokens.scaffoldBg.withValues(alpha: 0.35 + 0.65 * _anim.value)
+                : ScouterUiTokens.accentGreen.withValues(alpha: 0.5),
             shape: BoxShape.circle,
             boxShadow: widget.active
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF00FF00).withValues(alpha: _anim.value * 0.6),
-                      blurRadius: 8 * _anim.value,
-                      spreadRadius: 2 * _anim.value,
+                      color: ScouterUiTokens.scaffoldBg
+                          .withValues(alpha: 0.25 * _anim.value),
+                      blurRadius: 6 * _anim.value,
+                      spreadRadius: 1,
                     )
                   ]
                 : [],
