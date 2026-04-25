@@ -15,7 +15,7 @@ class LolControlPairingScreen extends StatefulWidget {
 }
 
 class _LolControlPairingScreenState extends State<LolControlPairingScreen> {
-  final _ipController = TextEditingController(text: '192.168.137.1');
+  final _ipController = TextEditingController(text: '192.168.1.145');
   final _portController = TextEditingController(text: '51001');
   final _codeController = TextEditingController();
   bool _navigated = false;
@@ -97,7 +97,7 @@ class _LolControlPairingScreenState extends State<LolControlPairingScreen> {
                 const SizedBox(height: 6),
                 _buildTextField(
                   controller: _ipController,
-                  hint: '192.168.137.1',
+                  hint: '192.168.1.145',
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 20),

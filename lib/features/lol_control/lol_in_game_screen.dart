@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
@@ -38,6 +39,14 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
   io.Socket? _socket;
   StreamSubscription<LcuEvent>? _riftSub;
   static const int _maxEvents = 120;
+
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _soundEnabled = true;
+  bool _gameStartSoundPlayed = false;
+
+  String? _lastKillerName;
+  DateTime? _lastKillTime;
+  int _killStreak = 0;
 
   String get _effectiveHost =>
       widget.serverIp ??
@@ -219,9 +228,79 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
     return null;
   }
 
+  Future<void> _playSound(String filename) async {
+    if (!_soundEnabled) return;
+    try {
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource('sounds/$filename'));
+    } catch (e) {
+      // ignore: avoid_print
+      print('[Audio] Error playing $filename: $e');
+    }
+  }
+
+  void _handleEventSound(Map<String, dynamic> e) {
+    final eventName = e['EventName']?.toString() ?? '';
+    final killer = e['KillerName']?.toString() ?? '';
+    final localName = _localSummonerFromState() ?? '';
+
+    switch (eventName) {
+      case 'GameStart':
+        if (!_gameStartSoundPlayed) {
+          _gameStartSoundPlayed = true;
+          _playSound('Start.wav');
+        }
+        break;
+
+      case 'FirstBlood':
+        _playSound('first_blood.wav');
+        break;
+
+      case 'ChampionKill':
+        if (killer == localName) {
+          final now = DateTime.now();
+          if (_lastKillerName == localName &&
+              _lastKillTime != null &&
+              now.difference(_lastKillTime!).inSeconds <= 10) {
+            _killStreak++;
+          } else {
+            _killStreak = 1;
+          }
+          _lastKillerName = localName;
+          _lastKillTime = now;
+
+          if (_killStreak == 2) {
+            _playSound('Double Kill.wav');
+          } else if (_killStreak >= 3) {
+            _playSound('Triple Kill.wav');
+          }
+        } else {
+          if (e['VictimName']?.toString() == localName) {
+            _killStreak = 0;
+            _lastKillTime = null;
+          }
+        }
+        break;
+
+      case 'Multikill':
+        if (killer == localName) {
+          final killType = e['KillType']?.toString() ?? '';
+          if (killType == 'DoubleKill') {
+            _playSound('Double Kill.wav');
+          } else if (killType == 'TripleKill' ||
+              killType == 'QuadraKill' ||
+              killType == 'PentaKill') {
+            _playSound('Triple Kill.wav');
+          }
+        }
+        break;
+    }
+  }
+
   void _pushEvent(Map<String, dynamic> raw) {
     if (!mounted) return;
     HapticFeedback.selectionClick();
+    _handleEventSound(raw);
     setState(() {
       _events.insert(0, Map<String, dynamic>.from(raw));
       if (_events.length > _maxEvents) {
@@ -251,6 +330,10 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
     _socket!.on('game-state', (data) {
       if (!mounted || data is! Map) return;
       setState(() => _gameState = Map<String, dynamic>.from(data));
+      if (!_gameStartSoundPlayed && _gameState != null) {
+        _gameStartSoundPlayed = true;
+        _playSound('Start.wav');
+      }
     });
 
     _socket!.on('game-event', (data) {
@@ -273,6 +356,9 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
           }
         }
       });
+      _killStreak = 0;
+      _lastKillTime = null;
+      _lastKillerName = null;
     });
 
     _socket!.connect();
@@ -325,6 +411,7 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
 
   @override
   void dispose() {
+    _audioPlayer.dispose();
     _riftSub?.cancel();
     _socket?.dispose();
     super.dispose();
@@ -355,6 +442,41 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: CustomScrollView(
                 slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          const Icon(
+                            Icons.music_note,
+                            color: Colors.white38,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          const Text(
+                            'Sounds',
+                            style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Transform.scale(
+                            scale: 0.75,
+                            child: Switch(
+                              value: _soundEnabled,
+                              onChanged: (val) {
+                                setState(() => _soundEnabled = val);
+                                if (!val) _audioPlayer.stop();
+                              },
+                              activeThumbColor: const Color(0xFF00E676),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   SliverToBoxAdapter(child: _buildStatsCard(gs, timeStr)),
                   const SliverToBoxAdapter(child: SizedBox(height: 8)),
                   SliverToBoxAdapter(child: _buildTeamScoreBar(gs)),
@@ -642,7 +764,7 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
     }
 
     return SizedBox(
-      width: 75,
+      width: 77,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: slotWidgets,
