@@ -22,4 +22,6 @@ class ApiConfig {
   static void printDebugInfo() {
     debugPrint('ApiConfig: kIsWeb=$kIsWeb, platform=$defaultTargetPlatform, baseUrl=$baseUrl');
   }
+
+  static const String blockchainRpcUrl = 'https://polygon-mainnet.g.alchemy.com/v2/Cne8sVjZYbsdhnBZxn4e-';
 }

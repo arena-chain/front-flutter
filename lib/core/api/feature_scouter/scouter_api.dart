@@ -301,8 +301,6 @@ class ScouterApi {
     return [];
   }
 
-<<<<<<< HEAD
-=======
   /// Public catalog (same as web `GET /highlights/public`).
   Future<List<HighlightItem>> getPublicHighlights() async {
     final headers = await _authHeaders();
@@ -445,7 +443,6 @@ class ScouterApi {
     throw Exception('Failed to unsave');
   }
 
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   // ── Rank progression ──────────────────────────────────────────────────────
 
   Future<List<RankEntry>> getPlayerRanks(String playerUserId) async {

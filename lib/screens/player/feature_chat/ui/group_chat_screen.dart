@@ -39,6 +39,7 @@ class _GroupChatScreenState extends State<GroupChatScreen>
     _load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final s = Provider.of<ChatWebRTCService>(context, listen: false);
+      s.connectChatSocket();
       _socketSub = s.messageStream.listen((msg) {
         if (msg is Map && msg['groupId'] != null &&
             _activeGroup != null && msg['groupId'] == _activeGroup['_id']) {

@@ -15,6 +15,8 @@ class TournamentModel {
   final String? locationName;
   final double? latitude;
   final double? longitude;
+  final List<dynamic>? ticketTypes; // Populated ticket types or IDs
+  final String? bannerImageUrl;
 
   TournamentModel({
     required this.id,
@@ -33,6 +35,8 @@ class TournamentModel {
     this.locationName,
     this.latitude,
     this.longitude,
+    this.ticketTypes,
+    this.bannerImageUrl,
   });
 
   factory TournamentModel.fromJson(Map<String, dynamic> json) {
@@ -72,6 +76,8 @@ class TournamentModel {
       locationName: json['locationName'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
+      ticketTypes: json['ticketTypes'] as List<dynamic>?,
+      bannerImageUrl: json['bannerImageUrl'] as String?,
     );
   }
 
@@ -93,6 +99,8 @@ class TournamentModel {
       'locationName': locationName,
       'latitude': latitude,
       'longitude': longitude,
+      'ticketTypes': ticketTypes,
+      'bannerImageUrl': bannerImageUrl,
     };
   }
 }

@@ -4,13 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/core/api/riot/riot_api.dart';
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
-<<<<<<< HEAD
-import 'package:arena_chain_flutter/navigation.dart';
-=======
 import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_viewmodel.dart';
 import 'package:arena_chain_flutter/navigation.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/side_drawer.dart';
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
 class PlayerProfileScreen extends StatefulWidget {
   const PlayerProfileScreen({super.key});
@@ -46,10 +42,7 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
       _avatarUrl = user?.avatar ?? '';
       setState(() {});
       _checkLinkStatus();
-<<<<<<< HEAD
-=======
       context.read<LevelViewModel>().fetchMyLevel();
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     });
   }
 
@@ -139,36 +132,6 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
         final isPro = user?.profile?.isPro ?? false;
 
         return Scaffold(
-<<<<<<< HEAD
-          backgroundColor: const Color(0xFF0A0E1A),
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF0A0E1A),
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-            title: const Row(
-              children: [
-                Icon(Icons.person, color: Color(0xFF00FF00), size: 24),
-                SizedBox(width: 8),
-                Text(
-                  'My Profile',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.settings, color: Color(0xFF00FF00)),
-                onPressed: () {
-                  Navigator.pushNamed(context, AppRoutes.settings);
-                },
-=======
           backgroundColor: const Color(0xFF121212),
           drawer: const SideDrawer(),
           appBar: AppBar(
@@ -208,22 +171,11 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
               IconButton(
                 icon: const Icon(Icons.settings, color: Color(0xFF00FF00)),
                 onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ),
             ],
           ),
           body: SingleChildScrollView(
             child: Column(
-<<<<<<< HEAD
-              children: [
-                const SizedBox(height: 24),
-                _buildProfileHeader(nickname, email, isPro),
-                const SizedBox(height: 24),
-                _buildStatsSection(),
-                const SizedBox(height: 24),
-                _buildTeamManagementSection(authViewModel),
-                const SizedBox(height: 24),
-=======
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_isEditing) ...[
@@ -240,17 +192,12 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
                   _buildActivityFeed(context, nickname),
                   const SizedBox(height: 28),
                 ],
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 _buildConnectedGameAccounts(),
                 const SizedBox(height: 24),
                 _buildMyLeagues(),
                 const SizedBox(height: 24),
                 _buildAchievements(),
-<<<<<<< HEAD
-                const SizedBox(height: 24),
-=======
                 const SizedBox(height: 32),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ],
             ),
           ),
@@ -259,13 +206,6 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildTeamManagementSection(AuthViewModel auth) {
-    final user = auth.currentUser;
-    final role = user?.role.toLowerCase() ?? '';
-    final isManager = role == 'team_manager';
-    final isAdmin = role == 'admin';
-=======
   static const Color _neon = Color(0xFF00FF00);
 
   Widget _buildCinematicHero(
@@ -498,25 +438,12 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
       (Icons.how_to_reg, 'Comms', 0.91),
       (Icons.handshake, 'Teamplay', 0.74),
     ];
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-<<<<<<< HEAD
-          const Row(
-            children: [
-              Icon(Icons.groups, color: Color(0xFF00FF00), size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Team Management',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-=======
           Row(
             children: [
               Icon(Icons.rocket_launch_rounded, color: _neon.withValues(alpha: 0.9), size: 20),
@@ -528,37 +455,10 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.4,
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 ),
               ),
             ],
           ),
-<<<<<<< HEAD
-          const SizedBox(height: 16),
-          if (isManager)
-            _buildActionTile(
-              'Manager Dashboard',
-              'Manage your squad, roster, and news.',
-              Icons.dashboard_customize,
-              const Color(0xFFE94560),
-              () => Navigator.pushNamed(context, AppRoutes.managerDashboard, arguments: user?.teamId ?? ''),
-            )
-          else if (!isAdmin)
-            _buildActionTile(
-              'Become Team Manager',
-              'Apply to leading your own official squad.',
-              Icons.stars,
-              const Color(0xFF00FF00),
-              () => Navigator.pushNamed(context, AppRoutes.managerApplication),
-            ),
-          const SizedBox(height: 12),
-          _buildActionTile(
-            'Recruitment Inbox',
-            'View team invitations and player offers.',
-            Icons.mail_outline,
-            Colors.blueAccent,
-            () => Navigator.pushNamed(context, AppRoutes.playerInvitations),
-=======
           const SizedBox(height: 18),
           SizedBox(
             height: 118,
@@ -571,41 +471,12 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
                 return _endorsementRing(icon: icon, label: label, value: value);
               },
             ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           ),
         ],
       ),
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildActionTile(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F1221),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFF7A86AC), fontSize: 12)),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 14),
-          ],
-        ),
-=======
   Widget _endorsementRing({required IconData icon, required String label, required double value}) {
     return SizedBox(
       width: 72,
@@ -913,7 +784,6 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
           const SizedBox(height: 10),
           Text(timeLabel, style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 10)),
         ],
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ),
     );
   }
@@ -1377,63 +1247,6 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildStatsSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildStatCard('Matches', '142', Icons.sports_esports),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatCard('Wins', '89', Icons.emoji_events),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatCard('Win Rate', '63%', Icons.trending_up),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F1221),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF1A1F36)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: const Color(0xFF00FF00), size: 24),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF00FF00),
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF7A86AC),
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-=======
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   Widget _buildMyLeagues() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1641,8 +1454,6 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
     );
   }
 }
-<<<<<<< HEAD
-=======
 
 class _ProfileGridPainter extends CustomPainter {
   final Color color;
@@ -1666,4 +1477,3 @@ class _ProfileGridPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _ProfileGridPainter oldDelegate) => oldDelegate.color != color;
 }
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056

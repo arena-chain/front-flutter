@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 
 class BottomNavBar extends StatelessWidget {
-<<<<<<< HEAD
-=======
   static const Color _accent = Color(0xFF39FF14);
   static const Color _slotBg = Color(0xFF0A0A0A);
   static const Color _muted = Color(0xFF5C6570);
 
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   final int currentIndex;
   final Function(int) onTap;
 
@@ -20,13 +17,6 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-<<<<<<< HEAD
-      decoration: const BoxDecoration(
-        color: Color(0xFF0A0E1A),
-        border: Border(
-          top: BorderSide(color: Colors.white10, width: 0.5),
-        ),
-=======
       decoration: BoxDecoration(
         color: Colors.black,
         border: Border(
@@ -42,24 +32,10 @@ class BottomNavBar extends StatelessWidget {
             offset: const Offset(0, -4),
           ),
         ],
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-<<<<<<< HEAD
-          padding: const EdgeInsets.symmetric(vertical: 4.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(context, Icons.home_rounded, 'Home', 0),
-              _buildNavItem(context, Icons.play_circle_outline, 'Live', 1),
-              _buildNavItem(context, Icons.emoji_events_outlined, 'Arena', 2),
-              _buildNavItem(context, Icons.my_location_outlined, 'Training', 3),
-              _buildNavItem(context, Icons.newspaper_outlined, 'News', 4),
-              _buildNavItem(context, Icons.message_rounded, 'Messages', 5),
-            ],
-=======
           padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
           // Scaffold gives bottom bar unbounded max height; without a fixed
           // height, Row + Expanded can expand and steal the whole screen.
@@ -130,47 +106,25 @@ class BottomNavBar extends StatelessWidget {
                     ),
                   ),
                 ),
+                Expanded(
+                  child: _navTapSlot(
+                    index: 6,
+                    child: _buildNavPill(
+                      icon: Icons.confirmation_num_outlined,
+                      activeIcon: Icons.confirmation_num,
+                      label: 'Vault',
+                      index: 6,
+                    ),
+                  ),
+                ),
               ],
             ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           ),
         ),
       ),
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildNavItem(BuildContext context, IconData icon, String label, int index) {
-    final isSelected = currentIndex == index;
-    final color = isSelected ? const Color(0xFF00FF87) : const Color(0xFF4A5568);
-    
-    return Expanded(
-      child: InkWell(
-        onTap: () => onTap(index),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 22),
-              const SizedBox(height: 2),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 10,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-=======
   /// Full-cell tap target; keeps the pill visually compact and centered.
   Widget _navTapSlot({required int index, required Widget child}) {
     return Material(
@@ -274,7 +228,6 @@ class BottomNavBar extends StatelessWidget {
             ),
           );
         },
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ),
     );
   }

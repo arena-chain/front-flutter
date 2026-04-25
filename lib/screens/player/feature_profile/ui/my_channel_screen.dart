@@ -6,16 +6,10 @@ import '../../../../core/api/video_api.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/models/channel_model.dart';
 import '../../../../core/models/video_model.dart';
-<<<<<<< HEAD
-import '../../../feature_auth/viewmodel/auth_viewmodel.dart';
-import '../../feature_live/ui/live_stream_screen.dart'; // Import Live Screen
-import '../../feature_live/ui/schedule_stream_screen.dart'; // Import Schedule Screen
-=======
 import '../../../../core/models/feature_scouter/scouter_models.dart';
 import '../../../../core/repositories/feature_scouter/scouter_repository.dart';
 import '../../../feature_auth/viewmodel/auth_viewmodel.dart';
 import '../../../scouter/ui/scouter_highlight_detail_screen.dart';
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 import 'video_player_screen.dart';
 
 class MyChannelScreen extends StatefulWidget {
@@ -29,17 +23,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
   // Mocking state: set to null to see "Create Channel", or an object to see "Channel"
   Channel? _myChannel;
   List<Video> _videos = [];
-<<<<<<< HEAD
-  final VideoApi _videoApi = VideoApi();
-  bool _isLoadingVideos = false;
-  bool _isUploadingVideo = false;
-  bool _showUploadActions = false;
-
-  final Color _backgroundColor = const Color(0xFF0A0E1A);
-  final Color _cardColor = const Color(0xFF131625);
-  final Color _accentColor = const Color(0xFF00E5FF); // Cyber punk blue cyan
-  final Color _primaryActionColor = const Color(0xFFD32F2F); // Red for Go Live
-=======
   List<HighlightItem> _highlightClips = [];
   final VideoApi _videoApi = VideoApi();
   bool _isLoadingVideos = false;
@@ -52,7 +35,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
   final Color _cardColor = const Color(0xFF1A1C23);
   final Color _surface = const Color(0xFF0A0A0A);
   final Color _neon = const Color(0xFF39FF14);
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
   @override
   void initState() {
@@ -132,10 +114,7 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
       final videos = await _videoApi.getVideos(uploaderId: uploaderId);
       if (!mounted) return;
       setState(() => _videos = videos);
-<<<<<<< HEAD
-=======
       await _loadHighlightClips(uploaderId);
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -148,12 +127,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     }
   }
 
-<<<<<<< HEAD
-  Future<void> _pickAndUploadVideo() async {
-    final source = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: _cardColor,
-=======
   /// Short clips from the player’s uploads + public pool, ranked by reactions (mobile parity with web).
   Future<void> _loadHighlightClips(String? userId) async {
     if (userId == null || userId.isEmpty) {
@@ -205,15 +178,10 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         side: BorderSide(color: Color(0x3329FF14)),
       ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       builder: (bottomSheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-<<<<<<< HEAD
-            ListTile(
-              leading: const Icon(Icons.video_library, color: Colors.white),
-=======
             const SizedBox(height: 10),
             Container(
               width: 40,
@@ -226,32 +194,20 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
             const SizedBox(height: 8),
             ListTile(
               leading: Icon(Icons.video_library_outlined, color: _neon.withValues(alpha: 0.9)),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               title: const Text('Pick from gallery', style: TextStyle(color: Colors.white)),
               onTap: () => Navigator.pop(bottomSheetContext, 'gallery'),
             ),
             ListTile(
-<<<<<<< HEAD
-              leading: const Icon(Icons.videocam, color: Colors.white),
-=======
               leading: Icon(Icons.videocam_outlined, color: _neon.withValues(alpha: 0.9)),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               title: const Text('Record with camera', style: TextStyle(color: Colors.white)),
               onTap: () => Navigator.pop(bottomSheetContext, 'camera'),
             ),
             ListTile(
-<<<<<<< HEAD
-              leading: const Icon(Icons.folder_open, color: Colors.white),
-              title: const Text('Browse files', style: TextStyle(color: Colors.white)),
-              onTap: () => Navigator.pop(bottomSheetContext, 'files'),
-            ),
-=======
               leading: Icon(Icons.folder_open_rounded, color: _neon.withValues(alpha: 0.9)),
               title: const Text('Browse files', style: TextStyle(color: Colors.white)),
               onTap: () => Navigator.pop(bottomSheetContext, 'files'),
             ),
             const SizedBox(height: 8),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           ],
         ),
       ),
@@ -298,9 +254,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: _cardColor,
-<<<<<<< HEAD
-        title: const Text('Upload Video', style: TextStyle(color: Colors.white)),
-=======
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: _neon.withValues(alpha: 0.35)),
@@ -313,18 +266,12 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
             shadows: [Shadow(color: _neon.withValues(alpha: 0.25), blurRadius: 8)],
           ),
         ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: titleController,
               style: const TextStyle(color: Colors.white),
-<<<<<<< HEAD
-              decoration: const InputDecoration(
-                labelText: 'Title',
-                labelStyle: TextStyle(color: Colors.white70),
-=======
               decoration: InputDecoration(
                 labelText: 'Title',
                 labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
@@ -336,7 +283,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: _neon.withValues(alpha: 0.55)),
                 ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ),
             ),
             const SizedBox(height: 12),
@@ -344,11 +290,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
               controller: descriptionController,
               maxLines: 3,
               style: const TextStyle(color: Colors.white),
-<<<<<<< HEAD
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
-                labelStyle: TextStyle(color: Colors.white70),
-=======
               decoration: InputDecoration(
                 labelText: 'Description (optional)',
                 labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
@@ -360,7 +301,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: _neon.withValues(alpha: 0.55)),
                 ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ),
             ),
           ],
@@ -368,13 +308,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-<<<<<<< HEAD
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Upload'),
-=======
             child: Text('Cancel', style: TextStyle(color: Colors.white.withValues(alpha: 0.65))),
           ),
           FilledButton(
@@ -384,7 +317,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
               foregroundColor: Colors.black,
             ),
             child: const Text('Upload', style: TextStyle(fontWeight: FontWeight.w800)),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           ),
         ],
       ),
@@ -433,112 +365,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     }
   }
 
-<<<<<<< HEAD
-  void _showGoLiveOptions() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: _backgroundColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          height: 300,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Go Live',
-                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Choose how you want to start streaming.',
-                style: TextStyle(color: Colors.grey[400], fontSize: 16),
-              ),
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildOptionCard(
-                      icon: Icons.videocam,
-                      title: 'Stream Now',
-                      color: Colors.redAccent,
-                      onTap: () {
-                        Navigator.pop(context); // Close bottom sheet
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => LiveStreamScreen(
-                              // TODO: Replace this placeholder with the stream ID returned by your "go live" / stream creation API.
-                              streamId: _myChannel?.id ?? '1',
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildOptionCard(
-                      icon: Icons.calendar_today,
-                      title: 'Schedule',
-                      color: Colors.blueAccent,
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const ScheduleStreamScreen()),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildOptionCard({
-    required IconData icon,
-    required String title,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 120,
-        decoration: BoxDecoration(
-          color: _cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white10),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 32),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      ),
-    );
-=======
   int get _approvedVideoCount =>
       _videos.where((v) => v.status == VideoStatus.approved).length;
 
@@ -548,7 +374,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return '$n';
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   }
 
   @override
@@ -559,86 +384,12 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     return Scaffold(
       backgroundColor: _backgroundColor,
       body: CustomScrollView(
-<<<<<<< HEAD
-=======
         clipBehavior: Clip.none,
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         slivers: [
           _buildSliverAppBar(),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-<<<<<<< HEAD
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 60), // Space for avatar
-                  Center(child: _buildUserInfo()),
-                  const SizedBox(height: 24),
-                  _buildActionButtons(),
-                  const SizedBox(height: 32),
-                  _buildStatsSection(),
-                  const SizedBox(height: 32),
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Recent Videos',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          setState(() => _showUploadActions = !_showUploadActions);
-                        },
-                        icon: Icon(
-                          _showUploadActions ? Icons.close : Icons.add,
-                          color: Colors.white,
-                        ),
-                        tooltip: 'Toggle upload actions',
-                      ),
-                    ],
-                  ),
-                  if (_showUploadActions)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: _cardColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white10),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _isUploadingVideo ? null : _pickAndUploadVideo,
-                              icon: _isUploadingVideo
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  : const Icon(Icons.upload_file),
-                              label: Text(_isUploadingVideo ? 'Uploading...' : 'Upload Video'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            onPressed: _isLoadingVideos ? null : _fetchVideos,
-                            icon: const Icon(Icons.refresh, color: Colors.white),
-                            tooltip: 'Refresh videos',
-                          ),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-=======
               child: Stack(
                 clipBehavior: Clip.none,
                 alignment: Alignment.topCenter,
@@ -755,15 +506,11 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
                     right: 0,
                     child: Center(child: _buildChannelAvatar()),
                   ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 ],
               ),
             ),
           ),
-<<<<<<< HEAD
-=======
           _buildHighlightClipsSliver(),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           _buildSliverVideoList(),
           const SliverToBoxAdapter(
              child: SizedBox(height: 80), // Bottom padding
@@ -773,15 +520,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildSliverVideoList() {
-    final approvedVideos = _videos.where((v) => v.status == VideoStatus.approved).toList();
-    if (_isLoadingVideos) {
-      return const SliverToBoxAdapter(
-        child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Center(child: CircularProgressIndicator()),
-=======
   Widget _buildHighlightClipsSliver() {
     if (!_loadingClips && _highlightClips.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -940,7 +678,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
           child: Center(
             child: CircularProgressIndicator(color: _neon.withValues(alpha: 0.85)),
           ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         ),
       );
     }
@@ -949,9 +686,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(32.0),
-<<<<<<< HEAD
-            child: Text('No videos uploaded yet.', style: TextStyle(color: Colors.grey[600])),
-=======
             child: Text(
               'No videos uploaded yet.',
               style: TextStyle(
@@ -960,7 +694,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
                 fontWeight: FontWeight.w600,
               ),
             ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           ),
         ),
       );
@@ -989,96 +722,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
                     },
               child: Container(
                 decoration: BoxDecoration(
-<<<<<<< HEAD
-                  color: _cardColor,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Thumbnail placeholder
-                    Stack(
-                      children: [
-                        Container(
-                          height: 180,
-                          width: double.infinity,
-                          color: Colors.black26,
-                          child: video.thumbnailUrl != null
-                              ? Image.network(
-                                  video.thumbnailUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Center(
-                                      child: Icon(Icons.broken_image, color: Colors.white24)),
-                                )
-                              : const Center(child: Icon(Icons.videogame_asset, size: 50, color: Colors.white24)),
-                        ),
-                        const Positioned(
-                          left: 12,
-                          top: 12,
-                          child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 32),
-                        ),
-                        Positioned(
-                          bottom: 8,
-                          right: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.8),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              _formatDuration(video.duration),
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            video.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Text(
-                                '${video.views} views',
-                                style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                child: Icon(Icons.circle, size: 4, color: Colors.grey[700]),
-                              ),
-                              Text(
-                                _timeAgo(video.uploadDate),
-                                style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                              ),
-                            ],
-                          ),
-                          if (playableUrl == null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                'Video URL missing',
-                                style: TextStyle(color: Colors.red[300], fontSize: 12),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-=======
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -1193,7 +836,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
                     ],
                   ),
                 ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ),
             ),
           );
@@ -1254,17 +896,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     return url;
   }
 
-<<<<<<< HEAD
-  // ... (Keep existing _buildSliverAppBar, _buildUserInfo, _buildActionButtons, _buildStatsSection, _buildStatItem, _buildVerticalDivider) ...
-  // Note: I will need to manually preserve them if I am replacing the whole block, or rely on context. 
-  // Since I replaced a large chunk, I will re-implement them or leave them if they were outside the replaced range.
-  // The replaced range ended at 299, let's assume helper methods are still there or I need to include them if they were inside.
-  // Wait, I am replacing from 'initState' down to 'build'. The helpers like _buildSliverAppBar were seemingly *after* build in previous file state.
-  // I need to be careful. The previous state had helper methods after `build`.
-
-  // To be safe, I should probably output the helper methods I'm calling in `build` or ensure they are preserved.
-  // Let's assume the user wants me to replace the logic. I will include the necessary helper methods for the tabs and lists.
-=======
   /// Banner when URL missing or fails to load — pro channel look, matches app neon.
   Widget _bannerBackground() {
     return Container(
@@ -1285,54 +916,10 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
       ),
     );
   }
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
   Widget _buildSliverAppBar() {
     return SliverAppBar(
       backgroundColor: _backgroundColor,
-<<<<<<< HEAD
-      expandedHeight: 200.0,
-      pinned: true,
-      leading: Container(
-        margin: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.4),
-          shape: BoxShape.circle,
-        ),
-        child: const BackButton(color: Colors.white),
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings, color: Colors.white),
-          onPressed: () {},
-        ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            // Banner Image
-            Positioned.fill(
-              child: _myChannel!.bannerUrl != null
-                  ? Image.network(
-                      _myChannel!.bannerUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(color: _cardColor),
-                    )
-                  : Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [_cardColor, _backgroundColor],
-                        ),
-                      ),
-                    ),
-            ),
-            // Gradient Overlay
-            Positioned.fill(
-              child: Container(
-=======
       expandedHeight: 200,
       pinned: true,
       stretch: true,
@@ -1375,47 +962,21 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
             ),
             Positioned.fill(
               child: DecoratedBox(
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-<<<<<<< HEAD
-                      Colors.transparent,
-                      _backgroundColor.withOpacity(0.9),
-                      _backgroundColor,
-                    ],
-                    stops: const [0.0, 0.8, 1.0],
-=======
                       Colors.black.withValues(alpha: 0.2),
                       Colors.transparent,
                       _backgroundColor.withValues(alpha: 0.75),
                       _backgroundColor,
                     ],
                     stops: const [0.0, 0.28, 0.78, 1.0],
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                   ),
                 ),
               ),
             ),
-<<<<<<< HEAD
-            // Avatar (Half inside/half outside handled by padding in body, but visual here)
-            Container(
-              transform: Matrix4.translationValues(0, 50, 0),
-              child: CircleAvatar(
-                radius: 54, // Border width
-                backgroundColor: _backgroundColor,
-                child: CircleAvatar(
-                  radius: 50,
-                  backgroundColor: _cardColor,
-                  backgroundImage: _myChannel!.avatarUrl != null
-                      ? NetworkImage(_myChannel!.avatarUrl!)
-                      : null,
-                  child: _myChannel!.avatarUrl == null
-                      ? const Icon(Icons.person, size: 50, color: Colors.white)
-                      : null,
-=======
             Positioned(
               left: 0,
               right: 0,
@@ -1430,7 +991,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
                       Colors.transparent,
                     ],
                   ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 ),
               ),
             ),
@@ -1440,28 +1000,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildUserInfo() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _myChannel!.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.verified, color: Colors.blueAccent, size: 20),
-          ],
-        ),
-        const SizedBox(height: 4),
-=======
   Widget _buildChannelAvatar() {
     const double inner = 100;
     return Container(
@@ -1612,7 +1150,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
           ],
         ),
         const SizedBox(height: 6),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         Text(
           'Tunisia • Pro Gamer',
           style: TextStyle(color: Colors.grey[400], fontSize: 14),
@@ -1621,23 +1158,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _showGoLiveOptions,
-            icon: const Icon(Icons.live_tv, color: Colors.white),
-            label: const Text('GO LIVE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _primaryActionColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 8,
-              shadowColor: _primaryActionColor.withOpacity(0.5),
-=======
   Widget _buildChannelStrip() {
     return Container(
       width: double.infinity,
@@ -1718,34 +1238,10 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
               padding: const EdgeInsets.symmetric(vertical: 14),
               side: BorderSide(color: border, width: 1.2),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
             ),
           ),
         ),
         const SizedBox(width: 12),
-<<<<<<< HEAD
-        Container(
-          decoration: BoxDecoration(
-            color: _cardColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white12),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.share, color: Colors.white),
-            onPressed: () {},
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: _cardColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white12),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.edit, color: Colors.white),
-            onPressed: () {},
-=======
         Expanded(
           child: FilledButton.icon(
             onPressed: () {},
@@ -1764,7 +1260,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 0,
             ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
           ),
         ),
       ],
@@ -1773,13 +1268,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
 
   Widget _buildStatsSection() {
     return Container(
-<<<<<<< HEAD
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-=======
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
         color: _cardColor,
@@ -1791,18 +1279,10 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
             blurRadius: 20,
           ),
         ],
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-<<<<<<< HEAD
-          _buildStatItem('Subscribers', '${_myChannel!.subscriberCount}'),
-          _buildVerticalDivider(),
-          _buildStatItem('Total Views', '12.5K'),
-          _buildVerticalDivider(),
-          _buildStatItem('Live Streams', '42'),
-=======
           _buildStatItem(
             'Followers',
             _formatCompactCount(_myChannel!.subscriberCount),
@@ -1820,31 +1300,11 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
             '$_approvedVideoCount',
             Icons.video_library_outlined,
           ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         ],
       ),
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildStatItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(color: Colors.grey[500], fontSize: 12),
-        ),
-      ],
-=======
   Widget _buildStatItem(String label, String value, IconData icon) {
     return Expanded(
       child: Column(
@@ -1867,7 +1327,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
           ),
         ],
       ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     );
   }
 
@@ -1875,11 +1334,7 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
     return Container(
       height: 30,
       width: 1,
-<<<<<<< HEAD
-      color: Colors.white12,
-=======
       color: _neon.withValues(alpha: 0.22),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     );
   }
 
@@ -1891,9 +1346,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-<<<<<<< HEAD
-        leading: const BackButton(color: Colors.white),
-=======
         leading: Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -1903,7 +1355,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
           ),
           child: BackButton(color: _neon.withValues(alpha: 0.95)),
         ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ),
       body: Center(
         child: Column(
@@ -1914,14 +1365,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
               decoration: BoxDecoration(
                 color: _cardColor,
                 shape: BoxShape.circle,
-<<<<<<< HEAD
-                border: Border.all(color: Colors.white10),
-              ),
-              child: Icon(Icons.videocam_outlined, size: 64, color: _accentColor),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-=======
                 border: Border.all(color: _neon.withValues(alpha: 0.35)),
                 boxShadow: [
                   BoxShadow(color: _neon.withValues(alpha: 0.12), blurRadius: 20),
@@ -1931,39 +1374,20 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
             ),
             const SizedBox(height: 24),
             Text(
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               'Start Your Journey',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-<<<<<<< HEAD
-=======
                 shadows: [
                   Shadow(color: _neon.withValues(alpha: 0.25), blurRadius: 10),
                 ],
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ),
             ),
             const SizedBox(height: 12),
             Text(
               'Create a channel to stream your games,\nupload videos, and build your community.',
               textAlign: TextAlign.center,
-<<<<<<< HEAD
-              style: TextStyle(color: Colors.grey[400], fontSize: 16),
-            ),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: _createChannel,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _accentColor,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                elevation: 0,
-              ),
-              child: const Text('Create Channel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-=======
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.55),
                 fontSize: 16,
@@ -1982,7 +1406,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
                 'Create channel',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
               ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
             ),
           ],
         ),
@@ -1991,8 +1414,6 @@ class _MyChannelScreenState extends State<MyChannelScreen> {
   }
 }
 
-<<<<<<< HEAD
-=======
 class _ChannelBannerGridPainter extends CustomPainter {
   final Color color;
 
@@ -2016,5 +1437,4 @@ class _ChannelBannerGridPainter extends CustomPainter {
   bool shouldRepaint(covariant _ChannelBannerGridPainter oldDelegate) =>
       oldDelegate.color != color;
 }
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 

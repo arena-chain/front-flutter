@@ -332,8 +332,6 @@ class HighlightItem {
     return null;
   }
 
-<<<<<<< HEAD
-=======
   /// Processed highlight clip URL (short vertical clip), when present.
   String? get clipUrl {
     final u = raw['clipUrl']?.toString();
@@ -344,7 +342,6 @@ class HighlightItem {
   /// Prefer clip for playback, else full source video URL from nested `video` or flat fields.
   String? get playableUrl => clipUrl ?? videoUrl;
 
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   String get creatorId {
     final c = raw['creator'];
     if (c is Map) return (c['_id'] ?? c['id'] ?? '').toString();

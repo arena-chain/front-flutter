@@ -2,10 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:arena_chain_flutter/core/api/feature_leagues/leagues_api.dart';
 import 'package:arena_chain_flutter/core/models/feature_leagues/leagues_models.dart';
-<<<<<<< HEAD
-import 'package:arena_chain_flutter/screens/player/feature_home/_common/bottom_navbar.dart';
-=======
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 import 'package:arena_chain_flutter/navigation.dart';
 
 // ── Design tokens ────────────────────────────────────────────────────────────
@@ -28,9 +24,6 @@ const _textMuted     = Color(0xFF4A5568);
 
 class PlayerLeaguesScreen extends StatefulWidget {
   final VoidCallback? onBack;
-<<<<<<< HEAD
-  const PlayerLeaguesScreen({super.key, this.onBack});
-=======
 
   /// Inside [PlayerHomeScreen] bottom tabs: hide duplicate nav; menu opens drawer.
   final bool embeddedInPlayerShell;
@@ -40,7 +33,6 @@ class PlayerLeaguesScreen extends StatefulWidget {
     this.onBack,
     this.embeddedInPlayerShell = false,
   });
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
   @override
   State<PlayerLeaguesScreen> createState() => _PlayerLeaguesScreenState();
@@ -103,59 +95,6 @@ class _PlayerLeaguesScreenState extends State<PlayerLeaguesScreen> {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-    return Scaffold(
-      backgroundColor: _bg,
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 2,
-        onTap: (i) {
-          if (i == 2) return;
-          Navigator.pushReplacementNamed(context, AppRoutes.playerHome);
-        },
-      ),
-      body: Column(
-        children: [
-          _Header(onBack: widget.onBack, count: _leagues.length),
-          Expanded(
-            child: _loading
-                ? const _Spinner()
-                : _error != null
-                    ? _ErrorState(error: _error!, onRetry: _load)
-                    : _leagues.isEmpty
-                        ? const _EmptyState()
-                        : RefreshIndicator(
-                            color: _accent,
-                            backgroundColor: _surface,
-                            onRefresh: _load,
-                            child: ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                              itemCount: _leagues.length,
-                              itemBuilder: (ctx, i) {
-                                final l = _leagues[i];
-                                final isExpanded = _expandedId == l.id;
-                                return _LeagueCard(
-                                  league: l,
-                                  isExpanded: isExpanded,
-                                  seasons: _seasonsCache[l.id],
-                                  seasonsLoading: _seasonsLoading[l.id] ?? false,
-                                  onToggle: () => _toggle(l.id),
-                                  onSeasonTap: (season) => Navigator.push(
-                                    ctx,
-                                    MaterialPageRoute(
-                                      builder: (_) => LeagueSeasonScreen(
-                                        league: l,
-                                        season: season,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-          ),
-        ],
-      ),
-=======
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final body = Column(
       children: [
@@ -211,7 +150,6 @@ class _PlayerLeaguesScreenState extends State<PlayerLeaguesScreen> {
     return Scaffold(
       backgroundColor: _bg,
       body: body,
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     );
   }
 }
@@ -221,9 +159,6 @@ class _PlayerLeaguesScreenState extends State<PlayerLeaguesScreen> {
 class _Header extends StatelessWidget {
   final VoidCallback? onBack;
   final int count;
-<<<<<<< HEAD
-  const _Header({this.onBack, required this.count});
-=======
   final bool embeddedInPlayerShell;
 
   const _Header({
@@ -231,7 +166,6 @@ class _Header extends StatelessWidget {
     required this.count,
     this.embeddedInPlayerShell = false,
   });
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
   @override
   Widget build(BuildContext context) {
@@ -252,39 +186,27 @@ class _Header extends StatelessWidget {
                 children: [
                   GestureDetector(
                     onTap: () {
-<<<<<<< HEAD
-                      if (onBack != null) {
-=======
                       if (embeddedInPlayerShell) {
                         Scaffold.maybeOf(context)?.openDrawer();
                       } else if (onBack != null) {
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                         onBack!();
                       } else {
                         Navigator.maybePop(context);
                       }
                     },
                     child: Container(
-<<<<<<< HEAD
-                      width: 40, height: 40,
-=======
                       width: 40,
                       height: 40,
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                       decoration: BoxDecoration(
                         color: _card,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: _border),
                       ),
-<<<<<<< HEAD
-                      child: const Icon(Icons.arrow_back_ios_new, color: _textPrimary, size: 16),
-=======
                       child: Icon(
                         embeddedInPlayerShell ? Icons.menu_rounded : Icons.arrow_back_ios_new,
                         color: _textPrimary,
                         size: embeddedInPlayerShell ? 22 : 16,
                       ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -342,23 +264,37 @@ class _Header extends StatelessWidget {
                       child: const Icon(Icons.shield_rounded, color: _accent, size: 22),
                     ),
                     const SizedBox(width: 14),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Live Leagues',
-                          style: TextStyle(
-                            color: _textPrimary,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Live Leagues',
+                            style: TextStyle(
+                              color: _textPrimary,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Compete with the best players',
-                          style: TextStyle(color: _textSecondary, fontSize: 12),
-                        ),
-                      ],
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Compete with the best players',
+                            style: TextStyle(color: _textSecondary, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pushNamed(context, AppRoutes.browseEvents),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _accent,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('TICKETS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
                     ),
                   ],
                 ),
@@ -742,16 +678,6 @@ class _LeagueSeasonScreenState extends State<LeagueSeasonScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
-<<<<<<< HEAD
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 2,
-        onTap: (i) {
-          if (i == 2) return;
-          Navigator.pushReplacementNamed(context, AppRoutes.playerHome);
-        },
-      ),
-=======
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       body: Column(
         children: [
           _SeasonHeader(league: widget.league, season: widget.season, tabs: _tabs),

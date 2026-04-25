@@ -1,59 +1,3 @@
-<<<<<<< HEAD
-import 'package:flutter/material.dart';
-
-class NotificationScreen extends StatelessWidget {
-  const NotificationScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0E1A),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0E1A),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Notifications',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildNotificationItem(
-            icon: Icons.sports_esports,
-            iconColor: const Color(0xFF00FF00),
-            title: 'New Match Found',
-            subtitle: 'Ranked • Valorant',
-            time: '2m ago',
-            isUnread: true,
-          ),
-          const SizedBox(height: 12),
-          _buildNotificationItem(
-            icon: Icons.emoji_events,
-            iconColor: const Color(0xFFFFAA00),
-            title: 'Tournament Starting',
-            subtitle: 'Check-in required',
-            time: '1h ago',
-            isUnread: true,
-          ),
-          const SizedBox(height: 12),
-          _buildNotificationItem(
-            icon: Icons.group_add,
-            iconColor: const Color(0xFF00CCFF),
-            title: 'Team Invitation',
-            subtitle: 'Team Liquid invited you to join',
-            time: '3h ago',
-            isUnread: false,
-          ),
-        ],
-=======
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -173,16 +117,12 @@ class _NotificationScreenState extends State<NotificationScreen>
             ],
           );
         },
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ),
     );
   }
 
   Widget _buildNotificationItem({
-<<<<<<< HEAD
-=======
     required double breathe,
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
     required IconData icon,
     required Color iconColor,
     required String title,
@@ -190,18 +130,6 @@ class _NotificationScreenState extends State<NotificationScreen>
     required String time,
     required bool isUnread,
   }) {
-<<<<<<< HEAD
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isUnread 
-            ? const Color(0xFF1A1F36) 
-            : const Color(0xFF0F1221),
-        borderRadius: BorderRadius.circular(16),
-        border: isUnread 
-            ? Border.all(color: const Color(0xFF00FF00).withOpacity(0.3))
-            : Border.all(color: Colors.transparent),
-=======
     final double unreadBorderAlpha = isUnread
         ? ((0.28 + 0.18 * breathe).clamp(0.0, 1.0) as double)
         : 0;
@@ -224,17 +152,12 @@ class _NotificationScreenState extends State<NotificationScreen>
               spreadRadius: 0,
             ),
         ],
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-<<<<<<< HEAD
-              color: iconColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-=======
               color: _surface,
               shape: BoxShape.circle,
               border: Border.all(
@@ -247,7 +170,6 @@ class _NotificationScreenState extends State<NotificationScreen>
                   blurRadius: isUnread ? 12 : 4,
                 ),
               ],
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
             ),
             child: Icon(icon, color: iconColor, size: 24),
           ),
@@ -257,16 +179,6 @@ class _NotificationScreenState extends State<NotificationScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-<<<<<<< HEAD
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
-=======
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
@@ -277,33 +189,18 @@ class _NotificationScreenState extends State<NotificationScreen>
                           fontSize: 16,
                           fontWeight: isUnread ? FontWeight.w800 : FontWeight.w600,
                         ),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                       ),
                     ),
                     Text(
                       time,
-<<<<<<< HEAD
-                      style: const TextStyle(
-                        color: Color(0xFF7A86AC),
-                        fontSize: 12,
-=======
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.42),
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                       ),
                     ),
                   ],
                 ),
-<<<<<<< HEAD
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Color(0xFF7A86AC),
-                    fontSize: 14,
-=======
                 const SizedBox(height: 6),
                 Text(
                   subtitle,
@@ -311,22 +208,12 @@ class _NotificationScreenState extends State<NotificationScreen>
                     color: Colors.white.withValues(alpha: 0.48),
                     fontSize: 14,
                     height: 1.25,
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                   ),
                 ),
               ],
             ),
           ),
           if (isUnread) ...[
-<<<<<<< HEAD
-            const SizedBox(width: 12),
-            Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Color(0xFF00FF00),
-                shape: BoxShape.circle,
-=======
             const SizedBox(width: 10),
             Container(
               width: 8,
@@ -340,7 +227,6 @@ class _NotificationScreenState extends State<NotificationScreen>
                     blurRadius: 8 * breathe,
                   ),
                 ],
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ),
             ),
           ],

@@ -12,15 +12,12 @@ class TournamentsListScreen extends StatefulWidget {
 }
 
 class _TournamentsListScreenState extends State<TournamentsListScreen> {
-<<<<<<< HEAD
-=======
   static const Color _background = Color(0xFF000000);
   static const Color _surface = Color(0xFF0A0A0A);
   static const Color _card = Color(0xFF1A1C23);
   static const Color _neon = Color(0xFF39FF14);
   static const Color _danger = Color(0xFFFF0055);
 
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   @override
   void initState() {
     super.initState();
@@ -33,103 +30,6 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-    return Column(
-      children: [
-        _buildHeader(context),
-        Expanded(
-          child: Consumer<TournamentsViewModel>(
-            builder: (context, viewModel, child) {
-              if (viewModel.isLoading) {
-                return const Center(
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF00FF00),
-                  ),
-                );
-              }
-
-              if (viewModel.error != null) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Color(0xFFFF0055),
-                        size: 48,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error loading tournaments',
-                        style: const TextStyle(
-                          color: Color(0xFFFF0055),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        viewModel.error!,
-                        style: const TextStyle(color: Color(0xFF7A86AC)),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              return _buildTournamentList(viewModel.officialTournaments);
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00FF00).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.emoji_events,
-                      color: Color(0xFF00FF00),
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Tournaments',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Upcoming official tournaments',
-            style: TextStyle(
-              color: Color(0xFF7A86AC),
-              fontSize: 14,
-=======
     return ColoredBox(
       color: _background,
       child: Column(
@@ -196,7 +96,6 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
                   ),
                 );
               },
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
             ),
           ),
         ],
@@ -204,41 +103,6 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildTournamentList(List<TournamentModel> tournaments) {
-    if (tournaments.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(
-              Icons.emoji_events_outlined,
-              color: Color(0xFF7A86AC),
-              size: 64,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'No official tournaments found',
-              style: TextStyle(
-                color: Color(0xFF7A86AC),
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(20),
-      itemCount: tournaments.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 16),
-      itemBuilder: (context, index) {
-        final tournament = tournaments[index];
-        return _buildTournamentCard(tournament);
-      },
-    );
-=======
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -368,7 +232,6 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
         ),
       ),
     ];
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   }
 
   Widget _buildTournamentCard(TournamentModel tournament) {
@@ -378,13 +241,6 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-<<<<<<< HEAD
-        color: const Color(0xFF0F1221),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFF1A1F36),
-        ),
-=======
         color: _card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _neon.withValues(alpha: 0.28)),
@@ -394,7 +250,6 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
             blurRadius: 16,
           ),
         ],
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,15 +275,6 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
                 ),
                 decoration: BoxDecoration(
                   color: tournament.type == 'RANKED'
-<<<<<<< HEAD
-                      ? const Color(0xFF00FF00).withOpacity(0.1)
-                      : const Color(0xFFFF0055).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: tournament.type == 'RANKED'
-                        ? const Color(0xFF00FF00).withOpacity(0.3)
-                        : const Color(0xFFFF0055).withOpacity(0.3),
-=======
                       ? _neon.withValues(alpha: 0.12)
                       : _danger.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
@@ -436,20 +282,14 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
                     color: tournament.type == 'RANKED'
                         ? _neon.withValues(alpha: 0.45)
                         : _danger.withValues(alpha: 0.45),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                   ),
                 ),
                 child: Text(
                   tournament.type,
                   style: TextStyle(
                     color: tournament.type == 'RANKED'
-<<<<<<< HEAD
-                        ? const Color(0xFF00FF00)
-                        : const Color(0xFFFF0055),
-=======
                         ? _neon.withValues(alpha: 0.95)
                         : _danger,
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -463,14 +303,9 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-<<<<<<< HEAD
-              color: const Color(0xFF1A1F36),
-              borderRadius: BorderRadius.circular(8),
-=======
               color: _surface,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: _neon.withValues(alpha: 0.22)),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
             ),
             child: Text(
               tournament.gameId, // TODO: Replace with game name from catalog
@@ -523,16 +358,9 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
           ),
           const SizedBox(height: 16),
 
-<<<<<<< HEAD
-            // Registration button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-=======
           SizedBox(
             width: double.infinity,
             child: FilledButton(
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               onPressed: isFull
                   ? null
                   : () {
@@ -542,42 +370,24 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
                         arguments: tournament,
                       );
                     },
-<<<<<<< HEAD
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isFull
-                    ? const Color(0xFF1A1F36)
-                    : const Color(0xFF00FF00),
-                foregroundColor: isFull
-                    ? const Color(0xFF7A86AC)
-                    : const Color(0xFF0A0E1A),
-=======
               style: FilledButton.styleFrom(
                 backgroundColor: isFull ? _surface : _neon,
                 foregroundColor: isFull ? Colors.white.withValues(alpha: 0.4) : Colors.black,
                 disabledBackgroundColor: _surface,
                 disabledForegroundColor: Colors.white.withValues(alpha: 0.38),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-<<<<<<< HEAD
-                elevation: 0,
-=======
                 side: isFull
                     ? BorderSide(color: _neon.withValues(alpha: 0.15))
                     : BorderSide.none,
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ),
               child: Text(
                 isFull ? 'Registration Full' : 'Reserve',
                 style: const TextStyle(
                   fontSize: 14,
-<<<<<<< HEAD
-                  fontWeight: FontWeight.w600,
-=======
                   fontWeight: FontWeight.w800,
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 ),
               ),
             ),
@@ -597,15 +407,6 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
       children: [
         Row(
           children: [
-<<<<<<< HEAD
-            Icon(icon, color: const Color(0xFF7A86AC), size: 14),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF7A86AC),
-                fontSize: 11,
-=======
             Icon(icon, color: _neon.withValues(alpha: 0.65), size: 14),
             const SizedBox(width: 6),
             Text(
@@ -614,7 +415,6 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
                 color: Colors.white.withValues(alpha: 0.45),
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               ),
             ),
           ],

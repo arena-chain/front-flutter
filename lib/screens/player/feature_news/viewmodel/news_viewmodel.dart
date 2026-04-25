@@ -76,11 +76,7 @@ class NewsViewModel extends ChangeNotifier {
         title: 'CS2 Major: Global Rankings Updated After RMR',
         content: 'The standings for the next Major have been recalibrated after the recent RMR events. A new king sits on the throne of competitive Counter-Strike as FaZe Clan reclaims the number one spot following a dominant run.',
         game: 'CS2',
-<<<<<<< HEAD
-        imageUrl: 'https://images.unsplash.com/photo-1593305841991-05c297ba4575?q=80&w=2070&auto=format&fit=crop',
-=======
         imageUrl: 'https://images.unsplash.com/photo-1614013409192-3435163158e0?q=80&w=2070&auto=format&fit=crop',
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         source: 'Valve',
         publishedAt: DateTime.now().subtract(const Duration(days: 1)),
         categories: ['Major', 'Rankings'],

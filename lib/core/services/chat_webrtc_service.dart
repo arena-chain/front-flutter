@@ -149,6 +149,12 @@ class ChatWebRTCService extends ChangeNotifier {
       notifyListeners();
     });
 
+    _socket!.on('newGroupMessage', (data) {
+      debugPrint('New group message received: $data');
+      _messageStreamController.add(data);
+      notifyListeners();
+    });
+
     _socket!.connect();
   }
 
@@ -168,6 +174,25 @@ class ChatWebRTCService extends ChangeNotifier {
       'message': message,
       'messageType': 'text',
     });
+  }
+
+  // 1.6 Send Group Message
+  void sendGroupMessage(String groupId, String message) {
+    if (_socket == null || !_socket!.connected) {
+      debugPrint('Socket not connected, cannot send group message');
+      return;
+    }
+
+    _socket!.emit('sendGroupMessage', {
+      'groupId': groupId,
+      'message': message,
+    });
+  }
+
+  // 1.7 Join Group Room
+  void joinGroupRoom(String groupId) {
+    if (_socket == null || !_socket!.connected) return;
+    _socket!.emit('joinGroupRoom', {'groupId': groupId});
   }
 
   // 2. Initialiser le micro/caméra

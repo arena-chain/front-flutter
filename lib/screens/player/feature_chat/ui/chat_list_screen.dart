@@ -29,6 +29,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     _load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final s = Provider.of<ChatWebRTCService>(context, listen: false);
+      s.connectChatSocket();
       _sub = s.messageStream.listen((_) => _load());
     });
   }
@@ -49,16 +50,27 @@ class _ChatListScreenState extends State<ChatListScreen> {
         return;
       }
       final r1 = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/chat/inbox'), headers: {'Authorization': 'Bearer $t'});
-      final r2 = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/users/search?nickname='), headers: {'Authorization': 'Bearer $t'});
+      http.Response? r2;
+      for (final endpoint in [
+        '${ApiConfig.baseUrl}/api/presence/friends/online',
+        '${ApiConfig.baseUrl}/presence/friends/online',
+      ]) {
+        final resp = await http.get(Uri.parse(endpoint), headers: {'Authorization': 'Bearer $t'});
+        if (resp.statusCode == 200) {
+          r2 = resp;
+          break;
+        }
+      }
       if (mounted) {
         setState(() {
           if (r1.statusCode == 200) {
             final data1 = json.decode(r1.body);
             _conversations = (data1 is List) ? data1 : [];
           }
-          if (r2.statusCode == 200) {
+          if (r2 != null && r2.statusCode == 200) {
             final data2 = json.decode(r2.body);
-            _players = (data2 is List) ? data2.take(12).toList() : [];
+            debugPrint('Presence Data: ${r2.body}');
+            _players = (data2 is List) ? data2 : [];
           }
           _isLoading = false;
         });
@@ -115,44 +127,140 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Widget _buildOnlinePlayer(dynamic u, BuildContext context) {
     final n = u['nickname']?.toString() ?? 'Player';
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, AppRoutes.chatDetail, arguments: {'userId': u['_id'], 'nickname': n, 'avatar': u['avatar']}),
-      child: Container(width: 70, margin: const EdgeInsets.only(right: 15), child: Column(children: [
-        Stack(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.chatDetail, arguments: {
+        'userId': (u['userId'] ?? u['_id'] ?? '').toString(),
+        'nickname': n,
+        'avatar': u['avatar']?.toString()
+      }),
+      child: Container(
+        width: 72,
+        margin: const EdgeInsets.only(right: 18),
+        child: Column(
           children: [
-            Container(decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: const Color(0xFF00FF87).withOpacity(0.15), blurRadius: 12, spreadRadius: 1)]),
-              child: _safeAvatar(u['avatar']?.toString(), n, size: 58)),
-            Positioned(bottom: 2, right: 2, child: Container(width: 14, height: 14, decoration: BoxDecoration(color: const Color(0xFF00FF87), shape: BoxShape.circle, border: Border.all(color: const Color(0xFF0A0E1A), width: 2.5))))
+            Stack(
+              children: [
+                Container(
+                  width: 64, height: 64,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFF00FF87).withOpacity(0.3), width: 2),
+                    boxShadow: [BoxShadow(color: const Color(0xFF00FF87).withOpacity(0.1), blurRadius: 12)],
+                  ),
+                  child: ClipOval(
+                    child: _safeAvatar(u['avatar']?.toString(), n, size: 64),
+                  ),
+                ),
+                Positioned(
+                  right: 2, bottom: 2,
+                  child: Container(
+                    width: 16, height: 16,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00FF87),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF0A0E1A), width: 3),
+                      boxShadow: [BoxShadow(color: const Color(0xFF00FF87).withOpacity(0.5), blurRadius: 5)],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(n, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.2), overflow: TextOverflow.ellipsis),
           ],
         ),
-        const SizedBox(height: 8),
-        Text(n, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)
-      ])),
+      ),
     );
   }
 
   Widget _buildRecentChat(dynamic c, BuildContext context) {
     final u = c['interlocutor'] ?? {}; 
     final n = u['nickname']?.toString() ?? 'Player';
+    final lastMsg = c['lastMessage']?.toString() ?? 'Click here to send a message...';
+    final isUnread = (c['unreadCount'] ?? 0) > 0;
+    final time = c['lastMessageAt']?.toString() ?? c['updatedAt']?.toString();
+    String timeLabel = '';
+    if (time != null && time.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(time).toLocal();
+        final now = DateTime.now();
+        final diff = now.difference(dt);
+        if (diff.inDays >= 2) {
+          timeLabel = '${diff.inDays} DAYS AGO';
+        } else if (diff.inDays == 1) {
+          timeLabel = 'YESTERDAY';
+        } else {
+          final hh = dt.hour.toString().padLeft(2, '0');
+          final mm = dt.minute.toString().padLeft(2, '0');
+          timeLabel = '$hh:$mm';
+        }
+      } catch (_) {}
+    }
+    
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, AppRoutes.chatDetail, arguments: {'userId': u['_id'], 'nickname': n, 'avatar': u['avatar']}),
-      child: Container(margin: const EdgeInsets.only(bottom: 15), padding: const EdgeInsets.all(16), 
-        decoration: BoxDecoration(color: const Color(0xFF13172E).withOpacity(0.8), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withOpacity(0.05)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 5))]),
-        child: Row(children: [
-          _safeAvatar(u['avatar']?.toString(), n, size: 55), 
-          const SizedBox(width: 15), 
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(n, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)), 
-            const SizedBox(height: 6),
-            Text(c['lastMessage']?.toString() ?? 'Click here to send a message...', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)
-          ]))
-        ])
+      onTap: () => Navigator.pushNamed(context, AppRoutes.chatDetail, arguments: {
+        'userId': (u['_id'] ?? u['userId'] ?? '').toString(),
+        'nickname': (u['nickname'] ?? 'Player').toString(),
+        'avatar': u['avatar']?.toString(),
+      }),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                _safeAvatar(u['avatar']?.toString(), n, size: 52),
+                if (u['isActive'] == true)
+                  Positioned(
+                    right: 0, bottom: 0,
+                    child: Container(width: 13, height: 13, decoration: BoxDecoration(color: const Color(0xFF00FF87), shape: BoxShape.circle, border: Border.all(color: const Color(0xFF0A0E1A), width: 2))),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 12), 
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          n.toUpperCase(),
+                          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.4),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (timeLabel.isNotEmpty)
+                        Text(
+                          timeLabel,
+                          style: const TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.w600),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    lastMsg,
+                    style: TextStyle(
+                      color: isUnread ? const Color(0xFF65FF87) : Colors.white54,
+                      fontSize: 15,
+                      fontWeight: isUnread ? FontWeight.w700 : FontWeight.w400,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final int pCount = _safeLen(_players);
     final int cCount = _safeLen(_conversations);
 
     return Scaffold(
@@ -180,52 +288,174 @@ class _ChatListScreenState extends State<ChatListScreen> {
             },
           ),
           SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(padding: const EdgeInsets.fromLTRB(20, 20, 20, 5), child: Row(children: [
-                    const Expanded(child: Text('Messages', style: TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w900, letterSpacing: -0.5))),
-                    Container(decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle), child: IconButton(onPressed: _load, icon: const Icon(Icons.sync, color: Color(0xFF00FF87), size: 22))),
-                ])),
-                Consumer<ChatWebRTCService>(builder: (_, s, __) => s.mediaError != null 
-                  ? Container(margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Row(children: [const Icon(Icons.error_outline, color: Colors.redAccent, size: 20), const SizedBox(width: 10), Expanded(child: Text(s.mediaError!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)))])) 
-                  : const SizedBox.shrink()),
-                if (_error != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Text(_error!, style: const TextStyle(color: Colors.redAccent))),
-                if (pCount > 0) ...[
-                  const Padding(padding: EdgeInsets.fromLTRB(20, 15, 20, 15), child: Text('ONLINE NOW', style: TextStyle(color: Color(0xFF00FF87), fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.0))),
-                  SizedBox(height: 90, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: pCount, itemBuilder: (_, i) {
-                        try { return _buildOnlinePlayer(_players[i], context); } catch (_) { return const SizedBox.shrink(); }
-                      })),
-                ],
-                const Padding(padding: EdgeInsets.fromLTRB(20, 20, 20, 12), child: Text('VOICE ROOMS', style: TextStyle(color: Color(0xFFA855F7), fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.0))),
-                SizedBox(height: 50, child: Consumer<ChatWebRTCService>(builder: (_, s, __) {
-                    final rooms = ['Global', 'Alpha', 'Bravo'];
-                    return ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 20), itemCount: 3, itemBuilder: (_, i) {
-                      final rId = rooms[i];
-                      final id = (rId == 'Alpha' ? 'TeamA' : (rId == 'Bravo' ? 'TeamB' : 'Global'));
-                      final active = s.currentVoiceRoomId == id;
-                      return GestureDetector(onTap: () => s.joinVoiceRoom(id),
-                        child: Container(margin: const EdgeInsets.only(right: 12), padding: const EdgeInsets.symmetric(horizontal: 28), decoration: BoxDecoration(gradient: active ? const LinearGradient(colors: [Color(0xFFA855F7), Color(0xFF6B21A8)]) : null, color: active ? null : const Color(0xFF13172E), borderRadius: BorderRadius.circular(20), border: Border.all(color: active ? const Color(0xFFA855F7).withOpacity(0.5) : Colors.white10), boxShadow: active ? [BoxShadow(color: const Color(0xFFA855F7).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 3))] : null),
-                          child: Center(child: Text(rId, style: TextStyle(color: active ? Colors.white : Colors.white60, fontWeight: FontWeight.bold, fontSize: 14)))));
-                    });
-                })),
-                const Padding(padding: EdgeInsets.fromLTRB(20, 25, 20, 15), child: Text('RECENT CHATS', style: TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.0))),
-                Expanded(child: (_isLoading == true)
-                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF00FF87)))
-                  : cCount == 0 
-                    ? const Center(child: Text('Start a conversation above!', style: TextStyle(color: Colors.white24, fontSize: 16)))
-                    : ListView.builder(itemCount: cCount, padding: const EdgeInsets.symmetric(horizontal: 20), itemBuilder: (_, i) {
-                        try { return _buildRecentChat(_conversations[i], context); } catch (_) { return const SizedBox.shrink(); }
-                      })),
+            child: CustomScrollView(
+              physics: const ClampingScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Messages',
+                          style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w900, letterSpacing: -0.4),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF39FF14),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Consumer<ChatWebRTCService>(builder: (_, s, __) => s.mediaError != null 
+                    ? Container(margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Row(children: [const Icon(Icons.error_outline, color: Colors.redAccent, size: 20), const SizedBox(width: 10), Expanded(child: Text(s.mediaError!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)))])) 
+                    : const SizedBox.shrink()),
+                ),
+                if (_error != null) SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Text(_error!, style: const TextStyle(color: Colors.redAccent)))),
+                
+                const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.fromLTRB(20, 18, 20, 10), child: Text('VOICE ROOMS', style: TextStyle(color: Color(0xFFB5BBC7), fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 2.0)))),
+                SliverToBoxAdapter(
+                  child: SizedBox(height: 42, child: Consumer<ChatWebRTCService>(builder: (_, s, __) {
+                      final rooms = ['Global', 'Alpha', 'Bravo'];
+                      return ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 20), itemCount: 3, itemBuilder: (_, i) {
+                        final rId = rooms[i];
+                        final id = (rId == 'Alpha' ? 'TeamA' : (rId == 'Bravo' ? 'TeamB' : 'Global'));
+                        final active = s.currentVoiceRoomId == id;
+                        return GestureDetector(
+                          onTap: () => active ? s.leaveVoiceRoom() : s.joinVoiceRoom(id),
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            decoration: BoxDecoration(
+                              color: active ? const Color(0xFF39FF14) : const Color(0xFF1B1E25),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                rId.toUpperCase(),
+                                style: TextStyle(color: active ? Colors.black : Colors.white70, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.2),
+                              ),
+                            ),
+                          ),
+                        );
+                      });
+                  })),
+                ),
+                
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, AppRoutes.groupChat),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1C23),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF11151D),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.hub_rounded, color: Color(0xFF65FF87), size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Groups & Rooms',
+                                  style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900)),
+                              const SizedBox(height: 2),
+                              Text('Chat with multiple friends at once',
+                                  style: TextStyle(color: Colors.white70, fontSize: 15)),
+                            ],
+                          )),
+                          const Icon(Icons.groups_rounded, color: Color(0xFF2A3A2A), size: 26),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SliverPadding(
+                  padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
+                  sliver: SliverToBoxAdapter(child: Text('RECENT CHATS', style: TextStyle(color: Color(0xFFB5BBC7), fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 2.0))),
+                ),
+                
+                if (_isLoading == true)
+                  const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator(color: Color(0xFF00FF87))))
+                else if (cCount == 0)
+                  const SliverFillRemaining(hasScrollBody: false, child: Center(child: Text('Start a conversation above!', style: TextStyle(color: Colors.white24, fontSize: 16))))
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, i) {
+                          try { return _buildRecentChat(_conversations[i], context); } catch (_) { return const SizedBox.shrink(); }
+                        },
+                        childCount: cCount,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
-          Consumer<ChatWebRTCService>(builder: (_, s, __) => s.currentVoiceRoomId == null ? const SizedBox.shrink() : Positioned(bottom: 25, left: 20, right: 20,
-            child: Container(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15), decoration: BoxDecoration(color: const Color(0xFF0A0E1A).withOpacity(0.95), borderRadius: BorderRadius.circular(25), border: Border.all(color: const Color(0xFFA855F7), width: 1.5), boxShadow: [BoxShadow(color: const Color(0xFFA855F7).withOpacity(0.2), blurRadius: 20, spreadRadius: 2)]),
-              child: Row(children: [Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFA855F7).withOpacity(0.2), shape: BoxShape.circle), child: const Icon(Icons.multitrack_audio, color: Color(0xFFA855F7))), const SizedBox(width: 15), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [Text('Voice Connected', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)), Text('${s.currentVoiceRoomId}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15))])),
-                Container(decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle), child: IconButton(onPressed: () => s.toggleMute(), icon: Icon(s.isMuted ? Icons.mic_off : Icons.mic, color: s.isMuted ? Colors.redAccent : Colors.white))), const SizedBox(width: 8),
-                Container(decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.1), shape: BoxShape.circle), child: IconButton(onPressed: () => s.leaveVoiceRoom(), icon: const Icon(Icons.call_end, color: Colors.redAccent)))],)))),
+          Consumer<ChatWebRTCService>(builder: (_, s, __) => s.currentVoiceRoomId == null ? const SizedBox.shrink() : Positioned(
+            bottom: 30, left: 20, right: 20,
+            child: Container(
+              padding: const EdgeInsets.all(16), 
+              decoration: BoxDecoration(
+                color: const Color(0xFF12141C).withOpacity(0.98), 
+                borderRadius: BorderRadius.circular(28), 
+                border: Border.all(color: const Color(0xFFA855F7).withOpacity(0.3), width: 1.5), 
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 25, spreadRadius: 5)],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48, height: 48,
+                    decoration: BoxDecoration(color: const Color(0xFFA855F7).withOpacity(0.1), shape: BoxShape.circle),
+                    child: const Icon(Icons.multitrack_audio_rounded, color: Color(0xFFA855F7)),
+                  ),
+                  const SizedBox(width: 14), 
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start, 
+                      mainAxisSize: MainAxisSize.min, 
+                      children: [
+                        const Text('CONNECTED VOICE', style: TextStyle(color: Color(0xFFA855F7), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.0)), 
+                        const SizedBox(height: 2),
+                        Text(s.currentVoiceRoomId!.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => s.toggleMute(), 
+                    icon: Icon(s.isMuted ? Icons.mic_off_rounded : Icons.mic_rounded, color: s.isMuted ? Colors.redAccent : Colors.white),
+                    style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.05)),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => s.leaveVoiceRoom(), 
+                    icon: const Icon(Icons.call_end_rounded, color: Colors.white),
+                    style: IconButton.styleFrom(backgroundColor: Colors.redAccent),
+                  ),
+                ],
+              ),
+            ),
+          )),
         ],
       ),
     );

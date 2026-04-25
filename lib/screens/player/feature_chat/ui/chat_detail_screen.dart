@@ -46,6 +46,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     // Listen for new messages
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final chatService = Provider.of<ChatWebRTCService>(context, listen: false);
+      chatService.connectChatSocket();
       _msgSub = chatService.messageStream.listen((data) {
         if (data == null) return;
         if (mounted && (data['senderId'] == widget.userId)) {

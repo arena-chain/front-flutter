@@ -4,6 +4,7 @@ import 'package:arena_chain_flutter/core/api/feature_auth/auth_api.dart'; // For
 import 'package:arena_chain_flutter/core/models/feature_auth/team_manager_profile_model.dart';
 import 'package:arena_chain_flutter/screens/admin/ui/teams_management_screen.dart';
 import 'package:arena_chain_flutter/screens/admin/ui/pending_managers_screen.dart';
+import 'package:arena_chain_flutter/screens/admin/ui/admin_tickets_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -18,6 +19,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   static const List<Widget> _widgetOptions = <Widget>[
     TeamsManagementScreen(),
     PendingManagersScreen(),
+    AdminTicketsScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -56,6 +58,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.person_add),
             label: 'Requests',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.confirmation_num_outlined),
+            label: 'Tickets',
           ),
         ],
         currentIndex: _selectedIndex,

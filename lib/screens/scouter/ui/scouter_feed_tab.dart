@@ -2,14 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
 import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_matches_view_model.dart';
-<<<<<<< HEAD
-import 'package:arena_chain_flutter/core/models/feature_scouter/scouter_models.dart';
-import 'package:arena_chain_flutter/screens/scouter/ui/scouter_player_detail_screen.dart';
-=======
 import 'package:arena_chain_flutter/screens/scouter/view_model/scouter_public_highlights_view_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_scouter/scouter_models.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/scouter_highlight_detail_screen.dart';
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
 class ScouterFeedTab extends StatelessWidget {
   final String scouterId;
@@ -20,21 +15,13 @@ class ScouterFeedTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-    return Consumer<ScouterMatchesViewModel>(
-      builder: (context, vm, _) {
-=======
     return Consumer2<ScouterMatchesViewModel, ScouterPublicHighlightsViewModel>(
       builder: (context, vm, hlVm, _) {
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(context),
-<<<<<<< HEAD
-=======
             _buildTopHighlightsRow(context, hlVm),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
             _buildFilterChips(vm),
             Expanded(
               child: vm.isLoading
@@ -51,8 +38,6 @@ class ScouterFeedTab extends StatelessWidget {
     );
   }
 
-<<<<<<< HEAD
-=======
   /// Public clips ranked by reactions (likes + comments + saves) — same idea as web scouter dashboard.
   Widget _buildTopHighlightsRow(BuildContext context, ScouterPublicHighlightsViewModel hlVm) {
     if (!hlVm.isLoading && hlVm.highlights.isEmpty) {
@@ -190,7 +175,6 @@ class ScouterFeedTab extends StatelessWidget {
     );
   }
 
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   // ─── Header ──────────────────────────────────────────────────────────────
 
   Widget _buildHeader(BuildContext context) {

@@ -1,22 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
-<<<<<<< HEAD
-import 'package:arena_chain_flutter/navigation.dart';
-import 'package:arena_chain_flutter/screens/player/feature_clubs/ui/clubs_list_screen.dart';
-=======
 import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_viewmodel.dart';
 import 'package:arena_chain_flutter/navigation.dart';
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
 class SideDrawer extends StatelessWidget {
   const SideDrawer({super.key});
 
-<<<<<<< HEAD
-=======
   static const Color _neonGreen = Color(0xFF39FF14);
 
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -24,26 +16,6 @@ class SideDrawer extends StatelessWidget {
       child: Column(
         children: [
           _buildDrawerHeader(context),
-<<<<<<< HEAD
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              children: [
-                _buildDrawerItem(
-                  context,
-                  icon: Icons.hub_outlined,
-                  title: 'Nexus Hub',
-                  onTap: () {
-                    Navigator.pop(context); // Close drawer
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ClubsListScreen()),
-                    );
-                  },
-                ),
-                _buildDrawerItem(
-                  context,
-=======
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: _buildLevelProgressionCard(context),
@@ -54,7 +26,6 @@ class SideDrawer extends StatelessWidget {
               children: [
                 _buildDrawerItem(
                   context,
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                   icon: Icons.video_library,
                   title: 'My Channel',
                   onTap: () {
@@ -73,18 +44,15 @@ class SideDrawer extends StatelessWidget {
                     Navigator.pushNamed(context, AppRoutes.subscriptions);
                   },
                 ),
-<<<<<<< HEAD
-                const Divider(color: Color(0xFF1A1F36), height: 32),
                 _buildDrawerItem(
                   context,
-                  icon: Icons.shield,
-                  title: 'Leagues',
+                  icon: Icons.confirmation_number_outlined,
+                  title: 'My Tickets',
                   onTap: () {
-                    Navigator.pop(context); // Close drawer
-                    Navigator.pushNamed(context, AppRoutes.leagues);
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, AppRoutes.ticketWallet);
                   },
                 ),
-=======
                 _buildDrawerItem(
                   context,
                   icon: Icons.newspaper_rounded,
@@ -97,7 +65,6 @@ class SideDrawer extends StatelessWidget {
                 const Divider(color: Color(0xFF1A1F36), height: 32),
                 ..._teamAndRecruitmentItems(context),
                 const Divider(color: Color(0xFF1A1F36), height: 32),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                 _buildDrawerItem(
                   context,
                   icon: Icons.settings,
@@ -126,8 +93,6 @@ class SideDrawer extends StatelessWidget {
     );
   }
 
-<<<<<<< HEAD
-=======
   /// Same destinations as profile team section: manager apply/dashboard + invitations inbox.
   List<Widget> _teamAndRecruitmentItems(BuildContext context) {
     final auth = context.read<AuthViewModel>();
@@ -314,7 +279,6 @@ class SideDrawer extends StatelessWidget {
     );
   }
 
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   Widget _buildDrawerHeader(BuildContext context) {
     return Consumer<AuthViewModel>(
       builder: (context, authViewModel, child) {
@@ -342,11 +306,7 @@ class SideDrawer extends StatelessWidget {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-<<<<<<< HEAD
-                    color: const Color(0xFF00FF00).withOpacity(0.2),
-=======
                     color: const Color(0xFF00FF00).withValues(alpha: 0.2),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
                     shape: BoxShape.circle,
                     border: Border.all(color: const Color(0xFF00FF00), width: 2),
                     image: (user?.avatar != null && user!.avatar!.isNotEmpty)
@@ -410,11 +370,7 @@ class SideDrawer extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return ListTile(
-<<<<<<< HEAD
-      leading: Icon(icon, color: const Color(0xFF00FF00)),
-=======
       leading: Icon(icon, color: _neonGreen),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
       title: Text(
         title,
         style: const TextStyle(
@@ -465,11 +421,7 @@ class SideDrawer extends StatelessWidget {
           Text(
             'Arena Chain v1.0.0',
             style: TextStyle(
-<<<<<<< HEAD
-              color: const Color(0xFF7A86AC).withOpacity(0.5),
-=======
               color: const Color(0xFF7A86AC).withValues(alpha: 0.5),
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
               fontSize: 12,
             ),
           ),

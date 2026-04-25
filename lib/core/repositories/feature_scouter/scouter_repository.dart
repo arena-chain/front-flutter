@@ -2,10 +2,7 @@ import 'package:arena_chain_flutter/core/api/feature_scouter/scouter_api.dart';
 import 'package:arena_chain_flutter/core/api/feature_scouter/players_directory_api.dart';
 import 'package:arena_chain_flutter/core/models/feature_scouter/scouter_models.dart';
 import 'package:arena_chain_flutter/core/storage/local_scouting_storage.dart';
-<<<<<<< HEAD
-=======
 import 'package:arena_chain_flutter/core/utils/highlight_ranking.dart';
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
 
 /// Repository layer – delegates to ScouterApi, falls back to local storage when API fails.
 class ScouterRepository {
@@ -184,8 +181,6 @@ class ScouterRepository {
     }
   }
 
-<<<<<<< HEAD
-=======
   Future<List<HighlightItem>> getPublicHighlights() async {
     try {
       return await _api.getPublicHighlights();
@@ -244,7 +239,6 @@ class ScouterRepository {
   Future<List<HighlightItem>> rankHighlights(List<HighlightItem> items) =>
       rankHighlightsByEngagement(_api, items);
 
->>>>>>> 7f48c8d910f42a96c7f3da11bcd36e3921c73056
   Future<List<RankEntry>> getPlayerRanks(String playerUserId) async {
     try {
       return await _api.getPlayerRanks(playerUserId);
