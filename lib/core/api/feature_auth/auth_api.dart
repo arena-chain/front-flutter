@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:arena_chain_flutter/core/dto/auth/login_dto.dart';
 import 'package:arena_chain_flutter/core/dto/auth/register_player_dto.dart';
@@ -42,10 +43,10 @@ class AuthApi {
     final candidates = <String>[
       if (_workingBaseUrl case final String working) working,
       baseUrl,
-      'http://10.0.2.2:3000',
-      'http://127.0.0.1:3000',
-      'http://localhost:3000',
     ];
+    if (kIsWeb) {
+      candidates.addAll(['http://127.0.0.1:3000', 'http://localhost:3000']);
+    }
     final seen = <String>{};
     return candidates.where((b) => seen.add(b)).toList();
   }
@@ -59,11 +60,7 @@ class AuthApi {
     for (final candidate in _candidateBaseUrls()) {
       try {
         final response = await http
-            .post(
-              Uri.parse('$candidate$path'),
-              headers: headers,
-              body: body,
-            )
+            .post(Uri.parse('$candidate$path'), headers: headers, body: body)
             .timeout(_timeout);
         if (response.statusCode < 500) {
           _workingBaseUrl = candidate;
@@ -84,11 +81,13 @@ class AuthApi {
     final url = Uri.parse('$baseUrl/api/auth/register/player');
 
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(dto.toJson()),
-      ).timeout(_timeout);
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(dto.toJson()),
+          )
+          .timeout(_timeout);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final data = _decodeResponseBody(response);
@@ -157,11 +156,13 @@ class AuthApi {
     final url = Uri.parse('$baseUrl/api/auth/verify-email');
 
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(dto.toJson()),
-      ).timeout(_timeout);
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(dto.toJson()),
+          )
+          .timeout(_timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = _decodeResponseBody(response);
@@ -187,11 +188,13 @@ class AuthApi {
     final url = Uri.parse('$baseUrl/api/auth/resend-otp');
 
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
-      ).timeout(_timeout);
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email}),
+          )
+          .timeout(_timeout);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         final error = _decodeResponseBody(response);
@@ -206,11 +209,13 @@ class AuthApi {
     final url = Uri.parse('$baseUrl/api/auth/forgot-password');
 
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(dto.toJson()),
-      ).timeout(_timeout);
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(dto.toJson()),
+          )
+          .timeout(_timeout);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         final error = _decodeResponseBody(response);
@@ -225,11 +230,13 @@ class AuthApi {
     final url = Uri.parse('$baseUrl/api/auth/reset-password');
 
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(dto.toJson()),
-      ).timeout(_timeout);
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(dto.toJson()),
+          )
+          .timeout(_timeout);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         final error = _decodeResponseBody(response);
@@ -244,11 +251,13 @@ class AuthApi {
     final url = Uri.parse('$baseUrl/api/auth/google/mobile');
 
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'idToken': idToken}),
-      ).timeout(_timeout);
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'idToken': idToken}),
+          )
+          .timeout(_timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = _decodeResponseBody(response);
@@ -271,14 +280,13 @@ class AuthApi {
     final url = Uri.parse('$baseUrl/api/auth/verify-reset-otp');
 
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'otp': otp,
-        }),
-      ).timeout(_timeout);
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email, 'otp': otp}),
+          )
+          .timeout(_timeout);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         final error = _decodeResponseBody(response);
@@ -294,13 +302,15 @@ class AuthApi {
     final token = await _tokenStorage.getAccessToken();
 
     try {
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(_timeout);
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(_timeout);
 
       if (response.statusCode == 200) {
         final data = _decodeResponseBody(response);
@@ -323,22 +333,25 @@ class AuthApi {
     final token = await _tokenStorage.getAccessToken();
 
     try {
-      final response = await http.patch(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          if (nickname case final String n) 'nickname': n,
-          if (region case final String r) 'region': r,
-          if (avatar case final String a) 'avatar': a,
-        }),
-      ).timeout(_timeout);
+      final response = await http
+          .patch(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              if (nickname case final String n) 'nickname': n,
+              if (region case final String r) 'region': r,
+              if (avatar case final String a) 'avatar': a,
+            }),
+          )
+          .timeout(_timeout);
 
       if (response.statusCode == 200) {
         final data = _decodeResponseBody(response);
-        final dynamic userJson = data is Map<String, dynamic> && data['user'] != null
+        final dynamic userJson =
+            data is Map<String, dynamic> && data['user'] != null
             ? data['user']
             : data;
         return User.fromJson(userJson as Map<String, dynamic>);

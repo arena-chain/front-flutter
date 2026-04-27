@@ -15,7 +15,7 @@ class ApiConfig {
 
   // Set to your machine's Wi-Fi IP for physical device testing.
   // Use 'ipconfig' (Windows) or 'ifconfig' (Mac/Linux) to find it.
-  static const String _lanIp = '192.168.1.145';
+  static const String _lanIp = '192.168.1.195';
 
   // Set to true when running on an Android emulator, false for a physical device.
   static const bool _isEmulator = false;
@@ -23,7 +23,18 @@ class ApiConfig {
   static String get baseUrl {
     final override = _apiBaseUrlOverride.trim();
     if (override.isNotEmpty) {
-      return override.replaceAll(RegExp(r'/$'), '');
+      var normalized = override.replaceAll(RegExp(r'/$'), '');
+      // Prevent real devices from trying localhost by mistake via --dart-define.
+      if (!kIsWeb) {
+        final replacementHost =
+            (defaultTargetPlatform == TargetPlatform.android && _isEmulator)
+            ? '10.0.2.2'
+            : _lanIp;
+        normalized = normalized
+            .replaceAll('localhost', replacementHost)
+            .replaceAll('127.0.0.1', replacementHost);
+      }
+      return normalized;
     }
     if (kIsWeb) {
       return 'http://localhost:3000';
@@ -37,6 +48,8 @@ class ApiConfig {
   }
 
   static void printDebugInfo() {
-    debugPrint('ApiConfig: kIsWeb=$kIsWeb, platform=$defaultTargetPlatform, baseUrl=$baseUrl');
+    debugPrint(
+      'ApiConfig: kIsWeb=$kIsWeb, platform=$defaultTargetPlatform, baseUrl=$baseUrl',
+    );
   }
 }

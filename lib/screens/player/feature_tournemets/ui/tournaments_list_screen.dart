@@ -112,6 +112,17 @@ class _TournamentsListScreenState extends State<TournamentsListScreen> {
         children: [
           Row(
             children: [
+              if (Navigator.of(context).canPop())
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  icon: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: _neon.withValues(alpha: 0.95),
+                    size: 20,
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(

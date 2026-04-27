@@ -19,10 +19,7 @@ class BottomNavBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black,
         border: Border(
-          top: BorderSide(
-            width: 1,
-            color: _accent.withValues(alpha: 0.25),
-          ),
+          top: BorderSide(width: 1, color: _accent.withValues(alpha: 0.25)),
         ),
         boxShadow: [
           BoxShadow(
@@ -57,8 +54,9 @@ class BottomNavBar extends StatelessWidget {
                   child: _navTapSlot(
                     index: 1,
                     child: _buildNavPill(
-                      icon: Icons.podcasts_outlined,
-                      label: 'Live',
+                      icon: Icons.view_carousel_outlined,
+                      activeIcon: Icons.view_carousel_rounded,
+                      label: 'Reels',
                       index: 1,
                     ),
                   ),
@@ -88,20 +86,10 @@ class BottomNavBar extends StatelessWidget {
                   child: _navTapSlot(
                     index: 4,
                     child: _buildNavPill(
-                      icon: Icons.fitness_center_outlined,
-                      label: 'Training',
-                      index: 4,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: _navTapSlot(
-                    index: 5,
-                    child: _buildNavPill(
                       icon: Icons.chat_bubble_outline_rounded,
                       activeIcon: Icons.chat_rounded,
                       label: 'Messages',
-                      index: 5,
+                      index: 4,
                     ),
                   ),
                 ),
@@ -182,7 +170,9 @@ class BottomNavBar extends StatelessWidget {
                       style: TextStyle(
                         color: isSelected ? _accent : _muted,
                         fontSize: 11,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         height: 1,
                       ),
                     ),
