@@ -109,18 +109,18 @@ class AppRoutes {
         addFriend: (context) => const AddFriendScreen(),
         friendsList: (context) => const FriendsListScreen(),
         playerPublicProfile: (context) {
-          final args = ModalRoute.of(context)!.settings.arguments;
-          String userId;
+          final args = ModalRoute.of(context)?.settings.arguments;
+          String userId = '';
           String? preNick;
           String? preEmail;
           String? preAvatar;
           if (args is Map<String, dynamic>) {
-            userId = args['userId'] as String;
-            preNick = args['nickname'] as String?;
-            preEmail = args['email'] as String?;
-            preAvatar = args['avatar'] as String?;
-          } else {
-            userId = args as String;
+            userId = args['userId']?.toString() ?? '';
+            preNick = args['nickname']?.toString();
+            preEmail = args['email']?.toString();
+            preAvatar = args['avatar']?.toString();
+          } else if (args is String) {
+            userId = args;
           }
           return PlayerPublicProfileScreen(
             targetUserId: userId,
@@ -131,14 +131,16 @@ class AppRoutes {
         },
         createTournament: (context) => const CreateTournamentScreen(),
         tournamentBooking: (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as TournamentModel;
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is! TournamentModel) return const Scaffold(body: Center(child: Text('Invalid args')));
           return BookingScreen(tournament: args);
         },
         tournamentTicket: (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          final raw = ModalRoute.of(context)?.settings.arguments;
+          final args = (raw is Map<String, dynamic>) ? raw : <String, dynamic>{};
           return TicketScreen(
             tournament: args['tournament'] as TournamentModel,
-            ticketCount: args['ticketCount'] as int,
+            ticketCount: (args['ticketCount'] as int?) ?? 1,
           );
         },
         matchmaking: (context) => const MatchmakingScreen(),
@@ -146,11 +148,12 @@ class AppRoutes {
         chatList: (context) => const ChatListScreen(),
         groupChat: (context) => const GroupChatScreen(),
         chatDetail: (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          final raw = ModalRoute.of(context)?.settings.arguments;
+          final args = (raw is Map<String, dynamic>) ? raw : <String, dynamic>{};
           return ChatDetailScreen(
-            userId: args['userId'] as String,
-            nickname: args['nickname'] as String,
-            avatar: args['avatar'] as String?,
+            userId: args['userId']?.toString() ?? '',
+            nickname: args['nickname']?.toString() ?? 'Player',
+            avatar: args['avatar']?.toString(),
           );
         },
 
@@ -158,28 +161,28 @@ class AppRoutes {
         managerApplication: (context) => const ManagerApplicationScreen(),
         adminManagerApproval: (context) => const AdminManagerApprovalScreen(),
         managerDashboard: (context) {
-          final teamId = ModalRoute.of(context)!.settings.arguments as String;
+          final teamId = ModalRoute.of(context)?.settings.arguments?.toString() ?? '';
           return ManagerDashboardScreen(teamId: teamId);
         },
         recruitPlayer: (context) {
-          final teamId = ModalRoute.of(context)!.settings.arguments as String;
+          final teamId = ModalRoute.of(context)?.settings.arguments?.toString() ?? '';
           return RecruitPlayerScreen(teamId: teamId);
         },
         manageRoster: (context) {
-          final teamId = ModalRoute.of(context)!.settings.arguments as String;
+          final teamId = ModalRoute.of(context)?.settings.arguments?.toString() ?? '';
           return ManageRosterScreen(teamId: teamId);
         },
         playerInvitations: (context) => const PlayerInvitationsScreen(),
         teamFeed: (context) {
-          final teamId = ModalRoute.of(context)!.settings.arguments as String;
+          final teamId = ModalRoute.of(context)?.settings.arguments?.toString() ?? '';
           return TeamFeedScreen(teamId: teamId);
         },
         teamProfile: (context) {
-          final teamId = ModalRoute.of(context)!.settings.arguments as String;
+          final teamId = ModalRoute.of(context)?.settings.arguments?.toString() ?? '';
           return TeamProfileScreen(teamId: teamId);
         },
         liveStream: (context) {
-          final streamId = ModalRoute.of(context)!.settings.arguments as String;
+          final streamId = ModalRoute.of(context)?.settings.arguments?.toString() ?? '';
           return LiveStreamScreen(streamId: streamId);
         },
         scheduledStreams: (context) => const ScheduledStreamsScreen(),
@@ -187,7 +190,8 @@ class AppRoutes {
         browseEvents: (context) => const PlayerHomeScreen(initialIndex: 3),
         ticketWallet: (context) => const PlayerHomeScreen(initialIndex: 6),
         eventDetails: (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as EventModel;
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is! EventModel) return const Scaffold(body: Center(child: Text('Invalid event')));
           return EventDetailsScreen(event: args);
         },
         lolControl: (context) => const LolControlPairingScreen(),

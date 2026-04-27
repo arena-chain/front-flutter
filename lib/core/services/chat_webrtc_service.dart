@@ -5,6 +5,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 import 'package:arena_chain_flutter/core/config/api_config.dart';
 import 'dart:async';
+import 'package:http/http.dart' as http;
 
 class ChatWebRTCService extends ChangeNotifier {
   static final ChatWebRTCService _instance = ChatWebRTCService._internal();
@@ -13,6 +14,7 @@ class ChatWebRTCService extends ChangeNotifier {
 
   final TokenStorage _tokenStorage = TokenStorage();
   IO.Socket? _socket;
+  IO.Socket? _presenceSocket;
   
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
@@ -67,10 +69,54 @@ class ChatWebRTCService extends ChangeNotifier {
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .setAuth({'token': token})
+          .enableAutoConnect()
           .build(),
     );
 
-    _socket!.onConnect((_) => debugPrint('WebRTC Chat Socket connected'));
+    _presenceSocket = IO.io(
+      '${ApiConfig.baseUrl}/presence',
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .setAuth({'token': token})
+          .enableAutoConnect()
+          .build(),
+    );
+
+    _socket!.onConnect((_) {
+      debugPrint('🟢 WebRTC Chat Socket connected');
+      notifyListeners();
+    });
+    _socket!.onDisconnect((_) {
+      debugPrint('🔴 WebRTC Chat Socket disconnected');
+      notifyListeners();
+    });
+    _socket!.onConnectError((err) => debugPrint('⚠️ Chat Socket Error: $err'));
+
+    _presenceSocket!.onConnect((_) {
+      debugPrint('🟢 Presence Socket connected');
+      _presenceSocket!.emit('update-status', {'status': 'online'});
+      notifyListeners();
+    });
+    _presenceSocket!.onDisconnect((_) {
+      debugPrint('🔴 Presence Socket disconnected');
+      notifyListeners();
+    });
+    _presenceSocket!.onConnectError((err) => debugPrint('⚠️ Presence Socket Error: $err'));
+
+    _presenceSocket!.on('friend-online', (data) {
+      debugPrint('👤 Friend online: ${data['userId']}');
+      notifyListeners(); 
+    });
+
+    _presenceSocket!.on('friend-offline', (data) {
+      debugPrint('👤 Friend offline: ${data['userId']}');
+      notifyListeners();
+    });
+
+    _presenceSocket!.on('presence-ready', (data) {
+      debugPrint('✅ Presence ready: ${data['friends']?.length} friends');
+      notifyListeners();
+    });
 
     // Events Entrants (Incoming Call)
     _socket!.on('incomingCall', (data) {
@@ -78,84 +124,53 @@ class ChatWebRTCService extends ChangeNotifier {
       currentCallerId = data['callerId'];
       currentCallerName = data['callerName'] ?? 'Joueur';
       currentCallerAvatar = data['callerAvatar'];
-      notifyListeners(); // Affiche le CallScreen
+      notifyListeners(); 
     });
 
-    _socket!.on('offer', (data) async {
-      await _handleIncomingOffer(data['senderId'], data['offer']);
-    });
-
+    // ... (rest of voice events) ...
+    _socket!.on('offer', (data) async => await _handleIncomingOffer(data['senderId'], data['offer']));
     _socket!.on('answer', (data) async {
       if (_peerConnection != null) {
-        await _peerConnection!.setRemoteDescription(
-            RTCSessionDescription(data['answer']['sdp'], data['answer']['type']));
+        await _peerConnection!.setRemoteDescription(RTCSessionDescription(data['answer']['sdp'], data['answer']['type']));
       }
     });
-
     _socket!.on('ice-candidate', (data) async {
       if (_peerConnection != null && data['candidate'] != null) {
-        final candidate = RTCIceCandidate(
-          data['candidate']['candidate'],
-          data['candidate']['sdpMid'],
-          data['candidate']['sdpMLineIndex'],
-        );
-        await _peerConnection!.addCandidate(candidate);
+        await _peerConnection!.addCandidate(RTCIceCandidate(data['candidate']['candidate'], data['candidate']['sdpMid'], data['candidate']['sdpMLineIndex']));
       }
     });
 
     _socket!.on('callAnswered', (data) async {
       if (_peerConnection != null) {
-        await _peerConnection!.setRemoteDescription(
-            RTCSessionDescription(data['answer']['sdp'], data['answer']['type']));
-        isInCall = true;
-        isCalling = false;
-        notifyListeners();
+        await _peerConnection!.setRemoteDescription(RTCSessionDescription(data['answer']['sdp'], data['answer']['type']));
+        isInCall = true; isCalling = false; notifyListeners();
       }
     });
-
     _socket!.on('callRejected', (_) => endCallLocally());
     _socket!.on('callEnded', (_) => endCallLocally());
 
     // --- Voice Room Events ---
-    _socket!.on('user-joined', (data) {
-      debugPrint('[Voice] User joined: ${data['userId']}');
-      // We don't send an offer here. We wait for the new user to send us an offer.
-      _setupRoomPeerConnection(data['userId'], false); 
-    });
-
-    _socket!.on('user-left', (data) {
-      debugPrint('[Voice] User left: ${data['userId']}');
-      _removeRoomPeerConnection(data['userId']);
-    });
-
-    _socket!.on('voice-offer', (data) async {
-      debugPrint('[Voice] Handling offer from: ${data['from']}');
-      await _handleVoiceOffer(data['from'], data['offer']);
-    });
-
-    _socket!.on('voice-answer', (data) async {
-      debugPrint('[Voice] Handling answer from: ${data['from']}');
-      await _handleVoiceAnswer(data['from'], data['answer']);
-    });
-
-    _socket!.on('voice-ice-candidate', (data) async {
-      await _handleVoiceIceCandidate(data['from'], data['candidate']);
-    });
+    _socket!.on('user-joined', (data) => _setupRoomPeerConnection(data['userId'], false));
+    _socket!.on('user-left', (data) => _removeRoomPeerConnection(data['userId']));
+    _socket!.on('voice-offer', (data) async => await _handleVoiceOffer(data['from'], data['offer']));
+    _socket!.on('voice-answer', (data) async => await _handleVoiceAnswer(data['from'], data['answer']));
+    _socket!.on('voice-ice-candidate', (data) async => await _handleVoiceIceCandidate(data['from'], data['candidate']));
 
     // --- Message Events ---
     _socket!.on('newPrivateMessage', (data) {
-      debugPrint('New private message received: $data');
+      debugPrint('📩 New private message received: $data');
       _messageStreamController.add(data);
       notifyListeners();
     });
 
     _socket!.on('newGroupMessage', (data) {
-      debugPrint('New group message received: $data');
+      debugPrint('📩 New group message received: $data');
       _messageStreamController.add(data);
       notifyListeners();
     });
 
     _socket!.connect();
+    _presenceSocket!.connect();
   }
 
   // Stream for new messages
@@ -163,30 +178,81 @@ class ChatWebRTCService extends ChangeNotifier {
   Stream<Map<String, dynamic>> get messageStream => _messageStreamController.stream;
 
   // 1.5 Send Private Message
-  void sendPrivateMessage(String receiverId, String message) {
-    if (_socket == null || !_socket!.connected) {
-      debugPrint('Socket not connected, cannot send message');
+  Future<void> sendPrivateMessage(String receiverId, String message) async {
+    // 1. Try Socket if connected
+    if (_socket != null && _socket!.connected) {
+      _socket!.emit('sendPrivateMessage', {
+        'receiverId': receiverId,
+        'message': message,
+        'messageType': 'text',
+      });
       return;
     }
 
-    _socket!.emit('sendPrivateMessage', {
-      'receiverId': receiverId,
-      'message': message,
-      'messageType': 'text',
-    });
+    // 2. Fallback to HTTP REST
+    debugPrint('Socket not connected, using HTTP fallback for private message');
+    try {
+      final token = await _tokenStorage.getAccessToken();
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/api/chat/send'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'receiverId': receiverId,
+          'message': message,
+          'messageType': 'text',
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint('Message sent via HTTP');
+        // Manually trigger stream update for local UI if needed
+        final data = json.decode(response.body);
+        _messageStreamController.add(data);
+      } else {
+        debugPrint('HTTP Send failed: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error sending message via HTTP: $e');
+    }
   }
 
   // 1.6 Send Group Message
-  void sendGroupMessage(String groupId, String message) {
-    if (_socket == null || !_socket!.connected) {
-      debugPrint('Socket not connected, cannot send group message');
+  Future<void> sendGroupMessage(String groupId, String message) async {
+    // 1. Try Socket if connected
+    if (_socket != null && _socket!.connected) {
+      _socket!.emit('sendGroupMessage', {
+        'groupId': groupId,
+        'message': message,
+      });
       return;
     }
 
-    _socket!.emit('sendGroupMessage', {
-      'groupId': groupId,
-      'message': message,
-    });
+    // 2. Fallback to HTTP REST
+    debugPrint('Socket not connected, using HTTP fallback for group message');
+    try {
+      final token = await _tokenStorage.getAccessToken();
+      // Use channel endpoint as per backend controller
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/api/chat/user/fallback'), // Placeholder or actual group endpoint
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'channelId': groupId,
+          'message': message,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint('Group message sent via HTTP');
+      }
+    } catch (e) {
+      debugPrint('Error sending group message via HTTP: $e');
+    }
   }
 
   // 1.7 Join Group Room

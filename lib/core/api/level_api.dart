@@ -10,7 +10,7 @@ class LevelApi {
 
   Future<PlayerLevel> getMyLevel() async {
     final token = await _tokenStorage.getAccessToken();
-    final url = Uri.parse('$baseUrl/api/level/me'); // Added /api
+    final url = Uri.parse('$baseUrl/api/me/level');
     
     try {
       final response = await http.get(

@@ -43,8 +43,18 @@ class _GroupChatScreenState extends State<GroupChatScreen>
       _socketSub = s.messageStream.listen((msg) {
         if (msg is Map && msg['groupId'] != null &&
             _activeGroup != null && msg['groupId'] == _activeGroup['_id']) {
-          setState(() => _messages.add(msg));
-          _scrollToBottom();
+          setState(() {
+            // Check for duplicates (Optimistic UI vs Socket Echo)
+            final String mId = (msg['_id'] ?? msg['id'] ?? '').toString();
+            final bool exists = _messages.any((m) {
+               final String existingId = (m['_id'] ?? m['id'] ?? '').toString();
+               return existingId.isNotEmpty && existingId == mId;
+            });
+            if (!exists) {
+              _messages.add(msg);
+              _scrollToBottom();
+            }
+          });
         }
       });
     });

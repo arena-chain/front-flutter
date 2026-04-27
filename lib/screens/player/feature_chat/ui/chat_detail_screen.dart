@@ -49,11 +49,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       chatService.connectChatSocket();
       _msgSub = chatService.messageStream.listen((data) {
         if (data == null) return;
-        if (mounted && (data['senderId'] == widget.userId)) {
+        
+        final String sId = data['senderId']?.toString() ?? '';
+        final String rId = data['receiverId']?.toString() ?? '';
+        
+        // If message is from interlocutor OR from me to interlocutor
+        if (mounted && (sId == widget.userId || rId == widget.userId)) {
           setState(() {
-            _messages.insert(0, data);
+            // Check if message already exists to avoid duplicates
+            final exists = _messages.any((m) => m['_id'] == data['_id']);
+            if (!exists) {
+              _messages.insert(0, data);
+            }
           });
-          _markAsRead();
+          if (sId == widget.userId) _markAsRead();
         }
       });
     });
@@ -72,7 +81,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (str.contains('§')) return 'Sent an encrypted message';
     if (str.startsWith(':')) {
        final parts = str.split(':');
-       return parts.length > 2 ? parts.sublist(2).join(':').trim() : str;
+       // If it follows :id:text or similar, extract the text part
+       if (parts.length > 2) return parts.sublist(2).join(':').trim();
+       // If it is just :something: then it might be a code
+       if (parts.length == 3 && parts[2].isEmpty) return parts[1];
+       return str;
     }
     return str;
   }
@@ -290,22 +303,40 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                               alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                               child: GestureDetector(
                                 onLongPress: () => _showDeleteOption(msg),
-                                child: Container(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                                  decoration: BoxDecoration(
-                                    color: isMe ? const Color(0xFF00FF00).withOpacity(0.15) : const Color(0xFF1E2235),
-                                    borderRadius: BorderRadius.circular(18).copyWith(
-                                      bottomRight: isMe ? const Radius.circular(0) : const Radius.circular(18),
-                                      bottomLeft: !isMe ? const Radius.circular(0) : const Radius.circular(18),
+                                child: Column(
+                                  crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.only(bottom: 4),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                                      decoration: BoxDecoration(
+                                        color: isMe ? const Color(0xFF00FF00).withOpacity(0.15) : const Color(0xFF1E2235),
+                                        borderRadius: BorderRadius.circular(18).copyWith(
+                                          bottomRight: isMe ? const Radius.circular(0) : const Radius.circular(18),
+                                          bottomLeft: isMe ? const Radius.circular(18) : const Radius.circular(0),
+                                        ),
+                                        border: Border.all(color: isMe ? const Color(0xFF00FF00).withOpacity(0.3) : Colors.white.withOpacity(0.05)),
+                                      ),
+                                      child: Text(
+                                        _sanitize(msg['message']),
+                                        style: TextStyle(
+                                          color: isMe ? const Color(0xFF00FF00) : Colors.white,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
                                     ),
-                                    border: isMe ? Border.all(color: const Color(0xFF00FF00).withOpacity(0.3)) : null,
-                                  ),
-                                  child: Text(
-                                    _sanitize(msg['message']),
-                                    style: const TextStyle(color: Colors.white, fontSize: 14.5),
-                                  ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 12, left: 4, right: 4),
+                                      child: Text(
+                                        msg['createdAt'] != null 
+                                          ? TimeOfDay.fromDateTime(DateTime.parse(msg['createdAt'])).format(context)
+                                          : 'Just now',
+                                        style: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             );
@@ -389,7 +420,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         chatService.sendPrivateMessage(widget.userId, text);
                         
                         _msgController.clear();
-                        _fetchConversation();
                         setState(() => _showEmojiPicker = false);
                       }
                     },

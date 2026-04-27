@@ -5,8 +5,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:arena_chain_flutter/navigation.dart';
 import 'package:arena_chain_flutter/core/services/chat_webrtc_service.dart';
+import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart' as arena_auth;
 import 'package:provider/provider.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'dart:async';
 
 class ChatListScreen extends StatefulWidget {
@@ -17,447 +17,710 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
-  List<dynamic> _conversations = [];
-  List<dynamic> _players = [];
-  bool? _isLoading = true;
+  List<Map<String, dynamic>> _conversations = [];
+  List<Map<String, dynamic>> _players = [];
+  bool _isLoading = true;
   String? _error;
-  StreamSubscription? _sub;
+  arena_auth.AuthViewModel? _authVm;
+
+  String _sanitize(dynamic msg) {
+    if (msg == null) return '';
+    final str = msg.toString();
+    if (str.contains('§')) return 'Sent an encrypted message';
+    if (str.startsWith(':')) {
+       final parts = str.split(':');
+       if (parts.length > 2) return parts.sublist(2).join(':').trim();
+       if (parts.length == 3 && parts[2].isEmpty) return parts[1];
+       return str;
+    }
+    return str;
+  }
+
+  /// Decode JWT payload to extract user ID without needing context after await
+  static String _extractUserIdFromToken(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length < 2) return '';
+      // Pad base64url to correct length
+      String payload = parts[1];
+      while (payload.length % 4 != 0) { payload += '='; }
+      final decoded = utf8.decode(base64Url.decode(payload));
+      final map = json.decode(decoded) as Map<String, dynamic>;
+      final sub = map['sub']?.toString() ?? '';
+      if (sub.isNotEmpty) return sub;
+      final uid = map['userId']?.toString() ?? '';
+      if (uid.isNotEmpty) return uid;
+      return map['id']?.toString() ?? '';
+    } catch (_) { return ''; }
+  }
+
+  VoidCallback? _serviceListener;
 
   @override
   void initState() {
     super.initState();
     _load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final s = Provider.of<ChatWebRTCService>(context, listen: false);
-      s.connectChatSocket();
-      _sub = s.messageStream.listen((_) => _load());
+      _authVm = Provider.of<arena_auth.AuthViewModel>(context, listen: false);
+      _authVm!.addListener(_onAuthChanged);
+      
+      try {
+        final s = Provider.of<ChatWebRTCService>(context, listen: false);
+        s.connectChatSocket();
+        
+        _serviceListener = () {
+          if (mounted) {
+            debugPrint('🔔 Service notified listener - refreshing list');
+            _load(silent: true);
+          }
+        };
+        s.addListener(_serviceListener!);
+      } catch (e) {
+        debugPrint('Socket init error: $e');
+      }
     });
+  }
+
+  void _onAuthChanged() {
+    if (mounted) _load();
   }
 
   @override
   void dispose() {
-    _sub?.cancel();
+    _authVm?.removeListener(_onAuthChanged);
+    if (_serviceListener != null) {
+      try {
+        final s = Provider.of<ChatWebRTCService>(context, listen: false);
+        s.removeListener(_serviceListener!);
+      } catch (_) {}
+    }
     super.dispose();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool silent = false}) async {
     if (!mounted) return;
-    setState(() { _isLoading = true; _error = null; });
+    if (!silent) {
+       setState(() { _isLoading = true; _error = null; });
+    }
+
     try {
       final t = await TokenStorage().getAccessToken();
       if (t == null) {
-        setState(() { _isLoading = false; _error = "Auth Required"; });
+        if (mounted) setState(() { _isLoading = false; _error = 'Auth Required'; });
         return;
       }
-      final r1 = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/chat/inbox'), headers: {'Authorization': 'Bearer $t'});
-      http.Response? r2;
-      for (final endpoint in [
-        '${ApiConfig.baseUrl}/api/presence/friends/online',
-        '${ApiConfig.baseUrl}/presence/friends/online',
-      ]) {
-        final resp = await http.get(Uri.parse(endpoint), headers: {'Authorization': 'Bearer $t'});
-        if (resp.statusCode == 200) {
-          r2 = resp;
-          break;
+
+      // Extract userId from JWT token directly — no context needed after await
+      String userId = _extractUserIdFromToken(t);
+      // Fallback: try ViewModel if token extraction fails
+      if (userId.isEmpty) {
+        userId = _authVm?.currentUser?.id ?? '';
+      }
+      debugPrint('Chat load: userId=$userId');
+      // ── Inbox ──────────────────────────────────────────────
+      List<Map<String, dynamic>> newConversations = [];
+      try {
+        final r1 = await http.get(
+          Uri.parse('${ApiConfig.baseUrl}/api/chat/inbox'),
+          headers: {'Authorization': 'Bearer $t'},
+        );
+        if (r1.statusCode == 200) {
+          final decoded = json.decode(r1.body);
+          if (decoded is List) {
+            for (final item in decoded) {
+              if (item is Map) newConversations.add(Map<String, dynamic>.from(item));
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Inbox error: $e');
+      }
+
+      // ── Presence ───────────────────────────────────────────
+      List<Map<String, dynamic>> newPlayers = [];
+      if (userId.isNotEmpty) {
+        for (final base in [
+          '${ApiConfig.baseUrl}/api/presence/friends/$userId',
+          '${ApiConfig.baseUrl}/presence/friends/$userId',
+        ]) {
+          try {
+            final resp = await http.get(
+              Uri.parse(base),
+              headers: {'Authorization': 'Bearer $t'},
+            );
+            if (resp.statusCode == 200) {
+              final decoded = json.decode(resp.body);
+              List<dynamic> raw = [];
+              if (decoded is Map && decoded['friends'] is List) {
+                raw = decoded['friends'] as List<dynamic>;
+              } else if (decoded is List) {
+                raw = decoded;
+              }
+              for (final item in raw) {
+                if (item is Map) {
+                  final mapped = Map<String, dynamic>.from(item);
+                  // Only show real connected friends (status != offline)
+                  if (mapped['status'] != 'offline') {
+                    newPlayers.add(mapped);
+                  }
+                }
+              }
+              debugPrint('Presence: ${newPlayers.length} online friends loaded');
+              break;
+            }
+          } catch (e) {
+            debugPrint('Presence error: $e');
+          }
         }
       }
+
       if (mounted) {
         setState(() {
-          if (r1.statusCode == 200) {
-            final data1 = json.decode(r1.body);
-            _conversations = (data1 is List) ? data1 : [];
-          }
-          if (r2 != null && r2.statusCode == 200) {
-            final data2 = json.decode(r2.body);
-            debugPrint('Presence Data: ${r2.body}');
-            _players = (data2 is List) ? data2 : [];
-          }
+          _conversations = newConversations;
+          _players = newPlayers;
           _isLoading = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() { _isLoading = false; _error = "Connect Error"; });
+      debugPrint('_load error: $e');
+      if (mounted) setState(() { _isLoading = false; _error = 'Connect Error'; });
     }
   }
 
-  int _safeLen(dynamic list) {
-    try { return (list is List) ? list.length : 0; } catch (_) { return 0; }
+  Future<void> _createGroupDialog() async {
+    final TextEditingController nameCtrl = TextEditingController();
+    List<String> selectedIds = [];
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF0A0E1A),
+          title: const Text('CREATE NEW GROUP', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Group Name',
+                    labelStyle: TextStyle(color: Colors.white54),
+                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('SELECT FRIENDS', style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _players.length,
+                    itemBuilder: (context, i) {
+                      final p = _players[i];
+                      final uid = p['userId'] ?? p['_id'];
+                      final isSelected = selectedIds.contains(uid);
+                      return CheckboxListTile(
+                        title: Text(p['nickname'] ?? 'Player', style: const TextStyle(color: Colors.white)),
+                        value: isSelected,
+                        activeColor: const Color(0xFF00FF87),
+                        onChanged: (val) {
+                          setDialogState(() {
+                            if (val == true) selectedIds.add(uid);
+                            else selectedIds.remove(uid);
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL', style: TextStyle(color: Colors.white38))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00FF87)),
+              onPressed: () async {
+                if (nameCtrl.text.isEmpty) return;
+                try {
+                  final t = await TokenStorage().getAccessToken();
+                  final res = await http.post(
+                    Uri.parse('${ApiConfig.baseUrl}/api/group-chat'),
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': 'Bearer $t'
+                    },
+                    body: json.encode({
+                      'name': nameCtrl.text,
+                      'memberIds': selectedIds,
+                    }),
+                  );
+                  if (res.statusCode == 201) {
+                    Navigator.pop(context);
+                    _load();
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Group created!'), backgroundColor: Colors.green));
+                  }
+                } catch (e) {
+                  debugPrint('Create group error: $e');
+                }
+              },
+              child: const Text('CREATE', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  Widget _safeAvatar(String? url, String? name, {double size = 45}) {
-    String sUrl = url?.toString() ?? "";
-    final sName = name?.toString() ?? "?";
-    
-    // Auto-fix relative urls
-    if (sUrl != "" && !sUrl.startsWith("http") && !sUrl.startsWith("data:") && sUrl != "null") {
-      if (sUrl.startsWith("/")) sUrl = "${ApiConfig.baseUrl}$sUrl";
-      else sUrl = "${ApiConfig.baseUrl}/$sUrl";
-    }
+  // ─────────────────────────────── Helpers ───────────────────────────────
 
-    // Convert Dicebear SVGs to PNGs for native Flutter support
-    if (sUrl.contains("dicebear.com")) {
-      sUrl = sUrl.replaceAll("/svg", "/png");
-      sUrl = sUrl.replaceAll(".svg", ".png");
-    }
+  String _safeStr(Map<String, dynamic> m, String key, {String fallback = ''}) {
+    try { return m[key]?.toString() ?? fallback; } catch (_) { return fallback; }
+  }
 
-    // Block remaining unsupported SVGs
-    final hasUrl = sUrl != "" && !sUrl.endsWith(".svg") && sUrl != "null";
-    
-    double h = 200.0;
-    try { if (sName != "") h = (sName.codeUnitAt(0) * 20.0) % 360.0; } catch(_) {}
-    
+  Widget _safeAvatar(String? rawUrl, String name, {double size = 45}) {
+    String url = rawUrl?.toString() ?? '';
+    if (url.isNotEmpty && !url.startsWith('http') && !url.startsWith('data:')) {
+      url = url.startsWith('/') ? '${ApiConfig.baseUrl}$url' : '${ApiConfig.baseUrl}/$url';
+    }
+    if (url.contains('dicebear.com')) {
+      url = url.replaceAll('/svg', '/png').replaceAll('.svg', '.png');
+    }
+    final valid = url.isNotEmpty && !url.endsWith('.svg');
+    final h = name.isNotEmpty ? (name.codeUnitAt(0) * 20.0) % 360.0 : 200.0;
+
     return Container(
       width: size, height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF13172E), border: Border.all(color: Colors.white10)),
-      child: ClipOval(child: hasUrl
-        ? Image.network(sUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _colorAvatar(sName, h))
-        : _colorAvatar(sName, h)),
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: Color(0xFF13172E),
+      ),
+      child: ClipOval(
+        child: valid
+            ? Image.network(url, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _colorAvatar(name, h))
+            : _colorAvatar(name, h),
+      ),
     );
   }
 
-  Widget _colorAvatar(String n, double h) {
-    String initial = "?";
-    try { if (n != "") initial = n[0].toUpperCase(); } catch (_) {}
-    return Container(
-      color: HSVColor.fromAHSV(1.0, h, 0.7, 0.5).toColor(),
-      child: Center(child: Text(initial, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18))),
-    );
-  }
+  Widget _colorAvatar(String name, double h) => Container(
+    color: HSVColor.fromAHSV(1.0, h, 0.7, 0.5).toColor(),
+    child: Center(
+      child: Text(
+        name.isEmpty ? '?' : name[0].toUpperCase(),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+      ),
+    ),
+  );
 
-  Widget _buildOnlinePlayer(dynamic u, BuildContext context) {
-    final n = u['nickname']?.toString() ?? 'Player';
+  // ─────────────────────────────── Tiles ─────────────────────────────────
+
+  Widget _buildOnlinePlayer(Map<String, dynamic> u) {
+    final n = _safeStr(u, 'nickname', fallback: 'Player');
+    final uid = _safeStr(u, 'userId') .isNotEmpty
+        ? _safeStr(u, 'userId')
+        : _safeStr(u, '_id');
+    final avatar = u['avatar']?.toString();
+    final status = _safeStr(u, 'status', fallback: 'offline');
+    final isOnline = status == 'online' || status == 'in_game' || status == 'in_queue';
+    final dotColor = isOnline ? const Color(0xFF00FF87) : Colors.grey;
+
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, AppRoutes.chatDetail, arguments: {
-        'userId': (u['userId'] ?? u['_id'] ?? '').toString(),
-        'nickname': n,
-        'avatar': u['avatar']?.toString()
-      }),
+      onTap: () => Navigator.pushNamed(context, AppRoutes.chatDetail,
+          arguments: {'userId': uid, 'nickname': n, 'avatar': avatar}),
       child: Container(
         width: 72,
         margin: const EdgeInsets.only(right: 18),
         child: Column(
           children: [
-            Stack(
-              children: [
-                Container(
-                  width: 64, height: 64,
+            Stack(children: [
+              _safeAvatar(avatar, n, size: 64),
+              Positioned(
+                right: 2, bottom: 2,
+                child: Container(
+                  width: 14, height: 14,
                   decoration: BoxDecoration(
+                    color: dotColor,
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF00FF87).withOpacity(0.3), width: 2),
-                    boxShadow: [BoxShadow(color: const Color(0xFF00FF87).withOpacity(0.1), blurRadius: 12)],
-                  ),
-                  child: ClipOval(
-                    child: _safeAvatar(u['avatar']?.toString(), n, size: 64),
+                    border: Border.all(color: const Color(0xFF0A0E1A), width: 2),
                   ),
                 ),
-                Positioned(
-                  right: 2, bottom: 2,
-                  child: Container(
-                    width: 16, height: 16,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00FF87),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF0A0E1A), width: 3),
-                      boxShadow: [BoxShadow(color: const Color(0xFF00FF87).withOpacity(0.5), blurRadius: 5)],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(n, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.2), overflow: TextOverflow.ellipsis),
+              ),
+            ]),
+            const SizedBox(height: 8),
+            Text(n,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRecentChat(dynamic c, BuildContext context) {
-    final u = c['interlocutor'] ?? {}; 
-    final n = u['nickname']?.toString() ?? 'Player';
-    final lastMsg = c['lastMessage']?.toString() ?? 'Click here to send a message...';
-    final isUnread = (c['unreadCount'] ?? 0) > 0;
-    final time = c['lastMessageAt']?.toString() ?? c['updatedAt']?.toString();
+  Widget _buildRecentChat(Map<String, dynamic> c) {
+    final isGroup = c['isGroup'] == true;
+    final uRaw = c['interlocutor'];
+    final u = (uRaw is Map) ? Map<String, dynamic>.from(uRaw) : <String, dynamic>{};
+    final n = _safeStr(u, 'nickname', fallback: isGroup ? 'Group' : 'Player');
+    final uid = _safeStr(u, '_id').isNotEmpty ? _safeStr(u, '_id') : _safeStr(u, 'userId');
+    final avatar = u['avatar']?.toString();
+    final lastMsg = _safeStr(c, 'lastMessage', fallback: 'Tap to start chatting...');
+    final unread = (c['unreadCount'] is num) ? (c['unreadCount'] as num).toInt() : 0;
+    final isUnread = unread > 0;
+    final timeRaw = c['lastMessageAt']?.toString() ?? c['updatedAt']?.toString() ?? '';
     String timeLabel = '';
-    if (time != null && time.isNotEmpty) {
+    if (timeRaw.isNotEmpty) {
       try {
-        final dt = DateTime.parse(time).toLocal();
-        final now = DateTime.now();
-        final diff = now.difference(dt);
-        if (diff.inDays >= 2) {
-          timeLabel = '${diff.inDays} DAYS AGO';
-        } else if (diff.inDays == 1) {
-          timeLabel = 'YESTERDAY';
-        } else {
-          final hh = dt.hour.toString().padLeft(2, '0');
-          final mm = dt.minute.toString().padLeft(2, '0');
-          timeLabel = '$hh:$mm';
-        }
+        final dt = DateTime.parse(timeRaw).toLocal();
+        final diff = DateTime.now().difference(dt);
+        if (diff.inDays >= 2) timeLabel = '${diff.inDays}d';
+        else if (diff.inDays == 1) timeLabel = 'YESTERDAY';
+        else timeLabel = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
       } catch (_) {}
     }
-    
+
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, AppRoutes.chatDetail, arguments: {
-        'userId': (u['_id'] ?? u['userId'] ?? '').toString(),
-        'nickname': (u['nickname'] ?? 'Player').toString(),
-        'avatar': u['avatar']?.toString(),
-      }),
+      onTap: () {
+        if (isGroup) {
+          Navigator.pushNamed(context, AppRoutes.groupChat);
+        } else {
+          Navigator.pushNamed(context, AppRoutes.chatDetail,
+              arguments: {'userId': uid, 'nickname': n, 'avatar': avatar});
+        }
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Stack(
-              children: [
-                _safeAvatar(u['avatar']?.toString(), n, size: 52),
-                if (u['isActive'] == true)
-                  Positioned(
-                    right: 0, bottom: 0,
-                    child: Container(width: 13, height: 13, decoration: BoxDecoration(color: const Color(0xFF00FF87), shape: BoxShape.circle, border: Border.all(color: const Color(0xFF0A0E1A), width: 2))),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 12), 
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          n.toUpperCase(),
-                          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.4),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (timeLabel.isNotEmpty)
-                        Text(
-                          timeLabel,
-                          style: const TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.w600),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    lastMsg,
-                    style: TextStyle(
-                      color: isUnread ? const Color(0xFF65FF87) : Colors.white54,
-                      fontSize: 15,
-                      fontWeight: isUnread ? FontWeight.w700 : FontWeight.w400,
+            Stack(children: [
+              if (isGroup)
+                Container(
+                  width: 52, height: 52,
+                  decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF13172E)),
+                  child: const Center(child: Icon(Icons.group_rounded, color: Color(0xFF00FF87), size: 28)),
+                )
+              else
+                _safeAvatar(avatar, n, size: 52),
+              if (!isGroup && u['isActive'] == true)
+                Positioned(
+                  right: 0, bottom: 0,
+                  child: Container(
+                    width: 13, height: 13,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00FF87),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF0A0E1A), width: 2),
                     ),
+                  ),
+                ),
+            ]),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Expanded(
+                    child: Text(n.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
+                  ),
+                  if (timeLabel.isNotEmpty)
+                    Text(timeLabel, style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                ]),
+                const SizedBox(height: 2),
+                Text(lastMsg,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+                    style: TextStyle(
+                      color: isUnread ? const Color(0xFF65FF87) : Colors.white54,
+                      fontSize: 14,
+                      fontWeight: isUnread ? FontWeight.w700 : FontWeight.normal,
+                    )),
+              ]),
             ),
+            if (isUnread)
+              Container(
+                margin: const EdgeInsets.only(left: 8, top: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00FF87),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text('$unread', style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w900)),
+              ),
           ],
         ),
       ),
     );
   }
 
+  // ─────────────────────────────── Build ─────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final int cCount = _safeLen(_conversations);
-
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E1A),
-      body: Stack(
-        children: [
-          Consumer<ChatWebRTCService>(
-            builder: (_, s, __) {
-              final views = <Widget>[];
-              try {
-                s.roomRenderers.forEach((k, v) {
-                  if (v != null) views.add(SizedBox(width: 1, height: 1, child: RTCVideoView(v)));
-                });
-              } catch (_) {}
-              if (_safeLen(views) == 0) return const SizedBox.shrink();
-              return Positioned(
-                left: 0, top: 0, width: 2, height: 2,
-                child: Stack(
-                  children: views.map((v) => SizedBox(
-                    width: 2, height: 2,
-                    child: v,
-                  )).toList(),
-                ),
-              );
-            },
-          ),
-          SafeArea(
-            child: CustomScrollView(
-              physics: const ClampingScrollPhysics(),
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Messages',
-                          style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w900, letterSpacing: -0.4),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF39FF14),
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Consumer<ChatWebRTCService>(builder: (_, s, __) => s.mediaError != null 
-                    ? Container(margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Row(children: [const Icon(Icons.error_outline, color: Colors.redAccent, size: 20), const SizedBox(width: 10), Expanded(child: Text(s.mediaError!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)))])) 
-                    : const SizedBox.shrink()),
-                ),
-                if (_error != null) SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Text(_error!, style: const TextStyle(color: Colors.redAccent)))),
-                
-                const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.fromLTRB(20, 18, 20, 10), child: Text('VOICE ROOMS', style: TextStyle(color: Color(0xFFB5BBC7), fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 2.0)))),
-                SliverToBoxAdapter(
-                  child: SizedBox(height: 42, child: Consumer<ChatWebRTCService>(builder: (_, s, __) {
-                      final rooms = ['Global', 'Alpha', 'Bravo'];
-                      return ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 20), itemCount: 3, itemBuilder: (_, i) {
-                        final rId = rooms[i];
-                        final id = (rId == 'Alpha' ? 'TeamA' : (rId == 'Bravo' ? 'TeamB' : 'Global'));
-                        final active = s.currentVoiceRoomId == id;
-                        return GestureDetector(
-                          onTap: () => active ? s.leaveVoiceRoom() : s.joinVoiceRoom(id),
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 10),
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            decoration: BoxDecoration(
-                              color: active ? const Color(0xFF39FF14) : const Color(0xFF1B1E25),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Center(
-                              child: Text(
-                                rId.toUpperCase(),
-                                style: TextStyle(color: active ? Colors.black : Colors.white70, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.2),
-                              ),
-                            ),
-                          ),
-                        );
-                      });
-                  })),
-                ),
-                
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, AppRoutes.groupChat),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
+      body: SafeArea(
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // Header
+            const SliverPadding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Messages',
+                        style: TextStyle(color: Colors.white, fontSize: 40,
+                            fontWeight: FontWeight.w900, letterSpacing: -0.4)),
+                    SizedBox(height: 8),
+                    SizedBox(
+                      width: 40, height: 4,
+                      child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1A1C23),
-                          borderRadius: BorderRadius.circular(12),
+                          color: Color(0xFF39FF14),
+                          borderRadius: BorderRadius.all(Radius.circular(99)),
                         ),
-                        child: Row(children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF11151D),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.hub_rounded, color: Color(0xFF65FF87), size: 22),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Media / mic error from WebRTC service
+            SliverToBoxAdapter(
+              child: Consumer<ChatWebRTCService>(builder: (_, s, __) {
+                if (s.mediaError == null) return const SizedBox.shrink();
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.error_outline, color: Colors.redAccent, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(s.mediaError!, style: const TextStyle(color: Colors.redAccent, fontSize: 12))),
+                  ]),
+                );
+              }),
+            ),
+
+            // Error banner
+            if (_error != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                ),
+              ),
+
+            // ── Online Users ─────────────────────────────────────
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
+                child: Text('ONLINE FRIENDS',
+                    style: TextStyle(color: Color(0xFFB5BBC7), fontSize: 12,
+                        fontWeight: FontWeight.w900, letterSpacing: 2.0)),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 100,
+                child: _isLoading
+                    ? const Center(child: SizedBox(width: 20, height: 20,
+                        child: CircularProgressIndicator(color: Color(0xFF00FF87), strokeWidth: 2)))
+                    : _players.isEmpty
+                        ? const Center(
+                            child: Text('No friends online',
+                                style: TextStyle(color: Colors.white24, fontSize: 13)))
+                        : ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: _players.length,
+                            itemBuilder: (_, i) => _buildOnlinePlayer(_players[i]),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Groups & Rooms',
-                                  style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900)),
-                              const SizedBox(height: 2),
-                              Text('Chat with multiple friends at once',
-                                  style: TextStyle(color: Colors.white70, fontSize: 15)),
-                            ],
-                          )),
-                          const Icon(Icons.groups_rounded, color: Color(0xFF2A3A2A), size: 26),
+              ),
+            ),
+
+            // ── Voice Rooms ──────────────────────────────────────
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
+                child: Text('VOICE ROOMS',
+                    style: TextStyle(color: Color(0xFFB5BBC7), fontSize: 12,
+                        fontWeight: FontWeight.w900, letterSpacing: 2.0)),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 42,
+                child: Consumer<ChatWebRTCService>(builder: (_, s, __) {
+                  const rooms = [('Global', 'Global'), ('Alpha', 'TeamA'), ('Bravo', 'TeamB')];
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: rooms.length,
+                    itemBuilder: (_, i) {
+                      final (label, id) = rooms[i];
+                      final active = s.currentVoiceRoomId == id;
+                      return GestureDetector(
+                        onTap: () => active ? s.leaveVoiceRoom() : s.joinVoiceRoom(id),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          decoration: BoxDecoration(
+                            color: active ? const Color(0xFF39FF14) : const Color(0xFF1B1E25),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: Text(label.toUpperCase(),
+                                style: TextStyle(
+                                  color: active ? Colors.black : Colors.white70,
+                                  fontWeight: FontWeight.w900, fontSize: 12)),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }),
+              ),
+            ),
+
+            // ── Groups ───────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: GestureDetector(
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.groupChat),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1C23),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF11151D),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.hub_rounded, color: Color(0xFF65FF87), size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          const Text('Groups & Rooms',
+                              style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 2),
+                          Text('Chat with multiple friends at once',
+                              style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13)),
                         ]),
                       ),
-                    ),
-                  ),
-                ),
-
-                const SliverPadding(
-                  padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
-                  sliver: SliverToBoxAdapter(child: Text('RECENT CHATS', style: TextStyle(color: Color(0xFFB5BBC7), fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 2.0))),
-                ),
-                
-                if (_isLoading == true)
-                  const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator(color: Color(0xFF00FF87))))
-                else if (cCount == 0)
-                  const SliverFillRemaining(hasScrollBody: false, child: Center(child: Text('Start a conversation above!', style: TextStyle(color: Colors.white24, fontSize: 16))))
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, i) {
-                          try { return _buildRecentChat(_conversations[i], context); } catch (_) { return const SizedBox.shrink(); }
-                        },
-                        childCount: cCount,
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline, color: Color(0xFF00FF87), size: 28),
+                        onPressed: _createGroupDialog,
                       ),
-                    ),
+                      const Icon(Icons.groups_rounded, color: Colors.white10, size: 24),
+                    ]),
                   ),
-              ],
-            ),
-          ),
-          Consumer<ChatWebRTCService>(builder: (_, s, __) => s.currentVoiceRoomId == null ? const SizedBox.shrink() : Positioned(
-            bottom: 30, left: 20, right: 20,
-            child: Container(
-              padding: const EdgeInsets.all(16), 
-              decoration: BoxDecoration(
-                color: const Color(0xFF12141C).withOpacity(0.98), 
-                borderRadius: BorderRadius.circular(28), 
-                border: Border.all(color: const Color(0xFFA855F7).withOpacity(0.3), width: 1.5), 
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 25, spreadRadius: 5)],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48, height: 48,
-                    decoration: BoxDecoration(color: const Color(0xFFA855F7).withOpacity(0.1), shape: BoxShape.circle),
-                    child: const Icon(Icons.multitrack_audio_rounded, color: Color(0xFFA855F7)),
-                  ),
-                  const SizedBox(width: 14), 
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start, 
-                      mainAxisSize: MainAxisSize.min, 
-                      children: [
-                        const Text('CONNECTED VOICE', style: TextStyle(color: Color(0xFFA855F7), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.0)), 
-                        const SizedBox(height: 2),
-                        Text(s.currentVoiceRoomId!.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => s.toggleMute(), 
-                    icon: Icon(s.isMuted ? Icons.mic_off_rounded : Icons.mic_rounded, color: s.isMuted ? Colors.redAccent : Colors.white),
-                    style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.05)),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: () => s.leaveVoiceRoom(), 
-                    icon: const Icon(Icons.call_end_rounded, color: Colors.white),
-                    style: IconButton.styleFrom(backgroundColor: Colors.redAccent),
-                  ),
-                ],
+                ),
               ),
             ),
-          )),
-        ],
+
+            // ── Recent Chats ─────────────────────────────────────
+            const SliverPadding(
+              padding: EdgeInsets.fromLTRB(20, 22, 20, 12),
+              sliver: SliverToBoxAdapter(
+                child: Text('RECENT CHATS',
+                    style: TextStyle(color: Color(0xFFB5BBC7), fontSize: 12,
+                        fontWeight: FontWeight.w900, letterSpacing: 2.0)),
+              ),
+            ),
+
+            if (_isLoading)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: CircularProgressIndicator(color: Color(0xFF00FF87))),
+              )
+            else if (_conversations.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Text('Start a conversation above!',
+                      style: TextStyle(color: Colors.white24, fontSize: 16)),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (_, i) {
+                      try {
+                        return _buildRecentChat(_conversations[i]);
+                      } catch (e) {
+                        debugPrint('Chat tile error: $e');
+                        return const SizedBox.shrink();
+                      }
+                    },
+                    childCount: _conversations.length,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
+
+      // Active voice room banner
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Consumer<ChatWebRTCService>(builder: (_, s, __) {
+        if (s.currentVoiceRoomId == null) return const SizedBox.shrink();
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF12141C),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFA855F7).withOpacity(0.3)),
+          ),
+          child: Row(children: [
+            const Icon(Icons.mic_rounded, color: Color(0xFFA855F7)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('CONNECTED VOICE', style: TextStyle(color: Color(0xFFA855F7), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                Text(s.currentVoiceRoomId!.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+              ]),
+            ),
+            IconButton(
+              onPressed: s.toggleMute,
+              icon: Icon(s.isMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
+                  color: s.isMuted ? Colors.redAccent : Colors.white),
+              style: IconButton.styleFrom(backgroundColor: Colors.white12),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              onPressed: s.leaveVoiceRoom,
+              icon: const Icon(Icons.call_end_rounded, color: Colors.white),
+              style: IconButton.styleFrom(backgroundColor: Colors.redAccent),
+            ),
+          ]),
+        );
+      }),
     );
   }
 }
