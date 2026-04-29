@@ -1,0 +1,39 @@
+{
+    "project_info": {
+        "project_number": "114048184741",
+        "project_id": "arena-chain-7ab1f",
+        "storage_bucket": "arena-chain-7ab1f.firebasestorage.app"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:114048184741:android:bcd465e0eedd2cb976384c",
+                "android_client_info": {
+                    "package_name": "com.example.arena_chain_flutter"
+                }
+            },
+            "oauth_client": [
+                {
+                    "client_id": "114048184741-vavvpvduv2a9lmtql6ak0r23tbvj4lfq.apps.googleusercontent.com",
+                    "client_type": 3
+                }
+            ],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyBuBeHgOuNqMcRkuhihX4QWhQYhtSFakM4"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": [
+                        {
+                            "client_id": "114048184741-vavvpvduv2a9lmtql6ak0r23tbvj4lfq.apps.googleusercontent.com",
+                            "client_type": 3
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}
