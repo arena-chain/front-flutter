@@ -12,7 +12,8 @@ import 'package:arena_chain_flutter/screens/leagues/player_leagues_screen.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
 import 'package:arena_chain_flutter/screens/player/feature_news/viewmodel/news_viewmodel.dart';
 import 'package:arena_chain_flutter/screens/player/feature_rank/viewmodel/rank_viewmodel.dart';
-import 'package:arena_chain_flutter/core/models/rank_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/linked_accounts_viewmodel.dart';
+import 'package:arena_chain_flutter/core/models/linked_accounts/linked_game_account.dart';
 import 'package:arena_chain_flutter/core/models/news_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_viewmodel.dart';
 import 'package:arena_chain_flutter/navigation.dart';
@@ -60,16 +61,24 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     super.initState();
     _quickCardController = PageController();
     _loadLivePreview();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final rankVm = context.read<RankViewModel>();
+      final linkedVm = context.read<LinkedAccountsViewModel>();
+      final mmVm = context.read<MatchmakingViewModel>();
+
       context.read<NewsViewModel>().fetchNews();
-      context.read<RankViewModel>().fetchMyRanks();
       context.read<LevelViewModel>().fetchMyLevel();
 
       _trainingApi = TrainingApiService(
         getToken: () => _tokenStorage.getAccessToken(),
       );
 
-      _matchmakingVm = context.read<MatchmakingViewModel>();
+      await rankVm.fetchMyRanks();
+      if (!mounted) return;
+      await linkedVm.refresh(platformRanks: rankVm.ranks);
+
+      _matchmakingVm = mmVm;
       _matchmakingVm!.addListener(_onMatchmakingChanged);
       _onMatchmakingChanged();
     });
@@ -605,86 +614,112 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
+  Future<void> _refreshLinkedAccounts(BuildContext context) async {
+    await context.read<LinkedAccountsViewModel>().refresh(
+          platformRanks: context.read<RankViewModel>().ranks,
+        );
+  }
+
   Widget _buildQuickActions() {
-    return Consumer<RankViewModel>(
-      builder: (context, rankVM, child) {
-        final primary = rankVM.primaryRank;
+    return Consumer<LinkedAccountsViewModel>(
+      builder: (context, linkedVM, child) {
         final playerName =
             context.read<AuthViewModel>().currentUser?.nickname.toUpperCase() ??
-            'COMMANDER_7';
-        final kdLine = '2.41';
-        final winLine = _winRateLabel(primary);
-        final rankLabel = _primaryTierLabel(primary);
+                'COMMANDER_7';
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: _buildPuzzleQuickActions(
-            playerName: playerName,
-            rankLabel: rankLabel,
-            kdLine: kdLine,
-            winRateLine: winLine,
-            onMatchmakingTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Connect Riot account'),
-                  duration: Duration(milliseconds: 900),
-                ),
-              );
-              Navigator.pushNamed(context, AppRoutes.myAccount);
-            },
-            onRankedTap: () =>
-                Navigator.pushNamed(context, AppRoutes.matchmaking),
+            context: context,
+            accounts: linkedVM.accounts,
+            linkedVm: linkedVM,
+            fallbackName: playerName,
           ),
         );
       },
     );
   }
 
-  String _winRateLabel(Rank? primaryRank) {
-    if (primaryRank == null) return '--';
-    final wins = primaryRank.wins;
-    final losses = primaryRank.losses;
-    final total = wins + losses;
-    if (total == 0) return '--';
-    return '${((wins / total) * 100).round()}%';
-  }
-
-  String _primaryTierLabel(Rank? primaryRank) {
-    final tier = primaryRank?.tier;
-    if (tier == null || tier.isEmpty) return 'ELITE TIER III';
-    return tier.toUpperCase();
+  Widget _gameCornerBadge(LinkedGameId id) {
+    String label;
+    List<Color> gradient;
+    switch (id) {
+      case LinkedGameId.lol:
+        label = 'LoL';
+        gradient = const [Color(0xFF0A4D2E), Color(0xFF39FF14)];
+        break;
+      case LinkedGameId.valorant:
+        label = 'VAL';
+        gradient = const [Color(0xFF4A0E2E), Color(0xFFFF4D8D)];
+        break;
+      case LinkedGameId.cs2:
+        label = 'CS2';
+        gradient = const [Color(0xFF2A2A1A), Color(0xFFFFA000)];
+        break;
+      case LinkedGameId.dota2:
+        label = 'DOTA';
+        gradient = const [Color(0xFF1A0A2E), Color(0xFFB84DFF)];
+        break;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        gradient: LinearGradient(colors: gradient),
+        border: Border.all(color: _neon.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.w900,
+          fontSize: 11,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
   }
 
   Widget _buildPuzzleQuickActions({
-    required String playerName,
-    required String rankLabel,
-    required String kdLine,
-    required String winRateLine,
-    required VoidCallback onMatchmakingTap,
-    required VoidCallback onRankedTap,
+    required BuildContext context,
+    required List<LinkedGameAccount> accounts,
+    required LinkedAccountsViewModel linkedVm,
+    required String fallbackName,
   }) {
-    final displayWinRate = winRateLine == '--' ? '68%' : winRateLine;
-    final quickProfiles = <Map<String, dynamic>>[
-      {
-        'name': playerName,
-        'kd': kdLine,
-        'win': displayWinRate,
-        'route': AppRoutes.myAccount,
-      },
-      {
-        'name': 'PHANTOM_09',
-        'kd': '1.96',
-        'win': '61%',
-        'route': AppRoutes.matchmaking,
-      },
-      {
-        'name': 'ZER0SHIFT',
-        'kd': '3.03',
-        'win': '74%',
-        'route': AppRoutes.playerProfile,
-      },
-    ];
-    final totalPages = quickProfiles.length + 1; // last page for adding account
+    final totalPages = accounts.length + 1;
+    final rv = linkedVm.riotVerified;
+    final sv = linkedVm.steamVerified;
+    late final String terminalTitle;
+    late final String terminalSubtitle;
+    late final IconData terminalIcon;
+    VoidCallback? terminalTap;
+    var terminalDisabled = false;
+    if (!rv) {
+      terminalTitle = 'LINK RIOT ACCOUNT';
+      terminalSubtitle = 'LoL & Valorant cards';
+      terminalIcon = Icons.link_rounded;
+      terminalTap = () {
+        Navigator.pushNamed(context, AppRoutes.myAccount).then((_) {
+          if (context.mounted) _refreshLinkedAccounts(context);
+        });
+      };
+    } else if (!sv) {
+      terminalTitle = 'LINK STEAM ACCOUNT';
+      terminalSubtitle = 'CS2 & Dota 2 cards';
+      terminalIcon = Icons.videogame_asset_rounded;
+      terminalTap = () {
+        Navigator.pushNamed(context, AppRoutes.linkSteam).then((_) {
+          if (context.mounted) _refreshLinkedAccounts(context);
+        });
+      };
+    } else {
+      terminalTitle = 'ALL ACCOUNTS LINKED';
+      terminalSubtitle = 'You are fully connected';
+      terminalIcon = Icons.check_circle_outline_rounded;
+      terminalDisabled = true;
+      terminalTap = null;
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final cardHeight = constraints.maxWidth < 430 ? 260.0 : 238.0;
@@ -708,7 +743,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
               ),
               child: Stack(
                 children: [
-                  if (_quickCardIndex < quickProfiles.length)
+                  if (_quickCardIndex < accounts.length)
                     Center(
                       child: SizedBox(
                         width: double.infinity,
@@ -730,45 +765,61 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                         });
                       },
                       itemBuilder: (context, index) {
-                        if (index == quickProfiles.length) {
+                        if (index == accounts.length) {
                           return Padding(
                             padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
                             child: Center(
                               child: GestureDetector(
-                                onTap: onMatchmakingTap,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 18,
-                                    vertical: 14,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: _neon.withValues(alpha: 0.78),
-                                      width: 1.2,
+                                onTap: terminalDisabled ? null : terminalTap,
+                                child: Opacity(
+                                  opacity: terminalDisabled ? 0.45 : 1,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 18,
+                                      vertical: 14,
                                     ),
-                                    color: Colors.black.withValues(alpha: 0.35),
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.add_circle_outline_rounded,
-                                        color: _neon.withValues(alpha: 0.95),
-                                        size: 36,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: _neon.withValues(alpha: 0.78),
+                                        width: 1.2,
                                       ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Add another account',
-                                        style: TextStyle(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.88,
-                                          ),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
+                                      color: Colors.black.withValues(alpha: 0.35),
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          terminalIcon,
+                                          color: _neon.withValues(alpha: 0.95),
+                                          size: 36,
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          terminalTitle,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.88,
+                                            ),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          terminalSubtitle,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.45,
+                                            ),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
@@ -776,17 +827,22 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                           );
                         }
 
-                        final profile = quickProfiles[index];
-                        final route = profile['route'] as String;
-                        return GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () => Navigator.pushNamed(context, route),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
+                        final profile = accounts[index];
+                        final displayName = profile.displayName.isNotEmpty
+                            ? profile.displayName
+                            : fallbackName;
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  profile.statsRoute,
+                                ),
+                                child: Row(
                                   children: [
                                     Container(
                                       width: 38,
@@ -798,11 +854,28 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                                           width: 1.2,
                                         ),
                                       ),
-                                      child: Icon(
-                                        Icons.person_rounded,
-                                        size: 21,
-                                        color: _neon.withValues(alpha: 0.95),
-                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: profile.avatarUrl != null &&
+                                              profile.avatarUrl!.isNotEmpty
+                                          ? Image.network(
+                                              profile.avatarUrl!,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) =>
+                                                  Icon(
+                                                Icons.person_rounded,
+                                                size: 21,
+                                                color: _neon.withValues(
+                                                  alpha: 0.95,
+                                                ),
+                                              ),
+                                            )
+                                          : Icon(
+                                              Icons.person_rounded,
+                                              size: 21,
+                                              color: _neon.withValues(
+                                                alpha: 0.95,
+                                              ),
+                                            ),
                                     ),
                                     const SizedBox(width: 14),
                                     Expanded(
@@ -822,8 +895,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                                             ),
                                           ),
                                           Text(
-                                            profile['name'] as String? ??
-                                                playerName,
+                                            displayName,
                                             style: TextStyle(
                                               color: Colors.white.withValues(
                                                 alpha: 0.96,
@@ -837,69 +909,27 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                                         ],
                                       ),
                                     ),
-                                    Icon(
-                                      Icons.sports_esports_rounded,
-                                      color: _neon.withValues(alpha: 0.95),
-                                      size: 28,
-                                    ),
+                                    _gameCornerBadge(profile.gameId),
                                   ],
                                 ),
-                                const SizedBox(height: 10),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'KIL/DEATH_RATIO',
-                                              style: TextStyle(
-                                                color: Colors.white.withValues(
-                                                  alpha: 0.32,
-                                                ),
-                                                fontSize: 8.5,
-                                                fontWeight: FontWeight.w700,
-                                                letterSpacing: 0.6,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              profile['kd'] as String? ??
-                                                  kdLine,
-                                              style: TextStyle(
-                                                color: _neon.withValues(
-                                                  alpha: 0.96,
-                                                ),
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.w800,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Container(
-                                        width: 1,
-                                        height: 46,
-                                        color: Colors.white.withValues(
-                                          alpha: 0.18,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(
-                                            left: 18,
-                                          ),
+                              ),
+                              const SizedBox(height: 10),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
                                           child: Column(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                'WIN_PROBABILITY',
+                                                'KIL/DEATH_RATIO',
                                                 style: TextStyle(
                                                   color: Colors.white
                                                       .withValues(alpha: 0.32),
@@ -910,8 +940,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                                               ),
                                               const SizedBox(height: 6),
                                               Text(
-                                                profile['win'] as String? ??
-                                                    displayWinRate,
+                                                profile.primaryStat,
                                                 style: TextStyle(
                                                   color: _neon.withValues(
                                                     alpha: 0.96,
@@ -923,104 +952,164 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                                             ],
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Spacer(),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: SizedBox(
-                                    width: constraints.maxWidth * 0.58,
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      alignment: Alignment.centerRight,
-                                      child: Text(
-                                        'MATCHMAKING',
-                                        style: TextStyle(
+                                        Container(
+                                          width: 1,
+                                          height: 46,
                                           color: Colors.white.withValues(
-                                            alpha: 0.96,
+                                            alpha: 0.18,
                                           ),
-                                          fontSize: 40,
-                                          fontStyle: FontStyle.italic,
-                                          fontWeight: FontWeight.w500,
-                                          letterSpacing: 0.5,
                                         ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Text(
-                                    'Find a game quickly',
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.45,
-                                      ),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: GestureDetector(
-                                    onTap: () =>
-                                        Navigator.pushNamed(context, route),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 30,
-                                        vertical: 10,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _neon,
-                                        borderRadius: BorderRadius.circular(2),
-                                      ),
-                                      child: const Text(
-                                        'INITIALIZE  >',
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 11,
-                                          letterSpacing: 1.4,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Center(
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: List.generate(totalPages, (i) {
-                                      final active = i == _quickCardIndex;
-                                      return AnimatedContainer(
-                                        duration: const Duration(
-                                          milliseconds: 180,
-                                        ),
-                                        margin: const EdgeInsets.symmetric(
-                                          horizontal: 3,
-                                        ),
-                                        width: active ? 12 : 6,
-                                        height: 6,
-                                        decoration: BoxDecoration(
-                                          color: active
-                                              ? _neon.withValues(alpha: 0.9)
-                                              : Colors.white.withValues(
-                                                  alpha: 0.25,
+                                        Expanded(
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(
+                                              left: 18,
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'WIN_PROBABILITY',
+                                                  style: TextStyle(
+                                                    color: Colors.white
+                                                        .withValues(alpha: 0.32),
+                                                    fontSize: 8.5,
+                                                    fontWeight: FontWeight.w700,
+                                                    letterSpacing: 0.6,
+                                                  ),
                                                 ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  profile.secondaryStat,
+                                                  style: TextStyle(
+                                                    color: _neon.withValues(
+                                                      alpha: 0.96,
+                                                    ),
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ),
-                                      );
-                                    }),
+                                      ],
+                                    ),
+                                    if (linkedVm.isLoading)
+                                      Positioned.fill(
+                                        child: Container(
+                                          alignment: Alignment.center,
+                                          color: Colors.black.withValues(
+                                            alpha: 0.35,
+                                          ),
+                                          child: const SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: _neon,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              const Spacer(),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: SizedBox(
+                                  width: constraints.maxWidth * 0.58,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                      'MATCHMAKING',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.96,
+                                        ),
+                                        fontSize: 40,
+                                        fontStyle: FontStyle.italic,
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  'Find a game quickly',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(
+                                      alpha: 0.45,
+                                    ),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: GestureDetector(
+                                  onTap: () => Navigator.pushNamed(
+                                    context,
+                                    AppRoutes.matchmaking,
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 30,
+                                      vertical: 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _neon,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                    child: const Text(
+                                      'INITIALIZE  >',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 11,
+                                        letterSpacing: 1.4,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Center(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: List.generate(totalPages, (i) {
+                                    final active = i == _quickCardIndex;
+                                    return AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 180,
+                                      ),
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 3,
+                                      ),
+                                      width: active ? 12 : 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: active
+                                            ? _neon.withValues(alpha: 0.9)
+                                            : Colors.white.withValues(
+                                                alpha: 0.25,
+                                              ),
+                                        borderRadius: BorderRadius.circular(
+                                          8,
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       },

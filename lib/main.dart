@@ -5,6 +5,7 @@ import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmode
 import 'package:arena_chain_flutter/screens/player/feature_leagues/viewmodel/league_viewmodel.dart';
 import 'package:arena_chain_flutter/screens/player/feature_news/viewmodel/news_viewmodel.dart';
 import 'package:arena_chain_flutter/screens/player/feature_rank/viewmodel/rank_viewmodel.dart';
+import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/linked_accounts_viewmodel.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_viewmodel.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/auth_state.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/view_model/friends_view_model.dart';
@@ -56,6 +57,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LevelViewModel()),
         ChangeNotifierProvider(create: (_) => NewsViewModel()),
         ChangeNotifierProvider(create: (_) => RankViewModel()),
+        ChangeNotifierProvider(create: (_) => LinkedAccountsViewModel()),
         ChangeNotifierProvider(create: (_) => LeagueViewModel()),
         ChangeNotifierProvider(create: (_) => HighlightsFeedViewModel()),
         ChangeNotifierProvider(create: (_) => RiftService()),

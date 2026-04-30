@@ -6,6 +6,15 @@ class Rank {
   final int losses;
   final DateTime updatedAt;
 
+  static String _gameFromJson(dynamic raw) {
+    if (raw == null) return '';
+    if (raw is String) return raw;
+    if (raw is Map) {
+      return (raw['title'] ?? raw['name'] ?? raw['_id'] ?? '').toString();
+    }
+    return raw.toString();
+  }
+
   Rank({
     required this.game,
     required this.elo,
@@ -17,7 +26,7 @@ class Rank {
 
   factory Rank.fromJson(Map<String, dynamic> json) {
     return Rank(
-      game: json['game'] ?? '',
+      game: _gameFromJson(json['game']),
       elo: json['elo'] ?? 0,
       tier: json['tier'] ?? 'Unranked',
       wins: json['wins'] ?? 0,

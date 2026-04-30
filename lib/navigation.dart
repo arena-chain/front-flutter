@@ -11,7 +11,6 @@ import 'package:arena_chain_flutter/screens/player/feature_profile/ui/settings_s
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/my_channel_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/subscriptions_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/my_account_screen.dart';
-import 'package:arena_chain_flutter/screens/player/feature_leagues/ui/leagues_list_screen.dart';
 import 'package:arena_chain_flutter/screens/leagues/player_leagues_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/ui/add_friend_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/create_tournament_screen.dart';
@@ -34,6 +33,11 @@ import 'package:arena_chain_flutter/screens/player/feature_live/ui/live_stream_s
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/scheduled_streams_screen.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/scouter_home_screen.dart';
 import 'package:arena_chain_flutter/features/lol_control/lol_control_pairing_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_game_stats/ui/lol_stats_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_game_stats/ui/valorant_stats_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_game_stats/ui/cs2_stats_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_game_stats/ui/dota2_stats_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_game_stats/ui/link_steam_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -72,6 +76,12 @@ class AppRoutes {
   static const String scheduledStreams = '/player/scheduled-streams';
   static const String scouterHome = '/scouter/home';
   static const String lolControl = '/lol-control';
+
+  static const String lolStats = '/player/games/lol';
+  static const String valorantStats = '/player/games/valorant';
+  static const String cs2Stats = '/player/games/cs2';
+  static const String dota2Stats = '/player/games/dota2';
+  static const String linkSteam = '/player/link-steam';
 
   static Map<String, WidgetBuilder> get routes => {
         splash: (context) => const SplashScreen(),
@@ -136,5 +146,10 @@ class AppRoutes {
         scheduledStreams: (context) => const ScheduledStreamsScreen(),
         scouterHome: (context) => const ScouterHomeScreen(),
         lolControl: (context) => const LolControlPairingScreen(),
+        lolStats: (context) => const LolStatsScreen(),
+        valorantStats: (context) => const ValorantStatsScreen(),
+        cs2Stats: (context) => const Cs2StatsScreen(),
+        dota2Stats: (context) => const Dota2StatsScreen(),
+        linkSteam: (context) => const LinkSteamScreen(),
       };
 }

@@ -206,6 +206,35 @@ class RiotApi {
     }
   }
 
+  Future<Map<String, dynamic>> getMatchHistory({
+    required String token,
+    String game = 'lol',
+    int start = 0,
+    int count = 10,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/riot-api/match-history').replace(
+      queryParameters: <String, String>{
+        'game': game,
+        'start': '$start',
+        'count': '$count',
+      },
+    );
+    final response = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    if (response.statusCode == 403) {
+      return {'linked': true, 'matches': <dynamic>[], 'game': game, 'total': 0};
+    }
+    throw Exception(_extractErrorMessage(response));
+  }
+
   Future<Map<String, dynamic>> getLinkStatus({
     required String token,
   }) async {
