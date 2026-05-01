@@ -57,11 +57,26 @@ class AuthRepository {
   /// Throws [Exception] if login fails
   Future<AuthResponse> login(LoginDto dto) async {
     try {
+      // Prevent stale cached role/user from previous session influencing routing.
+      await _tokenStorage.clearUser();
       final response = await _authApi.login(dto);
-      if (response.user != null) {
-        await _tokenStorage.saveUser(response.user!.toJson());
+
+      // Always prefer backend profile as source of truth for role-based routing.
+      User? resolvedUser = await getProfile();
+      resolvedUser ??= response.user;
+
+      if (resolvedUser != null) {
+        await _tokenStorage.saveUser(resolvedUser.toJson());
+      } else {
+        await _tokenStorage.clearUser();
       }
-      return response;
+
+      return AuthResponse(
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+        message: response.message,
+        user: resolvedUser,
+      );
     } catch (e) {
       throw Exception('Login failed: ${e.toString()}');
     }
@@ -131,6 +146,17 @@ class AuthRepository {
       }
       return null;
     } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get current user from backend profile endpoint and cache it locally.
+  Future<User?> getProfile() async {
+    try {
+      final user = await _authApi.getProfile();
+      await _tokenStorage.saveUser(user.toJson());
+      return user;
+    } catch (_) {
       return null;
     }
   }
@@ -222,11 +248,24 @@ class AuthRepository {
   /// Login with Google
   Future<AuthResponse> googleLogin(String idToken) async {
     try {
+      await _tokenStorage.clearUser();
       final response = await _authApi.googleLogin(idToken);
-      if (response.user != null) {
-        await _tokenStorage.saveUser(response.user!.toJson());
+
+      User? resolvedUser = await getProfile();
+      resolvedUser ??= response.user;
+
+      if (resolvedUser != null) {
+        await _tokenStorage.saveUser(resolvedUser.toJson());
+      } else {
+        await _tokenStorage.clearUser();
       }
-      return response;
+
+      return AuthResponse(
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+        message: response.message,
+        user: resolvedUser,
+      );
     } catch (e) {
       throw Exception('Google login failed: ${e.toString()}');
     }

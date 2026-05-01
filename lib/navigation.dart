@@ -35,6 +35,7 @@ import 'package:arena_chain_flutter/screens/player/feature_live/ui/scheduled_str
 import 'package:arena_chain_flutter/screens/scouter/ui/scouter_home_screen.dart';
 import 'package:arena_chain_flutter/features/lol_control/lol_control_pairing_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_marketplace/ui/marketplace_screen.dart';
+import 'package:arena_chain_flutter/screens/check_in_agent/ui/check_in_agent_home_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -72,6 +73,7 @@ class AppRoutes {
   static const String liveStream = '/player/live-stream';
   static const String scheduledStreams = '/player/scheduled-streams';
   static const String scouterHome = '/scouter/home';
+  static const String checkInAgentHome = '/check-in-agent/home';
   static const String lolControl = '/lol-control';
   static const String marketplace = '/player/marketplace';
 
@@ -137,6 +139,7 @@ class AppRoutes {
         },
         scheduledStreams: (context) => const ScheduledStreamsScreen(),
         scouterHome: (context) => const ScouterHomeScreen(),
+        checkInAgentHome: (context) => const CheckInAgentHomeScreen(),
         lolControl: (context) => const LolControlPairingScreen(),
         marketplace: (context) => const MarketplaceScreen(),
       };

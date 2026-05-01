@@ -9,6 +9,7 @@ import 'package:arena_chain_flutter/core/dto/auth/reset_password_dto.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/auth_state.dart';
 import 'package:arena_chain_flutter/core/models/feature_auth/user_model.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 
 /// ViewModel for managing authentication state and operations
 /// Uses ChangeNotifier for state management with provider
@@ -42,6 +43,32 @@ class AuthViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   AuthState get authState => _authState;
   String? get token => _token;
+  String get effectiveRole {
+    final userRole = (_currentUser?.role ?? '').trim();
+    if (userRole.isNotEmpty && userRole != 'unknown') {
+      return userRole;
+    }
+    return _roleFromToken(_token);
+  }
+
+  String _roleFromToken(String? token) {
+    if (token == null || token.trim().isEmpty) return '';
+    try {
+      final claims = JwtDecoder.decode(token);
+      final dynamic roleClaim = claims['role'];
+      if (roleClaim is String && roleClaim.trim().isNotEmpty) {
+        return roleClaim.trim();
+      }
+      final dynamic rolesClaim = claims['roles'];
+      if (rolesClaim is List && rolesClaim.isNotEmpty) {
+        final first = rolesClaim.first;
+        if (first is String && first.trim().isNotEmpty) {
+          return first.trim();
+        }
+      }
+    } catch (_) {}
+    return '';
+  }
 
   Future<bool> registerPlayer({
     required String email,
@@ -93,7 +120,12 @@ class AuthViewModel extends ChangeNotifier {
 
       _currentUser = response.user;
       _token = response.accessToken;
-      _authState = AuthState.authenticated;
+      _authState = _currentUser != null
+          ? AuthState.authenticated
+          : AuthState.unauthenticated;
+      if (_currentUser == null) {
+        _setError('Login succeeded but profile could not be loaded. Please retry.');
+      }
 
       notifyListeners();
     } catch (e) {
@@ -325,7 +357,12 @@ class AuthViewModel extends ChangeNotifier {
       final response = await _authRepository.googleLogin(tokenToUse);
 
       _currentUser = response.user;
-      _authState = AuthState.authenticated;
+      _authState = _currentUser != null
+          ? AuthState.authenticated
+          : AuthState.unauthenticated;
+      if (_currentUser == null) {
+        _setError('Google login succeeded but profile could not be loaded. Please retry.');
+      }
 
       notifyListeners();
     } catch (e) {
@@ -349,7 +386,8 @@ class AuthViewModel extends ChangeNotifier {
       final isAuthenticated = await _authRepository.isAuthenticated();
 
       if (isAuthenticated) {
-        _currentUser = await _authRepository.getUser();
+        _currentUser = await _authRepository.getProfile();
+        _currentUser ??= await _authRepository.getUser();
         _token = await _authRepository.getAccessToken();
         if (_currentUser != null) {
           _authState = AuthState.authenticated;
