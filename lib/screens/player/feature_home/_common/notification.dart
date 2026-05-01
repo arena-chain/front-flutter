@@ -131,7 +131,7 @@ class _NotificationScreenState extends State<NotificationScreen>
     required bool isUnread,
   }) {
     final double unreadBorderAlpha = isUnread
-        ? ((0.28 + 0.18 * breathe).clamp(0.0, 1.0) as double)
+        ? (0.28 + 0.18 * breathe).clamp(0.0, 1.0).toDouble()
         : 0;
     final glowAlpha = isUnread ? 0.05 + 0.06 * breathe : 0.0;
 

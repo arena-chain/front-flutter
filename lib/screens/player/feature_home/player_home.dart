@@ -23,6 +23,7 @@ import 'package:arena_chain_flutter/core/api/training_api_service.dart';
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/arena_chain_animated_title.dart';
+import 'package:arena_chain_flutter/screens/player/feature_home/_common/game_poster_card.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/side_drawer.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_dialogs.dart';
@@ -39,7 +40,6 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   static const Color _neon = Color(0xFF39FF14);
 
   int _currentIndex = 0;
-  _QuickActionSide? _activeQuickActionSide;
   late final PageController _quickCardController;
   int _quickCardIndex = 0;
 
@@ -243,42 +243,6 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     });
   }
 
-  bool _isLeftDiagonalHalf(Offset localPosition, Size size) {
-    if (size.width <= 0 || size.height <= 0) return true;
-    final yAtLeft = size.height * 0.62;
-    final yAtRight = size.height * 0.36;
-    final yOnDivider =
-        yAtLeft + ((yAtRight - yAtLeft) * (localPosition.dx / size.width));
-    return localPosition.dy <= yOnDivider;
-  }
-
-  void _handleQuickActionTap({
-    required TapDownDetails details,
-    required BoxConstraints constraints,
-    required double cardHeight,
-    required VoidCallback onLeftTap,
-    required VoidCallback onRightTap,
-  }) {
-    final size = Size(constraints.maxWidth, cardHeight);
-    final isLeft = _isLeftDiagonalHalf(details.localPosition, size);
-    setState(() {
-      _activeQuickActionSide = isLeft
-          ? _QuickActionSide.left
-          : _QuickActionSide.right;
-    });
-    Future.delayed(const Duration(milliseconds: 180), () {
-      if (!mounted) return;
-      setState(() {
-        _activeQuickActionSide = null;
-      });
-    });
-    if (isLeft) {
-      onLeftTap();
-    } else {
-      onRightTap();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_currentIndex > 4) {
@@ -412,6 +376,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildNexusFeed() {
     return Consumer<NewsViewModel>(
       builder: (context, newsVM, child) {
@@ -616,67 +581,22 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
 
   Future<void> _refreshLinkedAccounts(BuildContext context) async {
     await context.read<LinkedAccountsViewModel>().refresh(
-          platformRanks: context.read<RankViewModel>().ranks,
-        );
+      platformRanks: context.read<RankViewModel>().ranks,
+    );
   }
 
   Widget _buildQuickActions() {
     return Consumer<LinkedAccountsViewModel>(
       builder: (context, linkedVM, child) {
-        final playerName =
-            context.read<AuthViewModel>().currentUser?.nickname.toUpperCase() ??
-                'COMMANDER_7';
-
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: _buildPuzzleQuickActions(
             context: context,
             accounts: linkedVM.accounts,
             linkedVm: linkedVM,
-            fallbackName: playerName,
           ),
         );
       },
-    );
-  }
-
-  Widget _gameCornerBadge(LinkedGameId id) {
-    String label;
-    List<Color> gradient;
-    switch (id) {
-      case LinkedGameId.lol:
-        label = 'LoL';
-        gradient = const [Color(0xFF0A4D2E), Color(0xFF39FF14)];
-        break;
-      case LinkedGameId.valorant:
-        label = 'VAL';
-        gradient = const [Color(0xFF4A0E2E), Color(0xFFFF4D8D)];
-        break;
-      case LinkedGameId.cs2:
-        label = 'CS2';
-        gradient = const [Color(0xFF2A2A1A), Color(0xFFFFA000)];
-        break;
-      case LinkedGameId.dota2:
-        label = 'DOTA';
-        gradient = const [Color(0xFF1A0A2E), Color(0xFFB84DFF)];
-        break;
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        gradient: LinearGradient(colors: gradient),
-        border: Border.all(color: _neon.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.black,
-          fontWeight: FontWeight.w900,
-          fontSize: 11,
-          letterSpacing: 0.6,
-        ),
-      ),
     );
   }
 
@@ -684,7 +604,6 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     required BuildContext context,
     required List<LinkedGameAccount> accounts,
     required LinkedAccountsViewModel linkedVm,
-    required String fallbackName,
   }) {
     final totalPages = accounts.length + 1;
     final rv = linkedVm.riotVerified;
@@ -743,18 +662,6 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
               ),
               child: Stack(
                 children: [
-                  if (_quickCardIndex < accounts.length)
-                    Center(
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: double.infinity,
-                        child: CustomPaint(
-                          painter: _DiagonalDividerPainter(
-                            color: _neon.withValues(alpha: 0.82),
-                          ),
-                        ),
-                      ),
-                    ),
                   Positioned.fill(
                     child: PageView.builder(
                       controller: _quickCardController,
@@ -784,7 +691,9 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                                         color: _neon.withValues(alpha: 0.78),
                                         width: 1.2,
                                       ),
-                                      color: Colors.black.withValues(alpha: 0.35),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.35,
+                                      ),
                                     ),
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
@@ -828,289 +737,17 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                         }
 
                         final profile = accounts[index];
-                        final displayName = profile.displayName.isNotEmpty
-                            ? profile.displayName
-                            : fallbackName;
-                        return Padding(
-                          padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () => Navigator.pushNamed(
-                                  context,
-                                  profile.statsRoute,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 38,
-                                      height: 38,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: _neon.withValues(alpha: 0.8),
-                                          width: 1.2,
-                                        ),
-                                      ),
-                                      clipBehavior: Clip.antiAlias,
-                                      child: profile.avatarUrl != null &&
-                                              profile.avatarUrl!.isNotEmpty
-                                          ? Image.network(
-                                              profile.avatarUrl!,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) =>
-                                                  Icon(
-                                                Icons.person_rounded,
-                                                size: 21,
-                                                color: _neon.withValues(
-                                                  alpha: 0.95,
-                                                ),
-                                              ),
-                                            )
-                                          : Icon(
-                                              Icons.person_rounded,
-                                              size: 21,
-                                              color: _neon.withValues(
-                                                alpha: 0.95,
-                                              ),
-                                            ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'OPERATOR_ID',
-                                            style: TextStyle(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.45,
-                                              ),
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w700,
-                                              letterSpacing: 1.1,
-                                            ),
-                                          ),
-                                          Text(
-                                            displayName,
-                                            style: TextStyle(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.96,
-                                              ),
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    _gameCornerBadge(profile.gameId),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'KIL/DEATH_RATIO',
-                                                style: TextStyle(
-                                                  color: Colors.white
-                                                      .withValues(alpha: 0.32),
-                                                  fontSize: 8.5,
-                                                  fontWeight: FontWeight.w700,
-                                                  letterSpacing: 0.6,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 6),
-                                              Text(
-                                                profile.primaryStat,
-                                                style: TextStyle(
-                                                  color: _neon.withValues(
-                                                    alpha: 0.96,
-                                                  ),
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.w800,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Container(
-                                          width: 1,
-                                          height: 46,
-                                          color: Colors.white.withValues(
-                                            alpha: 0.18,
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Padding(
-                                            padding: const EdgeInsets.only(
-                                              left: 18,
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'WIN_PROBABILITY',
-                                                  style: TextStyle(
-                                                    color: Colors.white
-                                                        .withValues(alpha: 0.32),
-                                                    fontSize: 8.5,
-                                                    fontWeight: FontWeight.w700,
-                                                    letterSpacing: 0.6,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 6),
-                                                Text(
-                                                  profile.secondaryStat,
-                                                  style: TextStyle(
-                                                    color: _neon.withValues(
-                                                      alpha: 0.96,
-                                                    ),
-                                                    fontSize: 20,
-                                                    fontWeight: FontWeight.w800,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    if (linkedVm.isLoading)
-                                      Positioned.fill(
-                                        child: Container(
-                                          alignment: Alignment.center,
-                                          color: Colors.black.withValues(
-                                            alpha: 0.35,
-                                          ),
-                                          child: const SizedBox(
-                                            width: 22,
-                                            height: 22,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: _neon,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              const Spacer(),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: SizedBox(
-                                  width: constraints.maxWidth * 0.58,
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerRight,
-                                    child: Text(
-                                      'MATCHMAKING',
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.96,
-                                        ),
-                                        fontSize: 40,
-                                        fontStyle: FontStyle.italic,
-                                        fontWeight: FontWeight.w500,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  'Find a game quickly',
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(
-                                      alpha: 0.45,
-                                    ),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: GestureDetector(
-                                  onTap: () => Navigator.pushNamed(
-                                    context,
-                                    AppRoutes.matchmaking,
-                                  ),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 30,
-                                      vertical: 10,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _neon,
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                    child: const Text(
-                                      'INITIALIZE  >',
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 11,
-                                        letterSpacing: 1.4,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Center(
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: List.generate(totalPages, (i) {
-                                    final active = i == _quickCardIndex;
-                                    return AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 180,
-                                      ),
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 3,
-                                      ),
-                                      width: active ? 12 : 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: active
-                                            ? _neon.withValues(alpha: 0.9)
-                                            : Colors.white.withValues(
-                                                alpha: 0.25,
-                                              ),
-                                        borderRadius: BorderRadius.circular(
-                                          8,
-                                        ),
-                                      ),
-                                    );
-                                  }),
-                                ),
-                              ),
-                            ],
+                        return GamePosterCard(
+                          account: profile,
+                          totalPages: totalPages,
+                          activePage: _quickCardIndex,
+                          isLoading: linkedVm.isLoading,
+                          onPlayNow: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.matchmaking,
                           ),
+                          onOpenStats: () =>
+                              Navigator.pushNamed(context, profile.statsRoute),
                         );
                       },
                     ),
@@ -1319,63 +956,3 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   }
 }
 
-enum _QuickActionSide { left, right }
-
-class _DiagonalDividerPainter extends CustomPainter {
-  final Color color;
-
-  _DiagonalDividerPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1.6
-      ..style = PaintingStyle.stroke;
-
-    final start = Offset(0, size.height * 0.62);
-    final end = Offset(size.width, size.height * 0.36);
-    canvas.drawLine(start, end, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _DiagonalDividerPainter oldDelegate) {
-    return oldDelegate.color != color;
-  }
-}
-
-class _DiagonalSplitHighlightPainter extends CustomPainter {
-  final _QuickActionSide? side;
-  final Color color;
-
-  _DiagonalSplitHighlightPainter({required this.side, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (side == null) return;
-    final yAtLeft = size.height * 0.62;
-    final yAtRight = size.height * 0.36;
-    final path = Path();
-    if (side == _QuickActionSide.left) {
-      path
-        ..moveTo(0, 0)
-        ..lineTo(size.width, 0)
-        ..lineTo(size.width, yAtRight)
-        ..lineTo(0, yAtLeft)
-        ..close();
-    } else {
-      path
-        ..moveTo(0, yAtLeft)
-        ..lineTo(size.width, yAtRight)
-        ..lineTo(size.width, size.height)
-        ..lineTo(0, size.height)
-        ..close();
-    }
-    canvas.drawPath(path, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(covariant _DiagonalSplitHighlightPainter oldDelegate) {
-    return oldDelegate.side != side || oldDelegate.color != color;
-  }
-}
