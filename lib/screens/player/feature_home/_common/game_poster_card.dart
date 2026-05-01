@@ -107,14 +107,18 @@ class GamePosterCard extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         Positioned.fill(
-          child: Image.asset(
-            path,
-            fit: BoxFit.cover,
-            cacheWidth: 720,
-            errorBuilder: (context, error, stackTrace) {
-              debugPrint('[GamePosterCard] Failed to load $path: $error');
-              return _fallbackGradient(id);
-            },
+          child: Container(
+            color: Colors.black,
+            child: Image.asset(
+              path,
+              fit: BoxFit.contain,
+              alignment: Alignment.center,
+              cacheWidth: 720,
+              errorBuilder: (context, error, stackTrace) {
+                debugPrint('[GamePosterCard] Failed to load $path: $error');
+                return _fallbackGradient(id);
+              },
+            ),
           ),
         ),
         Positioned.fill(
@@ -138,37 +142,27 @@ class GamePosterCard extends StatelessWidget {
           ),
         ),
         Positioned(
-          left: 14,
-          bottom: 34,
+          right: 14,
+          bottom: 14,
           child: GestureDetector(
             onTap: onPlayNow,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: _kNeon, width: 1.6),
-                boxShadow: [
-                  BoxShadow(
-                    color: _kNeon.withValues(alpha: 0.45),
-                    blurRadius: 12,
-                    spreadRadius: 0.5,
-                  ),
-                ],
+                color: Colors.black.withValues(alpha: 0.55),
+                border: Border.all(
+                  color: _kNeon.withValues(alpha: 0.85),
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
+              child: const Text(
                 'PLAY NOW  >',
                 style: TextStyle(
-                  color: _kNeon,
+                  color: Colors.white,
                   fontWeight: FontWeight.w900,
-                  fontSize: 12,
-                  letterSpacing: 1.4,
-                  shadows: [
-                    Shadow(
-                      blurRadius: 6,
-                      color: Colors.black.withValues(alpha: 0.7),
-                    ),
-                  ],
+                  fontSize: 11,
+                  letterSpacing: 1.2,
                 ),
               ),
             ),
@@ -213,7 +207,7 @@ class GamePosterCard extends StatelessWidget {
             onTap: onOpenStats,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              constraints: const BoxConstraints(maxWidth: 200),
+              constraints: const BoxConstraints(maxWidth: 160),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.55),
                 border: Border.all(
@@ -238,7 +232,7 @@ class GamePosterCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.55),
-                            fontSize: 9,
+                            fontSize: 8,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 1.0,
                           ),
@@ -255,7 +249,7 @@ class GamePosterCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 13,
+                      fontSize: 11,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.6,
                     ),

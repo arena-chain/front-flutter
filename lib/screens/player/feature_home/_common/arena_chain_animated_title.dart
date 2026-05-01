@@ -1,35 +1,58 @@
 import 'package:flutter/material.dart';
 
-/// Center header wordmark: compact static neon type (no motion / chroma / bloom).
-class ArenaChainAnimatedTitle extends StatelessWidget {
-  const ArenaChainAnimatedTitle({
-    super.key,
-    this.fontSize = 17,
-  });
+/// Header logo: rotates a single full 360° turn once on first mount, then stops.
+class ArenaChainAnimatedTitle extends StatefulWidget {
+  const ArenaChainAnimatedTitle({super.key, this.size = 36});
 
-  final double fontSize;
+  final double size;
 
-  static const Color _neon = Color(0xFF39FF14);
-  static const String _label = 'Arena-Chain';
+  @override
+  State<ArenaChainAnimatedTitle> createState() =>
+      _ArenaChainAnimatedTitleState();
+}
+
+class _ArenaChainAnimatedTitleState extends State<ArenaChainAnimatedTitle>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _rotation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    );
+    _rotation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOutCubic,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      _label,
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: fontSize,
-        fontWeight: FontWeight.w800,
-        height: 1.05,
-        letterSpacing: 0.6,
-        color: _neon,
-        shadows: [
-          Shadow(
-            color: _neon.withValues(alpha: 0.22),
-            blurRadius: 6,
-            offset: const Offset(0, 1),
-          ),
-        ],
+    return RotationTransition(
+      turns: _rotation,
+      child: Image.asset(
+        'assets/images/logo_arena.png',
+        height: widget.size,
+        width: widget.size,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint(
+            '[ArenaChainAnimatedTitle] Failed to load logo_arena.png: $error',
+          );
+          return SizedBox(width: widget.size, height: widget.size);
+        },
       ),
     );
   }

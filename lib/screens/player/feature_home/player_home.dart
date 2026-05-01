@@ -647,19 +647,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(14),
             child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF0A0A0A),
-                border: Border.all(
-                  color: _neon.withValues(alpha: 0.42),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: _neon.withValues(alpha: 0.12),
-                    blurRadius: 16,
-                  ),
-                ],
-              ),
+              decoration: const BoxDecoration(color: Color(0xFF0A0A0A)),
               child: Stack(
                 children: [
                   Positioned.fill(
@@ -918,23 +906,18 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 9,
-                    ),
-                    decoration: BoxDecoration(
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Icon(
+                      Icons.gps_fixed,
                       color: _neon,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'OPEN',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 11,
-                        letterSpacing: 0.8,
-                      ),
+                      size: 32,
+                      shadows: [
+                        Shadow(
+                          color: _neon.withValues(alpha: 0.5),
+                          blurRadius: 8,
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -955,4 +938,3 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     return 'Just now';
   }
 }
-
