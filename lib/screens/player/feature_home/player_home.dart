@@ -639,113 +639,117 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       terminalTap = null;
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cardHeight = constraints.maxWidth < 430 ? 260.0 : 238.0;
-        return SizedBox(
-          height: cardHeight,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              decoration: const BoxDecoration(color: Color(0xFF0A0A0A)),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: PageView.builder(
-                      controller: _quickCardController,
-                      itemCount: totalPages,
-                      onPageChanged: (index) {
-                        setState(() {
-                          _quickCardIndex = index;
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        if (index == accounts.length) {
-                          return Padding(
-                            padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
-                            child: Center(
-                              child: GestureDetector(
-                                onTap: terminalDisabled ? null : terminalTap,
-                                child: Opacity(
-                                  opacity: terminalDisabled ? 0.45 : 1,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 18,
-                                      vertical: 14,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: _neon.withValues(alpha: 0.78),
-                                        width: 1.2,
-                                      ),
-                                      color: Colors.black.withValues(
-                                        alpha: 0.35,
-                                      ),
-                                    ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          terminalIcon,
-                                          color: _neon.withValues(alpha: 0.95),
-                                          size: 36,
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          terminalTitle,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.88,
-                                            ),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          terminalSubtitle,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.45,
-                                            ),
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+    return AspectRatio(
+      aspectRatio: 16 / 10,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A0A0A),
+            border: Border.all(
+              color: _neon.withValues(alpha: 0.65),
+              width: 1.4,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _neon.withValues(alpha: 0.22),
+                blurRadius: 18,
+                spreadRadius: 0.5,
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: PageView.builder(
+                  controller: _quickCardController,
+                  itemCount: totalPages,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _quickCardIndex = index;
+                    });
+                  },
+                  itemBuilder: (context, index) {
+                    if (index == accounts.length) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
+                        child: Center(
+                          child: GestureDetector(
+                            onTap: terminalDisabled ? null : terminalTap,
+                            child: Opacity(
+                              opacity: terminalDisabled ? 0.45 : 1,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: _neon.withValues(alpha: 0.78),
+                                    width: 1.2,
                                   ),
+                                  color: Colors.black.withValues(alpha: 0.35),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      terminalIcon,
+                                      color: _neon.withValues(alpha: 0.95),
+                                      size: 36,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      terminalTitle,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.88,
+                                        ),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      terminalSubtitle,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.45,
+                                        ),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          );
-                        }
-
-                        final profile = accounts[index];
-                        return GamePosterCard(
-                          account: profile,
-                          totalPages: totalPages,
-                          activePage: _quickCardIndex,
-                          isLoading: linkedVm.isLoading,
-                          onPlayNow: () => Navigator.pushNamed(
-                            context,
-                            AppRoutes.matchmaking,
                           ),
-                          onOpenStats: () =>
-                              Navigator.pushNamed(context, profile.statsRoute),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+                        ),
+                      );
+                    }
+
+                    final profile = accounts[index];
+                    return GamePosterCard(
+                      account: profile,
+                      totalPages: totalPages,
+                      activePage: _quickCardIndex,
+                      isLoading: linkedVm.isLoading,
+                      onPlayNow: () =>
+                          Navigator.pushNamed(context, AppRoutes.matchmaking),
+                      onOpenStats: () =>
+                          Navigator.pushNamed(context, profile.statsRoute),
+                    );
+                  },
+                ),
               ),
-            ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 

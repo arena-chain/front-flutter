@@ -16,19 +16,6 @@ String _bgPath(LinkedGameId id) {
   }
 }
 
-String _gameFullName(LinkedGameId id) {
-  switch (id) {
-    case LinkedGameId.lol:
-      return 'LEAGUE OF LEGENDS';
-    case LinkedGameId.valorant:
-      return 'VALORANT';
-    case LinkedGameId.cs2:
-      return 'COUNTER-STRIKE 2';
-    case LinkedGameId.dota2:
-      return 'DOTA 2';
-  }
-}
-
 String _fallbackWordmark(LinkedGameId id) {
   switch (id) {
     case LinkedGameId.lol:
@@ -107,18 +94,15 @@ class GamePosterCard extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         Positioned.fill(
-          child: Container(
-            color: Colors.black,
-            child: Image.asset(
-              path,
-              fit: BoxFit.contain,
-              alignment: Alignment.center,
-              cacheWidth: 720,
-              errorBuilder: (context, error, stackTrace) {
-                debugPrint('[GamePosterCard] Failed to load $path: $error');
-                return _fallbackGradient(id);
-              },
-            ),
+          child: Image.asset(
+            path,
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+            cacheWidth: 720,
+            errorBuilder: (context, error, stackTrace) {
+              debugPrint('[GamePosterCard] Failed to load $path: $error');
+              return _fallbackGradient(id);
+            },
           ),
         ),
         Positioned.fill(
@@ -147,22 +131,32 @@ class GamePosterCard extends StatelessWidget {
           child: GestureDetector(
             onTap: onPlayNow,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.55),
-                border: Border.all(
-                  color: _kNeon.withValues(alpha: 0.85),
-                  width: 1,
-                ),
+                color: Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _kNeon, width: 1.6),
+                boxShadow: [
+                  BoxShadow(
+                    color: _kNeon.withValues(alpha: 0.45),
+                    blurRadius: 12,
+                    spreadRadius: 0.5,
+                  ),
+                ],
               ),
-              child: const Text(
+              child: Text(
                 'PLAY NOW  >',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
-                  fontSize: 11,
-                  letterSpacing: 1.2,
+                  fontSize: 12,
+                  letterSpacing: 1.4,
+                  shadows: [
+                    Shadow(
+                      blurRadius: 6,
+                      color: Colors.black.withValues(alpha: 0.7),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -207,7 +201,7 @@ class GamePosterCard extends StatelessWidget {
             onTap: onOpenStats,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              constraints: const BoxConstraints(maxWidth: 160),
+              constraints: const BoxConstraints(maxWidth: 200),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.55),
                 border: Border.all(
@@ -216,42 +210,28 @@ class GamePosterCard extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.circle, size: 7, color: _kNeon),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          _gameFullName(id),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.55),
-                            fontSize: 8,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ),
-                    ],
+                  const Icon(
+                    Icons.remove_red_eye,
+                    size: 14,
+                    color: Colors.white,
                   ),
-                  const SizedBox(height: 1),
-                  Text(
-                    account.displayName.isNotEmpty
-                        ? account.displayName.toUpperCase()
-                        : 'OPERATOR',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.6,
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      account.displayName.isNotEmpty
+                          ? account.displayName.toUpperCase()
+                          : 'OPERATOR',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.6,
+                      ),
                     ),
                   ),
                 ],
