@@ -268,6 +268,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       });
     }
     return Scaffold(
+      extendBody: true,
       backgroundColor:
           _currentIndex == 0 ||
               _currentIndex == 1 ||
@@ -320,8 +321,6 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
             child: Column(
               children: [
                 _buildHeader(),
-                const SizedBox(height: 12),
-                _buildAccountStrip(),
                 const SizedBox(height: 14),
                 _buildQuickActions(),
                 const SizedBox(height: 14),
@@ -350,6 +349,9 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                   },
                 ),
                 const SizedBox(height: 32),
+                SizedBox(
+                  height: MediaQuery.of(context).viewPadding.bottom + 76,
+                ),
               ],
             ),
           ),
@@ -377,10 +379,54 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
-  String _surnameForPill(BuildContext context) {
-    final user = context.watch<AuthViewModel>().currentUser;
-    final nick = user?.nickname.trim() ?? '';
-    return nick.isEmpty ? '' : nick;
+  Widget _buildTopLeftIcon(BuildContext context, List<LinkedGameAccount> accounts) {
+    final onTerminal = accounts.isEmpty || _quickCardIndex >= accounts.length;
+    final String? avatarUrl =
+        onTerminal ? null : accounts[_quickCardIndex].avatarUrl?.trim();
+    final showAvatar =
+        !onTerminal && avatarUrl != null && avatarUrl.isNotEmpty;
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 360),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.85, end: 1.0).animate(animation),
+            child: child,
+          ),
+        );
+      },
+      child: showAvatar
+          ? Container(
+              key: ValueKey('avatar-$_quickCardIndex-$avatarUrl'),
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFF1F1F1F), width: 1),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.network(
+                avatarUrl,
+                fit: BoxFit.cover,
+                width: 56,
+                height: 56,
+                errorBuilder: (context, error, stackTrace) => const ColoredBox(
+                  color: Color(0xFF1A1A1A),
+                  child: Center(child: ArenaChainAnimatedTitle()),
+                ),
+              ),
+            )
+          : const SizedBox(
+              key: ValueKey('logo'),
+              width: 56,
+              height: 56,
+              child: Center(child: ArenaChainAnimatedTitle()),
+            ),
+    );
   }
 
   Widget _buildHeader() {
@@ -397,212 +443,146 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
               padding: const EdgeInsets.fromLTRB(4, 8, 8, 6),
               child: Row(
                 children: [
-              Builder(
-                builder: (context) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => Scaffold.of(context).openDrawer(),
-                    child: const SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: Center(child: ArenaChainAnimatedTitle()),
+                  Builder(
+                    builder: (context) => Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => Scaffold.of(context).openDrawer(),
+                        child: _buildTopLeftIcon(context, linkedVm.accounts),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              Consumer<AuthViewModel>(
-                builder: (context, auth, child) {
-                  final nick = _surnameForPill(context);
-                  if (nick.isEmpty) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1A1A1A),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        nick,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
+                  Consumer2<AuthViewModel, LevelViewModel>(
+                    builder: (context, auth, levelVm, _) {
+                      final nick =
+                          (auth.currentUser?.nickname.trim() ?? '').toUpperCase();
+                      final level = levelVm.currentLevel?.level ?? 1;
+                      if (nick.isEmpty) return const SizedBox.shrink();
+
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: TweenAnimationBuilder<Color?>(
+                          tween: ColorTween(end: accent),
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeInOutCubic,
+                          builder: (context, animatedLevelTint, _) {
+                            final levelTint =
+                                animatedLevelTint ?? accent;
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1A1A1A),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xFF2A2A2A),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    nick,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.6,
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                    ),
+                                    child: Text(
+                                      '·',
+                                      style: TextStyle(
+                                        color: const Color(0xFFB3B3B3),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w900,
+                                        height: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    'LVL $level',
+                                    style: TextStyle(
+                                      color: levelTint,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const Spacer(),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    iconSize: 22,
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                    constraints: const BoxConstraints(
-                      minWidth: 44,
-                      minHeight: 44,
-                    ),
-                    splashRadius: 24,
-                    icon: const Icon(Icons.search, color: Color(0xFF717171)),
-                    onPressed: () {},
+                      );
+                    },
                   ),
-                  Stack(
-                    clipBehavior: Clip.none,
+                  const Spacer(),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: Icon(
-                          Icons.notifications_none_rounded,
-                          color: accent.withValues(alpha: 0.95),
+                        iconSize: 22,
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        constraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
                         ),
-                        onPressed: () => Navigator.pushNamed(
-                          context,
-                          AppRoutes.notifications,
-                        ),
+                        splashRadius: 24,
+                        icon: const Icon(Icons.search, color: Color(0xFF717171)),
+                        onPressed: () {},
                       ),
-                      Positioned(
-                        right: 10,
-                        top: 10,
-                        child: Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFF0055),
-                            shape: BoxShape.circle,
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.notifications_none_rounded,
+                              color: accent.withValues(alpha: 0.95),
+                            ),
+                            onPressed: () => Navigator.pushNamed(
+                              context,
+                              AppRoutes.notifications,
+                            ),
                           ),
-                        ),
+                          Positioned(
+                            right: 10,
+                            top: 10,
+                            child: Container(
+                              width: 7,
+                              height: 7,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFF0055),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ],
               ),
-            ],
-          ),
-        );
+            );
           },
         );
       },
     );
   }
 
-  String _connectionSubtitle(LinkedGameAccount account) {
-    switch (account.gameId) {
-      case LinkedGameId.lol:
-      case LinkedGameId.valorant:
-        return 'Riot ID • Connected';
-      case LinkedGameId.cs2:
-      case LinkedGameId.dota2:
-        return 'Steam • Connected';
-    }
-  }
-
-  Widget _buildAccountStrip() {
-    return Consumer2<LinkedAccountsViewModel, AuthViewModel>(
-      builder: (context, linkedVm, authVm, _) {
-        final accounts = linkedVm.accounts;
-        final onTerminal =
-            accounts.isEmpty || _quickCardIndex >= accounts.length;
-        final profileAvatarUrl = authVm.currentUser?.avatar?.trim();
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              if (onTerminal)
-                const CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Color(0xFF1A1A1A),
-                  child: Icon(Icons.person, color: Colors.white70, size: 22),
-                )
-              else
-                _buildAccountStripGameAvatar(
-                  accounts[_quickCardIndex],
-                  profileAvatarUrl,
-                ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (onTerminal)
-                      const Text(
-                        'NO ACCOUNT',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      )
-                    else ...[
-                      Text(
-                        accounts[_quickCardIndex].displayName.toUpperCase(),
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.fade,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _connectionSubtitle(accounts[_quickCardIndex]),
-                        style: const TextStyle(
-                          color: Color(0xFFB3B3B3),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildAccountStripGameAvatar(
-    LinkedGameAccount account,
-    String? profileAvatarUrl,
-  ) {
-    final String? url;
-    switch (account.gameId) {
-      case LinkedGameId.cs2:
-      case LinkedGameId.dota2:
-        final p = profileAvatarUrl?.trim() ?? '';
-        url = p.isNotEmpty ? p : null;
-        break;
-      case LinkedGameId.lol:
-      case LinkedGameId.valorant:
-        final r = account.avatarUrl?.trim() ?? '';
-        url = r.isNotEmpty ? r : null;
-    }
-    if (url == null || url.isEmpty) {
-      return const CircleAvatar(
-        radius: 22,
-        backgroundColor: Color(0xFF1A1A1A),
-        child: Icon(Icons.person, color: Colors.white70, size: 22),
-      );
-    }
-    return CircleAvatar(
-      radius: 22,
-      backgroundColor: const Color(0xFF1A1A1A),
-      backgroundImage: NetworkImage(url),
-    );
+  String _accountDisplayName(LinkedGameAccount account) {
+    final raw = account.displayName.trim();
+    if (raw.isEmpty) return '--';
+    return raw.toUpperCase();
   }
 
   Widget _buildPerGameStatsStrip() {
@@ -623,13 +603,31 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
               border: Border.all(color: const Color(0xFF1A1A1A), width: 1),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _statColumn('KDA', account.primaryStat),
-                _statColumn('Win Rate', account.secondaryStat),
-                _statColumn('Matches', account.matchesCount ?? '--'),
-                _statColumn('Main Role', account.mainRole ?? '--'),
-                _statColumn('Streak', _formatStreak(account.streak)),
+                Expanded(
+                  flex: 2,
+                  child: _statColumn(
+                    'Account',
+                    _accountDisplayName(account),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: _statColumn('KDA', account.primaryStat),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: _statColumn('Win Rate', account.secondaryStat),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: _statColumn('Matches', account.matchesCount ?? '--'),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: _statColumn('Main', account.mainRole ?? '--'),
+                ),
               ],
             ),
           ),
@@ -639,13 +637,13 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   }
 
   Widget _statColumn(String label, String value) {
-    final isStreakWins =
-        label == 'Streak' && value.toLowerCase().contains('win');
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           label,
+          textAlign: TextAlign.center,
           style: const TextStyle(
             color: Color(0xFFB3B3B3),
             fontSize: 11,
@@ -654,29 +652,23 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-              ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Text(
+            value,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.fade,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
             ),
-            if (isStreakWins) const SizedBox(width: 4),
-            if (isStreakWins) const Text('🔥', style: TextStyle(fontSize: 14)),
-          ],
+          ),
         ),
       ],
     );
-  }
-
-  String _formatStreak(String? streak) {
-    if (streak == null || streak.isEmpty) return '--';
-    return streak;
   }
 
   // ignore: unused_element

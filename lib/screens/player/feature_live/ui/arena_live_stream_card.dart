@@ -29,22 +29,20 @@ class ArenaLiveStreamCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: neon.withValues(alpha: 0.45), width: 1.4),
           boxShadow: [
             BoxShadow(
-              color: neon.withValues(alpha: 0.12),
+              color: neon.withValues(alpha: 0.18),
               blurRadius: 18,
+              spreadRadius: 0.5,
               offset: Offset.zero,
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(13),
           child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: neon.withValues(alpha: 0.28)),
-              color: const Color(0xFF0A0A0A),
-            ),
+            color: const Color(0xFF0A0A0A),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
