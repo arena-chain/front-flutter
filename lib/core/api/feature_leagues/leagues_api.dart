@@ -7,7 +7,8 @@ import 'package:arena_chain_flutter/core/models/feature_leagues/leagues_models.d
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 
 class LeaguesApi {
-  String get _base => '${ApiConfig.baseUrl}/api';
+  /// [ApiConfig.baseUrl] already includes `/api` (e.g. `http://host:3000/api`).
+  String get _base => ApiConfig.baseUrl;
   String? _workingBase;
   static const Duration _timeout = Duration(seconds: 8);
   final TokenStorage _tokenStorage = TokenStorage();

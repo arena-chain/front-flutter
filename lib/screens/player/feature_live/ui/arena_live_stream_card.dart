@@ -33,9 +33,14 @@ class ArenaLiveStreamCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: neon.withValues(alpha: 0.12),
-              color: neon.withValues(alpha: 0.18),
               blurRadius: 18,
               spreadRadius: 0.5,
+              offset: Offset.zero,
+            ),
+            BoxShadow(
+              color: neon.withValues(alpha: 0.18),
+              blurRadius: 22,
+              spreadRadius: 0,
               offset: Offset.zero,
             ),
           ],

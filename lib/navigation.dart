@@ -36,12 +36,14 @@ import 'package:arena_chain_flutter/screens/Team_Manager/team_profile_screen.dar
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/live_stream_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/scheduled_streams_screen.dart';
 import 'package:arena_chain_flutter/screens/scouter/ui/scouter_home_screen.dart';
+import 'package:arena_chain_flutter/screens/check_in_agent/ui/check_in_agent_home_screen.dart';
 import 'package:arena_chain_flutter/features/lol_control/lol_control_pairing_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_game_stats/ui/lol_stats_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_game_stats/ui/valorant_stats_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_game_stats/ui/cs2_stats_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_game_stats/ui/dota2_stats_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_game_stats/ui/link_steam_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_marketplace/ui/marketplace_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -163,6 +165,7 @@ class AppRoutes {
         scouterHome: (context) => const ScouterHomeScreen(),
         checkInAgentHome: (context) => const CheckInAgentHomeScreen(),
         lolControl: (context) => const LolControlPairingScreen(),
+        marketplace: (context) => const MarketplaceScreen(),
         lolStats: (context) => const LolStatsScreen(),
         valorantStats: (context) => const ValorantStatsScreen(),
         cs2Stats: (context) => const Cs2StatsScreen(),

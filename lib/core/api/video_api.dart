@@ -7,7 +7,7 @@ class VideoApi {
   final String _baseUrl = ApiConfig.baseUrl;
 
   Future<List<Video>> getVideos({String? uploaderId}) async {
-    final response = await http.get(Uri.parse('$_baseUrl/api/video'));
+    final response = await http.get(Uri.parse('$_baseUrl/video'));
 
     if (response.statusCode != 200) {
       throw Exception('Failed to fetch videos (${response.statusCode})');
@@ -36,7 +36,7 @@ class VideoApi {
     String? description,
     String? token,
   }) async {
-    final uri = Uri.parse('$_baseUrl/api/video/upload');
+    final uri = Uri.parse('$_baseUrl/video/upload');
     final request = http.MultipartRequest('POST', uri);
 
     if (token != null && token.isNotEmpty) {

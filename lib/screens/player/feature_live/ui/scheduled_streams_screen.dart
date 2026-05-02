@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:arena_chain_flutter/core/api/stream_api.dart';
+import 'package:arena_chain_flutter/core/models/channel_model.dart';
 import 'package:arena_chain_flutter/core/models/stream_model.dart';
 import 'package:arena_chain_flutter/core/services/live_catalog_service.dart';
 import 'package:arena_chain_flutter/navigation.dart';
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/arena_live_stream_card.dart';
-import 'package:flutter/material.dart';
 
 // ── Sort options ─────────────────────────────────────────────────────────────
 

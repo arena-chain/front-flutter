@@ -749,6 +749,7 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
                   width: 80,
                   height: 80,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, _, _) => _riotAssetPlaceholder(80),
                 ),
               ),
               Container(
@@ -776,6 +777,8 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
               children: [
                 Text(
                   _accountData!.summonerName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -845,22 +848,30 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '$winrate% Winrate',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '$winrate% Winrate',
+                  textAlign: TextAlign.end,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-              ),
-              Text(
-                '${rank.wins}W ${rank.losses}L',
-                style: const TextStyle(color: Color(0xFF7A86AC), fontSize: 14),
-              ),
-            ],
+                Text(
+                  '${rank.wins}W ${rank.losses}L',
+                  textAlign: TextAlign.end,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Color(0xFF7A86AC), fontSize: 14),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1110,6 +1121,7 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
                       width: 50,
                       height: 50,
                       fit: BoxFit.cover,
+                      errorBuilder: (context, _, _) => _riotAssetPlaceholder(50),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1128,6 +1140,8 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
                         ),
                         Text(
                           match.championName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -1184,6 +1198,21 @@ class _MyAccountScreenState extends State<MyAccountScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Riot CDN / Data Dragon can 403 (wrong patch, token, etc.) — never show raw HTTP text in a [Row].
+  Widget _riotAssetPlaceholder(double size) {
+    return Container(
+      width: size,
+      height: size,
+      color: const Color(0xFF0A0E1A),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.image_not_supported_outlined,
+        color: Colors.white.withValues(alpha: 0.22),
+        size: size * 0.45,
       ),
     );
   }

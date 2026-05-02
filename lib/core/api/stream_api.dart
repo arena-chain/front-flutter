@@ -59,6 +59,8 @@ class StreamApi {
   }
 
   Future<List<StreamModel>> getLiveStreams() async {
+    final all = await getAllStreams();
+    return all.where((s) => s.isLive).toList();
   }
 
   Future<List<StreamModel>> getStreamsByChannel(String channelId) async {

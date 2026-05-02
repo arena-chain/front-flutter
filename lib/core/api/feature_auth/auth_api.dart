@@ -224,7 +224,6 @@ class AuthApi {
   }
 
   Future<void> resendOtp(String email) async {
-    final url = Uri.parse('$baseUrl/auth/resend-otp');
     final url = Uri.parse('$baseUrl/api/auth/resend-otp');
 
     try {

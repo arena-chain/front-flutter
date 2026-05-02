@@ -107,15 +107,20 @@ class MarketplaceViewModel extends ChangeNotifier {
     }
 
     try {
-      final results = await Future.wait([
+      final core = await Future.wait<List<NftModel>>([
         _api.getMarketplace(),
         _api.getMyNfts(),
-        _api.getTransactionHistory(limit: 15),
       ]);
+      _marketplaceNfts = core[0];
+      _myNfts = core[1];
 
-      _marketplaceNfts = results[0] as List<NftModel>;
-      _myNfts = results[1] as List<NftModel>;
-      _transactions = results[2] as List<NftTransaction>;
+      try {
+        _transactions = await _api.getTransactionHistory(limit: 15);
+      } catch (e) {
+        debugPrint('MarketplaceViewModel: transaction history optional fetch failed: $e');
+        _transactions = [];
+      }
+
       _status = MarketplaceStatus.loaded;
       _errorMessage = null;
     } catch (e) {
@@ -240,7 +245,11 @@ class MarketplaceViewModel extends ChangeNotifier {
   // ── Helpers ───────────────────────────────────────────────────────────
 
   String _friendlyError(Object e) {
-    final msg = e.toString().toLowerCase();
+    var raw = e.toString();
+    if (raw.startsWith('Exception: ')) {
+      raw = raw.substring('Exception: '.length);
+    }
+    final msg = raw.toLowerCase();
     if (msg.contains('socket') ||
         msg.contains('connection') ||
         msg.contains('network') ||
@@ -249,6 +258,10 @@ class MarketplaceViewModel extends ChangeNotifier {
     }
     if (msg.contains('401') || msg.contains('403')) {
       return 'Session expirée. Reconnectez-vous.';
+    }
+    // Server often returns JSON `message` (e.g. "Internal server error") — show it if short.
+    if (raw.length <= 200 && !msg.contains('formatexception')) {
+      return raw;
     }
     return 'Impossible de charger le marketplace.';
   }

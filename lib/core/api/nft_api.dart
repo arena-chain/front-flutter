@@ -16,20 +16,59 @@ class NftApi {
     );
   }
 
+  /// Parses Nest-style `{ "message": "..." }` from error responses.
+  static String? _messageFromErrorBody(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is! Map) return null;
+      final m = Map<String, dynamic>.from(decoded);
+      final msg = m['message'] ?? m['error'];
+      if (msg is String && msg.trim().isNotEmpty) return msg.trim();
+    } catch (_) {}
+    return null;
+  }
+
+  /// Backend may return a raw JSON array or `{ "data": [...] }` / `{ "nfts": [...] }`.
+  static List<dynamic> _decodeListBody(String body) {
+    final decoded = jsonDecode(body);
+    if (decoded is List) return decoded;
+    if (decoded is Map) {
+      final m = Map<String, dynamic>.from(decoded);
+      for (final key in [
+        'data',
+        'nfts',
+        'items',
+        'results',
+        'marketplace',
+        'transactions',
+        'history',
+      ]) {
+        final v = m[key];
+        if (v is List) return v;
+      }
+    }
+    throw const FormatException(
+      'NFT list: expected JSON array or object with data/nfts/items',
+    );
+  }
+
   /// GET /api/nft/marketplace
   /// Retourne tous les NFTs actuellement en vente.
   Future<List<NftModel>> getMarketplace() async {
     try {
       final response = await _client.get(_uri('/nft/marketplace'));
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+        final data = _decodeListBody(response.body);
         return data
             .whereType<Map<String, dynamic>>()
             .map(NftModel.fromJson)
             .toList();
       }
       debugPrint('NftApi.getMarketplace: ${response.statusCode} ${response.body}');
-      throw Exception('Marketplace fetch failed (${response.statusCode})');
+      final detail = _messageFromErrorBody(response.body);
+      throw Exception(
+        detail ?? 'Marketplace fetch failed (${response.statusCode})',
+      );
     } catch (e) {
       debugPrint('NftApi.getMarketplace error: $e');
       rethrow;
@@ -42,14 +81,15 @@ class NftApi {
     try {
       final response = await _client.get(_uri('/nft/my'));
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+        final data = _decodeListBody(response.body);
         return data
             .whereType<Map<String, dynamic>>()
             .map(NftModel.fromJson)
             .toList();
       }
       debugPrint('NftApi.getMyNfts: ${response.statusCode} ${response.body}');
-      throw Exception('My NFTs fetch failed (${response.statusCode})');
+      final detail = _messageFromErrorBody(response.body);
+      throw Exception(detail ?? 'My NFTs fetch failed (${response.statusCode})');
     } catch (e) {
       debugPrint('NftApi.getMyNfts error: $e');
       rethrow;
@@ -67,7 +107,9 @@ class NftApi {
         return NftModel.fromJson(data);
       }
       debugPrint('NftApi.buy: ${response.statusCode} ${response.body}');
-      throw Exception('Buy failed (${response.statusCode})');
+      throw Exception(
+        _messageFromErrorBody(response.body) ?? 'Buy failed (${response.statusCode})',
+      );
     } catch (e) {
       debugPrint('NftApi.buy error: $e');
       rethrow;
@@ -88,7 +130,10 @@ class NftApi {
         return NftModel.fromJson(data);
       }
       debugPrint('NftApi.listForSale: ${response.statusCode} ${response.body}');
-      throw Exception('List for sale failed (${response.statusCode})');
+      throw Exception(
+        _messageFromErrorBody(response.body) ??
+            'List for sale failed (${response.statusCode})',
+      );
     } catch (e) {
       debugPrint('NftApi.listForSale error: $e');
       rethrow;
@@ -109,7 +154,9 @@ class NftApi {
         return NftModel.fromJson(data);
       }
       debugPrint('NftApi.unlist: ${response.statusCode} ${response.body}');
-      throw Exception('Unlist failed (${response.statusCode})');
+      throw Exception(
+        _messageFromErrorBody(response.body) ?? 'Unlist failed (${response.statusCode})',
+      );
     } catch (e) {
       debugPrint('NftApi.unlist error: $e');
       rethrow;
@@ -124,7 +171,7 @@ class NftApi {
         _uri('/nft/transactions/history', queryParams: {'limit': limit}),
       );
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+        final data = _decodeListBody(response.body);
         return data
             .whereType<Map<String, dynamic>>()
             .map(NftTransaction.fromJson)
@@ -132,7 +179,10 @@ class NftApi {
       }
       debugPrint(
           'NftApi.getTransactionHistory: ${response.statusCode} ${response.body}');
-      throw Exception('Transaction history failed (${response.statusCode})');
+      throw Exception(
+        _messageFromErrorBody(response.body) ??
+            'Transaction history failed (${response.statusCode})',
+      );
     } catch (e) {
       debugPrint('NftApi.getTransactionHistory error: $e');
       rethrow;

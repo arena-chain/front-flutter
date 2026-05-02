@@ -42,10 +42,10 @@ class FriendsViewModel extends ChangeNotifier {
     // Note: Don't set global loading here to avoid blocking UI if done in background
     try {
       _pendingRequests = await _repository.getPendingRequests(currentUserId);
-      _error = null;
       notifyListeners();
-    } catch (e) {
-      _error = e.toString().replaceFirst('Exception: ', '');
+    } catch (e, st) {
+      _pendingRequests = [];
+      debugPrint('loadPendingRequests failed: $e\n$st');
       notifyListeners();
     }
   }
@@ -53,10 +53,10 @@ class FriendsViewModel extends ChangeNotifier {
   Future<void> loadSentRequests() async {
     try {
       _sentRequests = await _repository.getSentRequests(currentUserId);
-      _error = null;
       notifyListeners();
-    } catch (e) {
-      _error = e.toString().replaceFirst('Exception: ', '');
+    } catch (e, st) {
+      _sentRequests = [];
+      debugPrint('loadSentRequests failed: $e\n$st');
       notifyListeners();
     }
   }

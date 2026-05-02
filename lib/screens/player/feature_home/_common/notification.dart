@@ -222,94 +222,96 @@ class _NotificationScreenState extends State<NotificationScreen>
     required NotificationViewModel vm,
     required double breathe,
     required AppNotification notification,
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required String time,
-    required bool isUnread,
   }) {
     final isUnread = !notification.isRead;
     final iconColor = _categoryColor(notification.category);
     final icon = _categoryIcon(notification.category, notification.resourceDeleted);
+    final title = notification.title;
+    final subtitle = notification.message;
+    final time = _timeAgo(notification.createdAt);
     final double unreadBorderAlpha = isUnread
         ? (0.28 + 0.18 * breathe).clamp(0.0, 1.0).toDouble()
         : 0;
     final glowAlpha = isUnread ? 0.05 + 0.06 * breathe : 0.0;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isUnread ? _card : _cardRead,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _neon.withValues(alpha: isUnread ? unreadBorderAlpha : 0.08),
-          width: isUnread ? 1.25 : 1,
-        ),
-        boxShadow: [
-          if (isUnread)
-            BoxShadow(
-              color: _neon.withValues(alpha: glowAlpha),
-              blurRadius: 18,
-              spreadRadius: 0,
-            ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _surface,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: iconColor.withValues(alpha: isUnread ? 0.5 : 0.28),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: iconColor.withValues(alpha: isUnread ? 0.22 : 0.08),
-                  blurRadius: isUnread ? 12 : 4,
-                ),
-              ],
-            ),
-            child: Icon(icon, color: iconColor, size: 24),
+    return GestureDetector(
+      onTap: () => _openNotification(context, vm, notification),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isUnread ? _card : _cardRead,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _neon.withValues(alpha: isUnread ? unreadBorderAlpha : 0.08),
+            width: isUnread ? 1.25 : 1,
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: isUnread ? FontWeight.w800 : FontWeight.w600,
+          boxShadow: [
+            if (isUnread)
+              BoxShadow(
+                color: _neon.withValues(alpha: glowAlpha),
+                blurRadius: 18,
+                spreadRadius: 0,
+              ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _surface,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: iconColor.withValues(alpha: isUnread ? 0.5 : 0.28),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: iconColor.withValues(alpha: isUnread ? 0.22 : 0.08),
+                    blurRadius: isUnread ? 12 : 4,
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: iconColor, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: isUnread ? FontWeight.w800 : FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                    Text(
-                      time,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.42),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                      Text(
+                        time,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.42),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.48),
+                      fontSize: 14,
+                      height: 1.25,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.48),
-                    fontSize: 14,
-                    height: 1.25,
                   ),
                   const SizedBox(height: 10),
                   Row(

@@ -80,7 +80,7 @@ class TournamentsApi {
     final headers = await _getHeaders();
     final response = await _requestWithFallback(
       (candidateBase) => http.get(
-        Uri.parse('$candidateBase/api/tournements'),
+        Uri.parse('$candidateBase/tournements'),
         headers: headers,
       ),
     );

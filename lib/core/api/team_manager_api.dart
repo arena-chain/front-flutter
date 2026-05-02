@@ -18,7 +18,7 @@ class TeamManagerApi {
   }
 
   Future<void> createProfile(Map<String, dynamic> profileData) async {
-    final url = Uri.parse('$baseUrl/api/team-manager');
+    final url = Uri.parse('$baseUrl/team-manager');
     final headers = await _getHeaders();
 
     try {
@@ -27,7 +27,7 @@ class TeamManagerApi {
         headers: headers,
         body: jsonEncode(profileData),
       );
-      if (response.statusCode != 201) {
+      if (response.statusCode != 200 && response.statusCode != 201) {
         throw Exception('Failed to create manager profile: ${response.body}');
       }
     } catch (e) {
@@ -36,7 +36,7 @@ class TeamManagerApi {
   }
 
   Future<List<TeamManagerProfile>> getPendingManagers() async {
-    final url = Uri.parse('$baseUrl/api/team-manager/pending');
+    final url = Uri.parse('$baseUrl/team-manager/pending');
     final headers = await _getHeaders();
 
     try {
@@ -53,7 +53,7 @@ class TeamManagerApi {
   }
 
   Future<void> approveManager(String userId) async {
-    final url = Uri.parse('$baseUrl/api/team-manager/$userId/approve');
+    final url = Uri.parse('$baseUrl/team-manager/$userId/approve');
     final headers = await _getHeaders();
 
     try {
@@ -67,7 +67,7 @@ class TeamManagerApi {
   }
 
   Future<void> rejectManager(String userId) async {
-    final url = Uri.parse('$baseUrl/api/team-manager/$userId/reject');
+    final url = Uri.parse('$baseUrl/team-manager/$userId/reject');
     final headers = await _getHeaders();
 
     try {

@@ -13,6 +13,7 @@ class _PlayerInvitationsScreenState extends State<PlayerInvitationsScreen> {
   final _teamApi = TeamApi();
   List<Invitation> _invitations = [];
   bool _isLoading = true;
+  String? _loadError;
 
   @override
   void initState() {
@@ -21,17 +22,26 @@ class _PlayerInvitationsScreenState extends State<PlayerInvitationsScreen> {
   }
 
   Future<void> _fetchInvitations() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
     try {
       final invites = await _teamApi.getReceivedInvitations();
+      if (!mounted) return;
       setState(() {
         _invitations = invites;
         _isLoading = false;
+        _loadError = null;
       });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      if (!mounted) return;
+      final msg = e.toString();
+      setState(() {
+        _invitations = [];
+        _isLoading = false;
+        _loadError = msg.startsWith('Exception: ') ? msg.substring('Exception: '.length) : msg;
+      });
     }
   }
 
@@ -39,11 +49,13 @@ class _PlayerInvitationsScreenState extends State<PlayerInvitationsScreen> {
     setState(() => _isLoading = true);
     try {
       await _teamApi.respondToInvitation(inviteId, status);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Invitation ${status == 'accepted' ? 'Accepted' : 'Rejected'}!')),
       );
       _fetchInvitations();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
       setState(() => _isLoading = false);
     }
@@ -58,11 +70,39 @@ class _PlayerInvitationsScreenState extends State<PlayerInvitationsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : _invitations.isEmpty
-          ? const Center(child: Text('No active invitations.', style: TextStyle(color: Colors.grey)))
-          : ListView.builder(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _loadError != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.cloud_off_outlined, color: Colors.orangeAccent, size: 48),
+                        const SizedBox(height: 16),
+                        Text(
+                          _loadError!.contains('404')
+                              ? 'Invitations API not found on the server (404).\nYour backend must expose GET /api/teams/invitations/received\n(or change TeamApi to match your route).'
+                              : _loadError!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white70, height: 1.35),
+                        ),
+                        const SizedBox(height: 20),
+                        FilledButton.icon(
+                          onPressed: _fetchInvitations,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : _invitations.isEmpty
+                  ? const Center(
+                      child: Text('No active invitations.', style: TextStyle(color: Colors.grey)),
+                    )
+                  : ListView.builder(
               padding: const EdgeInsets.all(15),
               itemCount: _invitations.length,
               itemBuilder: (context, index) {
@@ -137,7 +177,7 @@ class _PlayerInvitationsScreenState extends State<PlayerInvitationsScreen> {
                   ),
                 );
               },
-            ),
+                    ),
     );
   }
 }

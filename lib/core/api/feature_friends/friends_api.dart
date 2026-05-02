@@ -24,9 +24,9 @@ class FriendsApi {
     final candidates = <String>[
       if (_workingBaseUrl case final String working) working,
       baseUrl,
-      'http://10.0.2.2:3000',
-      'http://127.0.0.1:3000',
-      'http://localhost:3000',
+      'http://10.0.2.2:3000/api',
+      'http://127.0.0.1:3000/api',
+      'http://localhost:3000/api',
     ];
     final seen = <String>{};
     return candidates.where((b) => seen.add(b)).toList();
@@ -58,7 +58,7 @@ class FriendsApi {
 
   Future<List<FriendUser>> searchUsers(String query, {String? excludeUserId}) async {
     final response = await _requestWithFallback((candidateBase) {
-      final uri = Uri.parse('$candidateBase/api/users/search').replace(
+      final uri = Uri.parse('$candidateBase/users/search').replace(
         queryParameters: {
           'q': query,
           if (excludeUserId case final String excludedId) 'excludeUserId': excludedId,
@@ -79,7 +79,7 @@ class FriendsApi {
     final headers = await _getHeaders();
     final response = await _requestWithFallback(
       (candidateBase) => http.post(
-        Uri.parse('$candidateBase/api/friendship/send-request'),
+        Uri.parse('$candidateBase/friendship/send-request'),
         headers: headers,
         body: json.encode({
           'requesterId': requesterId,
@@ -100,7 +100,7 @@ class FriendsApi {
     final headers = await _getHeaders();
     final response = await _requestWithFallback(
       (candidateBase) => http.get(
-        Uri.parse('$candidateBase/api/friendship/friends/$userId'),
+        Uri.parse('$candidateBase/friendship/friends/$userId'),
         headers: headers,
       ),
     );
@@ -117,7 +117,7 @@ class FriendsApi {
     final headers = await _getHeaders();
     final response = await _requestWithFallback(
       (candidateBase) => http.get(
-        Uri.parse('$candidateBase/api/friendship/pending-requests/$userId'),
+        Uri.parse('$candidateBase/friendship/pending-requests/$userId'),
         headers: headers,
       ),
     );
@@ -134,7 +134,7 @@ class FriendsApi {
     final headers = await _getHeaders();
     final response = await _requestWithFallback(
       (candidateBase) => http.get(
-        Uri.parse('$candidateBase/api/friendship/sent-requests/$userId'),
+        Uri.parse('$candidateBase/friendship/sent-requests/$userId'),
         headers: headers,
       ),
     );
@@ -151,7 +151,7 @@ class FriendsApi {
     final headers = await _getHeaders();
     final response = await _requestWithFallback(
       (candidateBase) => http.post(
-        Uri.parse('$candidateBase/api/friendship/accept/$friendshipId'),
+        Uri.parse('$candidateBase/friendship/accept/$friendshipId'),
         headers: headers,
         body: json.encode({'userId': userId}),
       ),
@@ -169,7 +169,7 @@ class FriendsApi {
     final headers = await _getHeaders();
     final response = await _requestWithFallback(
       (candidateBase) => http.post(
-        Uri.parse('$candidateBase/api/friendship/reject/$friendshipId'),
+        Uri.parse('$candidateBase/friendship/reject/$friendshipId'),
         headers: headers,
         body: json.encode({'userId': userId}),
       ),

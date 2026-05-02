@@ -34,9 +34,9 @@ class RiotApi {
     required String token,
   }) async {
     try {
-      print('RiotApi: POST to $baseUrl/api/riot-api/account');
+      print('RiotApi: POST to $baseUrl/riot-api/account');
       final response = await http.post(
-        Uri.parse('$baseUrl/api/riot-api/account'),
+        Uri.parse('$baseUrl/riot-api/account'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -70,7 +70,7 @@ class RiotApi {
     required String token,
   }) async {
     try {
-      final url = Uri.parse('$baseUrl/api/riot-api/match/$matchId?region=$region&puuid=$puuid');
+      final url = Uri.parse('$baseUrl/riot-api/match/$matchId?region=$region&puuid=$puuid');
       final response = await http.get(
         url,
         headers: {
@@ -98,7 +98,7 @@ class RiotApi {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/riot-api/tft/account'),
+        Uri.parse('$baseUrl/riot-api/tft/account'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -128,7 +128,7 @@ class RiotApi {
     required String token,
   }) async {
     try {
-      final url = Uri.parse('$baseUrl/api/riot-api/tft/match/$matchId?region=$region&puuid=$puuid');
+      final url = Uri.parse('$baseUrl/riot-api/tft/match/$matchId?region=$region&puuid=$puuid');
       final response = await http.get(
         url,
         headers: {
@@ -158,7 +158,7 @@ class RiotApi {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/riot-api/link-account'),
+        Uri.parse('$baseUrl/riot-api/link-account'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -187,7 +187,7 @@ class RiotApi {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/riot-api/verify-account'),
+        Uri.parse('$baseUrl/riot-api/verify-account'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -212,7 +212,7 @@ class RiotApi {
     int start = 0,
     int count = 10,
   }) async {
-    final uri = Uri.parse('$baseUrl/api/riot-api/match-history').replace(
+    final uri = Uri.parse('$baseUrl/riot-api/match-history').replace(
       queryParameters: <String, String>{
         'game': game,
         'start': '$start',
@@ -240,7 +240,7 @@ class RiotApi {
   }) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/riot-api/link-status'),
+        Uri.parse('$baseUrl/riot-api/link-status'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -263,7 +263,7 @@ class RiotApi {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/riot-api/disconnect-account'),
+        Uri.parse('$baseUrl/riot-api/disconnect-account'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

@@ -9,6 +9,20 @@ class TeamApi {
   static String get baseUrl => ApiConfig.baseUrl;
   final TokenStorage _tokenStorage = TokenStorage();
 
+  /// API may return `[...]` or `{ "data": [...] }` / `{ "invitations": [...] }`.
+  static List<dynamic> _decodeJsonList(String body) {
+    final decoded = jsonDecode(body);
+    if (decoded is List) return decoded;
+    if (decoded is Map) {
+      final m = Map<String, dynamic>.from(decoded);
+      for (final k in ['data', 'invitations', 'items', 'results']) {
+        final v = m[k];
+        if (v is List) return v;
+      }
+    }
+    throw const FormatException('Expected JSON array or object with invitations list');
+  }
+
   Future<Map<String, String>> _getHeaders() async {
     final token = await _tokenStorage.getAccessToken();
     return {
@@ -18,7 +32,7 @@ class TeamApi {
   }
 
   Future<Team> getTeamById(String id) async {
-    final url = Uri.parse('$baseUrl/api/teams/$id');
+    final url = Uri.parse('$baseUrl/teams/$id');
     
     try {
       final response = await http.get(url);
@@ -34,7 +48,7 @@ class TeamApi {
   }
 
   Future<List<Team>> getTeams() async {
-    final url = Uri.parse('$baseUrl/api/teams');
+    final url = Uri.parse('$baseUrl/teams');
     
     try {
       final response = await http.get(url);
@@ -51,7 +65,7 @@ class TeamApi {
   }
 
   Future<void> createTeam(Map<String, dynamic> teamData) async {
-    final url = Uri.parse('$baseUrl/api/teams');
+    final url = Uri.parse('$baseUrl/teams');
     final headers = await _getHeaders();
 
     try {
@@ -70,7 +84,7 @@ class TeamApi {
   }
 
   Future<void> updateTeam(String id, Map<String, dynamic> teamData) async {
-    final url = Uri.parse('$baseUrl/api/teams/$id');
+    final url = Uri.parse('$baseUrl/teams/$id');
     final headers = await _getHeaders();
 
     try {
@@ -89,7 +103,7 @@ class TeamApi {
   }
 
   Future<void> deleteTeam(String id) async {
-    final url = Uri.parse('$baseUrl/api/teams/$id');
+    final url = Uri.parse('$baseUrl/teams/$id');
     final headers = await _getHeaders();
 
     try {
@@ -106,7 +120,7 @@ class TeamApi {
   // --- Recruitment & Invitations ---
 
   Future<void> sendInvitation(String teamId, String receiverId, String role, String message) async {
-    final url = Uri.parse('$baseUrl/api/teams/invitations');
+    final url = Uri.parse('$baseUrl/teams/invitations');
     final headers = await _getHeaders();
 
     final response = await http.post(
@@ -126,35 +140,41 @@ class TeamApi {
   }
 
   Future<List<Invitation>> getReceivedInvitations() async {
-    final url = Uri.parse('$baseUrl/api/teams/invitations/received');
+    final url = Uri.parse('$baseUrl/teams/invitations/received');
     final headers = await _getHeaders();
 
     final response = await http.get(url, headers: headers);
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => Invitation.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to fetch invitations');
+      final data = _decodeJsonList(response.body);
+      return data
+          .map((json) => Invitation.fromJson(Map<String, dynamic>.from(json as Map)))
+          .toList();
     }
+    throw Exception(
+      'Failed to fetch invitations (${response.statusCode}): ${response.body}',
+    );
   }
 
   Future<List<Invitation>> getInvitationsSent(String teamId) async {
-    final url = Uri.parse('$baseUrl/api/teams/$teamId/invitations/sent');
+    final url = Uri.parse('$baseUrl/teams/$teamId/invitations/sent');
     final headers = await _getHeaders();
 
     final response = await http.get(url, headers: headers);
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => Invitation.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to fetch sent invitations');
+      final data = _decodeJsonList(response.body);
+      return data
+          .map((json) => Invitation.fromJson(Map<String, dynamic>.from(json as Map)))
+          .toList();
     }
+    throw Exception(
+      'Failed to fetch sent invitations (${response.statusCode}): ${response.body}',
+    );
   }
 
   Future<void> respondToInvitation(String invitationId, String status) async {
-    final url = Uri.parse('$baseUrl/api/teams/invitations/$invitationId/respond');
+    final url = Uri.parse('$baseUrl/teams/invitations/$invitationId/respond');
     final headers = await _getHeaders();
 
     final response = await http.patch(
@@ -171,7 +191,7 @@ class TeamApi {
   // --- Roster Management ---
 
   Future<void> removeMember(String teamId, String userId) async {
-    final url = Uri.parse('$baseUrl/api/teams/$teamId/members/$userId');
+    final url = Uri.parse('$baseUrl/teams/$teamId/members/$userId');
     final headers = await _getHeaders();
 
     final response = await http.delete(url, headers: headers);
@@ -184,7 +204,7 @@ class TeamApi {
   // --- Communication ---
 
   Future<void> createPost(String teamId, String content) async {
-    final url = Uri.parse('$baseUrl/api/teams/posts');
+    final url = Uri.parse('$baseUrl/teams/posts');
     final headers = await _getHeaders();
 
     final response = await http.post(
@@ -202,7 +222,7 @@ class TeamApi {
   }
 
   Future<List<TeamPost>> getTeamPosts(String teamId) async {
-    final url = Uri.parse('$baseUrl/api/teams/$teamId/posts');
+    final url = Uri.parse('$baseUrl/teams/$teamId/posts');
     final headers = await _getHeaders();
 
     final response = await http.get(url, headers: headers);
@@ -216,7 +236,7 @@ class TeamApi {
   }
 
   Future<void> addComment(String postId, String content) async {
-    final url = Uri.parse('$baseUrl/api/teams/posts/$postId/comments');
+    final url = Uri.parse('$baseUrl/teams/posts/$postId/comments');
     final headers = await _getHeaders();
 
     final response = await http.post(
@@ -231,7 +251,7 @@ class TeamApi {
   }
 
   Future<List<TeamComment>> getComments(String postId) async {
-    final url = Uri.parse('$baseUrl/api/teams/posts/$postId/comments');
+    final url = Uri.parse('$baseUrl/teams/posts/$postId/comments');
     final headers = await _getHeaders();
 
     final response = await http.get(url, headers: headers);
@@ -245,7 +265,7 @@ class TeamApi {
   }
 
   Future<List<dynamic>> searchPlayers(String query) async {
-    final url = Uri.parse('$baseUrl/api/teams/players/search?q=$query');
+    final url = Uri.parse('$baseUrl/teams/players/search?q=$query');
     final headers = await _getHeaders();
 
     final response = await http.get(url, headers: headers);

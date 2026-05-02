@@ -113,25 +113,38 @@ class _ArenaAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           child: Row(
             children: [
-              GestureDetector(
-                onTap: onMenuTap,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    3,
-                    (_) => Container(
-                      width: 16,
-                      height: 1.5,
-                      margin: const EdgeInsets.symmetric(vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _textMuted,
-                        borderRadius: BorderRadius.circular(2),
+              // Minimum ~48dp touch target; the old icon was ~16×17px and often missed taps.
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onMenuTap,
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(
+                          3,
+                          (_) => Container(
+                            width: 16,
+                            height: 1.5,
+                            margin: const EdgeInsets.symmetric(vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _textMuted,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 6),
               const Expanded(
                 child: Text(
                   'Check-in Agent',

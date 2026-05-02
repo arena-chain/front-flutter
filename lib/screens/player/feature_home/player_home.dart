@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:arena_chain_flutter/core/api/stream_api.dart';
 import 'package:arena_chain_flutter/core/models/channel_model.dart';
 import 'package:arena_chain_flutter/core/models/stream_model.dart';
 import 'package:arena_chain_flutter/core/services/live_catalog_service.dart';
@@ -153,21 +152,20 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
 
   Future<void> _loadLivePreview() async {
     try {
-      final fromLive = await _streamApi.getLiveStreams();
-      final all = await _streamApi.getAllStreams();
-      var live = fromLive.isNotEmpty
-          ? fromLive
-          : all.where((s) => s.isLive).toList();
-      live = _mergeLivePreview(live);
+      final snapshot = await _liveCatalogService.fetchSnapshot();
       if (!mounted) return;
+      final live = _mergeLivePreview(snapshot.liveStreams);
       setState(() {
+        _livePreviewStreams = live;
         _livePreviewLoading = false;
         _livePreviewErrorMessage = null;
       });
+    } catch (e) {
       if (!mounted) return;
       setState(() {
+        _livePreviewStreams = _mergeLivePreview([]);
         _livePreviewLoading = false;
-        _livePreviewErrorMessage = error.toString();
+        _livePreviewErrorMessage = e.toString();
       });
     }
   }
@@ -1311,25 +1309,32 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                   const SizedBox(width: 10),
                   Padding(
                     padding: const EdgeInsets.only(right: 4),
-                    child: Icon(
-                      Icons.gps_fixed,
-                      color: accent,
-                      size: 32,
-                      shadows: [
-                        Shadow(
-                          color: accent.withValues(alpha: 0.5),
-                          blurRadius: 8,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.gps_fixed,
+                          color: accent,
+                          size: 32,
+                          shadows: [
+                            Shadow(
+                              color: accent.withValues(alpha: 0.5),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'OPEN',
+                          style: TextStyle(
+                            color: accent.withValues(alpha: 0.95),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 11,
+                            letterSpacing: 0.8,
+                          ),
                         ),
                       ],
-                    ),
-                    child: const Text(
-                      'OPEN',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 11,
-                        letterSpacing: 0.8,
-                      ),
                     ),
                   ),
                 ],
