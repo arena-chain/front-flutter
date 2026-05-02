@@ -447,11 +447,12 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   }
 
   Widget _buildAccountStrip() {
-    return Consumer<LinkedAccountsViewModel>(
-      builder: (context, linkedVm, _) {
+    return Consumer2<LinkedAccountsViewModel, AuthViewModel>(
+      builder: (context, linkedVm, authVm, _) {
         final accounts = linkedVm.accounts;
         final onTerminal =
             accounts.isEmpty || _quickCardIndex >= accounts.length;
+        final profileAvatarUrl = authVm.currentUser?.avatar?.trim();
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -465,7 +466,10 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                   child: Icon(Icons.person, color: Colors.white70, size: 22),
                 )
               else
-                _buildAccountStripGameAvatar(accounts[_quickCardIndex]),
+                _buildAccountStripGameAvatar(
+                  accounts[_quickCardIndex],
+                  profileAvatarUrl,
+                ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -513,16 +517,33 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
-  Widget _buildAccountStripGameAvatar(LinkedGameAccount account) {
-    final raw = account.avatarUrl?.trim() ?? '';
-    final hasUrl = raw.isNotEmpty;
+  Widget _buildAccountStripGameAvatar(
+    LinkedGameAccount account,
+    String? profileAvatarUrl,
+  ) {
+    final String? url;
+    switch (account.gameId) {
+      case LinkedGameId.cs2:
+      case LinkedGameId.dota2:
+        final p = profileAvatarUrl?.trim() ?? '';
+        url = p.isNotEmpty ? p : null;
+        break;
+      case LinkedGameId.lol:
+      case LinkedGameId.valorant:
+        final r = account.avatarUrl?.trim() ?? '';
+        url = r.isNotEmpty ? r : null;
+    }
+    if (url == null || url.isEmpty) {
+      return const CircleAvatar(
+        radius: 22,
+        backgroundColor: Color(0xFF1A1A1A),
+        child: Icon(Icons.person, color: Colors.white70, size: 22),
+      );
+    }
     return CircleAvatar(
       radius: 22,
       backgroundColor: const Color(0xFF1A1A1A),
-      backgroundImage: hasUrl ? NetworkImage(raw) : null,
-      child: hasUrl
-          ? null
-          : const Icon(Icons.person, color: Colors.white70, size: 22),
+      backgroundImage: NetworkImage(url),
     );
   }
 

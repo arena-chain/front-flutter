@@ -65,18 +65,6 @@ class LinkedGameAccount {
     return '';
   }
 
-  /// Steam status payloads may use camelCase or snake_case depending on gateway.
-  static String? _steamAvatarFromStatus(Map<String, dynamic> steam) {
-    for (final key in [
-      'steamAvatarUrl',
-      'steam_avatar_url',
-    ]) {
-      final raw = steam[key]?.toString().trim();
-      if (raw != null && raw.isNotEmpty) return raw;
-    }
-    return null;
-  }
-
   factory LinkedGameAccount.lol(
     Map<String, dynamic> riotStatus, {
     String primaryStat = '--',
@@ -143,7 +131,7 @@ class LinkedGameAccount {
       displayName: (u != null && u.isNotEmpty)
           ? u.toUpperCase()
           : fallbackName.toUpperCase(),
-      avatarUrl: _steamAvatarFromStatus(steam),
+      avatarUrl: null,
       statsRoute: LinkedGameStatsRoutes.cs2,
       primaryStat: primaryStat,
       secondaryStat: secondaryStat,
@@ -170,7 +158,7 @@ class LinkedGameAccount {
       displayName: (u != null && u.isNotEmpty)
           ? u.toUpperCase()
           : fallbackName.toUpperCase(),
-      avatarUrl: _steamAvatarFromStatus(steam),
+      avatarUrl: null,
       statsRoute: LinkedGameStatsRoutes.dota2,
       primaryStat: primaryStat,
       secondaryStat: secondaryStat,
