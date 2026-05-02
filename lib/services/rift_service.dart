@@ -591,6 +591,7 @@ class RiftService extends ChangeNotifier {
       '/lol-gameflow/v1/session',
       '/lol-chat/v1/friends',
       '/lol-chat/v1/me',
+      '/lol-lobby/v2/received-invitations',
     ];
     for (final path in paths) {
       final innerMsg = jsonEncode([_mobileSubscribe, path]);

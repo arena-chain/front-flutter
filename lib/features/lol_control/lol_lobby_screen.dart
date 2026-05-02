@@ -8,6 +8,7 @@ import 'package:arena_chain_flutter/features/lol_control/lol_in_game_screen.dart
 import 'package:arena_chain_flutter/features/lol_control/lol_control_pairing_screen.dart';
 import 'package:arena_chain_flutter/features/lol_control/widgets/role_picker.dart';
 import 'package:arena_chain_flutter/features/lol_control/widgets/invite_overlay.dart';
+import 'package:arena_chain_flutter/features/lol_control/widgets/received_invite_card.dart';
 
 const _kBg = Color(0xFF0A0E1A);
 const _kGold = Color(0xFFC89B3C);
@@ -36,6 +37,8 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
   String _gameflowPhase = '';
   int? _creatingQueueId;
   bool _initialFetchDone = false;
+  List<Map<String, dynamic>> _receivedInvites = const [];
+  final Set<String> _busyInviteIds = {};
 
   static const _modes = <_GameModeOption>[
     _GameModeOption(queueId: 430, title: "Normal (SR 5v5)", icon: Icons.public),
@@ -90,6 +93,7 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
       if (r.status == RiftConnectionStatus.connected) {
         r.sendLcuRequest('GET', '/lol-lobby/v2/lobby');
         r.sendLcuRequest('GET', '/lol-gameflow/v1/gameflow-phase');
+        r.sendLcuRequest('GET', '/lol-lobby/v2/received-invitations');
       }
     });
 
@@ -111,6 +115,11 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
     if (uri == null || uri.isEmpty) return false;
     return uri.contains('/lol-gameflow/v1/gameflow-phase') ||
         uri.contains('/lol-gameflow/v1/session');
+  }
+
+  bool _isReceivedInvitesUri(String? uri) {
+    if (uri == null || uri.isEmpty) return false;
+    return uri.contains('/lol-lobby/v2/received-invitations');
   }
 
   Map<String, dynamic>? _localMemberFromLobby(Map<String, dynamic> lobby) {
@@ -148,6 +157,7 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
   void _onLcuEvent(LcuEvent event) {
     if (_isLobbyUri(event.uri)) _onLobbyLcuEvent(event);
     if (_isGameflowPhaseUri(event.uri)) _onGameflowLcuEvent(event);
+    if (_isReceivedInvitesUri(event.uri)) _onReceivedInvitesLcuEvent(event);
   }
 
   void _onLobbyLcuEvent(LcuEvent event) {
@@ -193,6 +203,33 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
     _maybeNavigateForGameflow();
   }
 
+  void _onReceivedInvitesLcuEvent(LcuEvent event) {
+    final raw = event.data;
+    if (event.httpStatus == 404 || raw == null || (raw is String && raw == 'null')) {
+      setState(() => _receivedInvites = const []);
+      return;
+    }
+
+    final list = <Map<String, dynamic>>[];
+    if (raw is List) {
+      for (final item in raw) {
+        if (item is Map) {
+          final m = Map<String, dynamic>.from(item);
+          final state = (m['state']?.toString() ?? '').toLowerCase();
+          final canAccept = m['canAcceptInvitation'];
+          if (state == 'pending' && (canAccept == null || canAccept == true)) {
+            list.add(m);
+          }
+        }
+      }
+    }
+    setState(() {
+      _receivedInvites = list;
+      final liveIds = list.map((m) => m['invitationId']?.toString() ?? '').toSet();
+      _busyInviteIds.removeWhere((id) => !liveIds.contains(id));
+    });
+  }
+
   void _maybeNavigateForGameflow() {
     if (!mounted) return;
     switch (_gameflowPhase) {
@@ -233,6 +270,41 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
     context.read<RiftService>().sendLcuRequest('DELETE', '/lol-lobby/v2/lobby');
   }
 
+  void _acceptInvite(String invitationId) {
+    if (invitationId.isEmpty || _busyInviteIds.contains(invitationId)) return;
+    setState(() => _busyInviteIds.add(invitationId));
+    context.read<RiftService>().sendLcuRequest(
+          'POST',
+          '/lol-lobby/v2/received-invitations/$invitationId/accept',
+        );
+  }
+
+  void _declineInvite(String invitationId) {
+    if (invitationId.isEmpty || _busyInviteIds.contains(invitationId)) return;
+    setState(() => _busyInviteIds.add(invitationId));
+    context.read<RiftService>().sendLcuRequest(
+          'POST',
+          '/lol-lobby/v2/received-invitations/$invitationId/decline',
+        );
+  }
+
+  String _queueLabelFromGameConfig(Map<String, dynamic>? gameConfig) {
+    if (gameConfig == null) return 'Custom lobby';
+    final qid = gameConfig['queueId'];
+    int? id;
+    if (qid is int) {
+      id = qid;
+    } else if (qid is num) {
+      id = qid.toInt();
+    }
+    for (final m in _modes) {
+      if (m.queueId == id) return m.title;
+    }
+    final mode = gameConfig['gameMode']?.toString();
+    if (mode != null && mode.isNotEmpty) return mode;
+    return 'Custom lobby';
+  }
+
   @override
   void dispose() {
     _rift?.removeListener(_onRiftConnectionChanged);
@@ -244,10 +316,13 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _kBg,
-      appBar: _buildAppBar(),
-      body: _buildBody(),
+    return PopScope(
+      canPop: true,
+      child: Scaffold(
+        backgroundColor: _kBg,
+        appBar: _buildAppBar(),
+        body: _buildBody(),
+      ),
     );
   }
 
@@ -274,11 +349,14 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
       leading: IconButton(
         icon: const Icon(Icons.arrow_back, color: Colors.white),
         onPressed: () {
-          context.read<RiftService>().disconnect();
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const LolControlPairingScreen()),
-          );
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const LolControlPairingScreen()),
+            );
+          }
         },
       ),
       title: const Text('Lobby', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -344,7 +422,28 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
                       mainAxisExtent: 90,
                     ),
                     itemCount: _modes.length,
-                    itemBuilder: (context, i) => _buildGameModeCard(_modes[i]),
+                    itemBuilder: (context, i) {
+                      if (i == 0 && _receivedInvites.isNotEmpty) {
+                        final invite = _receivedInvites.first;
+                        final invId = invite['invitationId']?.toString() ?? '';
+                        final rawName = invite['fromSummonerName']?.toString().trim();
+                        final fromName =
+                            (rawName != null && rawName.isNotEmpty) ? rawName : 'a friend';
+                        final gameConfig = invite['gameConfig'];
+                        final label = _queueLabelFromGameConfig(
+                          gameConfig is Map ? Map<String, dynamic>.from(gameConfig) : null,
+                        );
+                        final busy = _busyInviteIds.contains(invId);
+                        return ReceivedInviteCard(
+                          fromName: fromName,
+                          queueLabel: label,
+                          busy: busy,
+                          onAccept: () => _acceptInvite(invId),
+                          onDecline: () => _declineInvite(invId),
+                        );
+                      }
+                      return _buildGameModeCard(_modes[i]);
+                    },
                   );
                 },
               ),
