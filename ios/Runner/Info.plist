@@ -46,7 +46,7 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Allow camera access to record videos for upload.</string>
+	<string>Allow camera access to record videos for upload and to scan Arena Chain pairing QR codes for LoL Control.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allow photo library access to choose videos for upload.</string>
 	<key>NSMicrophoneUsageDescription</key>

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/services/rift_service.dart';
 import 'package:arena_chain_flutter/features/lol_control/lol_lobby_screen.dart';
+import 'package:arena_chain_flutter/features/lol_control/qr_scanner_screen.dart';
 
 const _kBg = Color(0xFF0A0E1A);
 const _kGold = Color(0xFFC89B3C);
@@ -35,6 +36,27 @@ class _LolControlPairingScreenState extends State<LolControlPairingScreen> {
     if (ip.isEmpty || code.length != 6) return;
 
     context.read<RiftService>().connect(ip, port.isEmpty ? '51001' : port, code);
+  }
+
+  Future<void> _scanQr() async {
+    final result = await Navigator.of(context).push<QrPairingPayload>(
+      MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+    );
+    if (result == null || !mounted) return;
+
+    setState(() {
+      _ipController.text = result.ip;
+      _portController.text = result.port;
+      _codeController.text = result.code;
+    });
+
+    // Auto-connect after scan — matches the user's UX intent: "the request
+    // of connecting will be sent to the desktop app as the current flow exists".
+    // The user still sees the populated fields for ~1 frame so they can verify.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _connect();
+    });
   }
 
   @override
@@ -87,7 +109,7 @@ class _LolControlPairingScreenState extends State<LolControlPairingScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Enter your PC\'s IP and the 6-digit pairing code\nshown in Conduit on your desktop.',
+                  'Scan the QR code shown in Arena Chain Conduit on your PC,\nor enter the IP and 6-digit code manually.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey[400], fontSize: 14),
                 ),
@@ -159,6 +181,27 @@ class _LolControlPairingScreenState extends State<LolControlPairingScreen> {
                     borderColor: Colors.redAccent.withValues(alpha: 0.4),
                     textColor: Colors.redAccent,
                   ),
+
+                // ── scan-qr button ─────────────────────────
+                SizedBox(
+                  height: 50,
+                  child: OutlinedButton.icon(
+                    onPressed: busy ? null : _scanQr,
+                    icon: const Icon(Icons.qr_code_scanner, size: 20),
+                    label: const Text(
+                      'Scan QR code',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _kGold,
+                      side: BorderSide(color: _kGold.withValues(alpha: 0.6), width: 1.4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
 
                 // ── connect button ─────────────────────────
                 SizedBox(
