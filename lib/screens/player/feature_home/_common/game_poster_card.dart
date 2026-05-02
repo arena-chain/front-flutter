@@ -1,7 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:arena_chain_flutter/core/models/linked_accounts/linked_game_account.dart';
 
+// ignore: unused_element
 const Color _kNeon = Color(0xFF39FF14);
+
+/// Per-game brand accent color used for borders, glow, button outline,
+/// page-indicator highlight, and loading spinner. Drives the visual
+/// identity of each game card so the UI doesn't feel static.
+Color gameAccentColor(LinkedGameId id) {
+  switch (id) {
+    case LinkedGameId.lol:
+      return const Color(0xFF4DB8FF); // electric blue (Jinx-inspired)
+    case LinkedGameId.valorant:
+      return const Color(0xFFFF4655); // Valorant red
+    case LinkedGameId.cs2:
+      return const Color(0xFFFFA726); // warm amber/orange
+    case LinkedGameId.dota2:
+      return const Color(0xFF7CFF6B); // Dota 2 green
+  }
+}
 
 String _bgPath(LinkedGameId id) {
   switch (id) {
@@ -90,6 +107,7 @@ class GamePosterCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final id = account.gameId;
     final path = _bgPath(id);
+    final accent = gameAccentColor(id);
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -135,10 +153,10 @@ class GamePosterCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _kNeon, width: 1.6),
+                border: Border.all(color: accent, width: 1.6),
                 boxShadow: [
                   BoxShadow(
-                    color: _kNeon.withValues(alpha: 0.45),
+                    color: accent.withValues(alpha: 0.45),
                     blurRadius: 12,
                     spreadRadius: 0.5,
                   ),
@@ -176,7 +194,7 @@ class GamePosterCard extends StatelessWidget {
                 height: 6,
                 decoration: BoxDecoration(
                   color: active
-                      ? _kNeon.withValues(alpha: 0.9)
+                      ? accent.withValues(alpha: 0.9)
                       : Colors.white.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -205,7 +223,7 @@ class GamePosterCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.55),
                 border: Border.all(
-                  color: _kNeon.withValues(alpha: 0.85),
+                  color: accent.withValues(alpha: 0.85),
                   width: 1,
                 ),
                 borderRadius: BorderRadius.circular(8),
@@ -213,11 +231,7 @@ class GamePosterCard extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.remove_red_eye,
-                    size: 14,
-                    color: Colors.white,
-                  ),
+                  Icon(Icons.remove_red_eye, size: 14, color: accent),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
@@ -244,10 +258,10 @@ class GamePosterCard extends StatelessWidget {
             child: Container(
               alignment: Alignment.center,
               color: Colors.black.withValues(alpha: 0.35),
-              child: const SizedBox(
+              child: SizedBox(
                 width: 28,
                 height: 28,
-                child: CircularProgressIndicator(strokeWidth: 2, color: _kNeon),
+                child: CircularProgressIndicator(strokeWidth: 2, color: accent),
               ),
             ),
           ),

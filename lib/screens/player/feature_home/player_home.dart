@@ -639,20 +639,27 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       terminalTap = null;
     }
 
+    final activeAccent =
+        (_quickCardIndex >= 0 && _quickCardIndex < accounts.length)
+        ? gameAccentColor(accounts[_quickCardIndex].gameId)
+        : _neon;
+
     return AspectRatio(
       aspectRatio: 16 / 10,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOut,
           decoration: BoxDecoration(
             color: const Color(0xFF0A0A0A),
             border: Border.all(
-              color: _neon.withValues(alpha: 0.65),
+              color: activeAccent.withValues(alpha: 0.65),
               width: 1.4,
             ),
             boxShadow: [
               BoxShadow(
-                color: _neon.withValues(alpha: 0.22),
+                color: activeAccent.withValues(alpha: 0.22),
                 blurRadius: 18,
                 spreadRadius: 0.5,
               ),
