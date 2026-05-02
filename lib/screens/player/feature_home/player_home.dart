@@ -25,6 +25,7 @@ import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/arena_chain_animated_title.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/game_poster_card.dart'
     show GamePosterCard, gameAccentColor;
+import 'package:arena_chain_flutter/screens/player/feature_home/_common/hero_card_light_streak.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/side_drawer.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_dialogs.dart';
@@ -61,6 +62,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   void initState() {
     super.initState();
     _quickCardController = PageController(viewportFraction: 0.92);
+    _quickCardController.addListener(_onQuickCardScroll);
     _loadLivePreview();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
@@ -185,6 +187,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   @override
   void dispose() {
     _matchmakingVm?.removeListener(_onMatchmakingChanged);
+    _quickCardController.removeListener(_onQuickCardScroll);
     _quickCardController.dispose();
     try {
       _trainingApi.dispose();
@@ -236,6 +239,19 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       _lastHandledStatus = status;
     }
   }
+
+  void _onQuickCardScroll() {
+    if (!_quickCardController.hasClients) return;
+    final page = _quickCardController.page;
+    if (page == null) return;
+    final intendedIndex = page.round();
+    if (intendedIndex != _quickCardIndex) {
+      setState(() {
+        _quickCardIndex = intendedIndex;
+      });
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────
 
   void _onNavTap(int index) {
@@ -296,34 +312,68 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   }
 
   Widget _buildHomeContent() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 12),
-          _buildAccountStrip(),
-          const SizedBox(height: 14),
-          _buildQuickActions(),
-          const SizedBox(height: 14),
-          _buildPerGameStatsStrip(),
-          const SizedBox(height: 24),
-          Consumer<LinkedAccountsViewModel>(
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Positioned.fill(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 12),
+                _buildAccountStrip(),
+                const SizedBox(height: 14),
+                _buildQuickActions(),
+                const SizedBox(height: 14),
+                _buildPerGameStatsStrip(),
+                const SizedBox(height: 24),
+                Consumer<LinkedAccountsViewModel>(
+                  builder: (context, linkedVm, _) {
+                    final targetAccent = _activeAccent(linkedVm.accounts);
+                    return TweenAnimationBuilder<Color?>(
+                      tween: ColorTween(end: targetAccent),
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeInOutCubic,
+                      builder: (context, animatedAccent, _) {
+                        final accent = animatedAccent ?? targetAccent;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildTrainingModeCard(accent),
+                            const SizedBox(height: 28),
+                            _buildLivePreviewSection(accent),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Consumer<LinkedAccountsViewModel>(
             builder: (context, linkedVm, _) {
-              final accent = _activeAccent(linkedVm.accounts);
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildTrainingModeCard(accent),
-                  const SizedBox(height: 28),
-                  _buildLivePreviewSection(accent),
-                ],
+              final targetAccent = _activeAccent(linkedVm.accounts);
+              return TweenAnimationBuilder<Color?>(
+                tween: ColorTween(end: targetAccent),
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeInOutCubic,
+                builder: (context, animatedAccent, _) {
+                  final accent = animatedAccent ?? targetAccent;
+                  return HomeLightStreakOverlay(
+                    triggerKey: _quickCardIndex,
+                    accentColor: accent,
+                  );
+                },
               );
             },
           ),
-          const SizedBox(height: 32),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -336,11 +386,17 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   Widget _buildHeader() {
     return Consumer<LinkedAccountsViewModel>(
       builder: (context, linkedVm, _) {
-        final accent = _activeAccent(linkedVm.accounts);
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 8, 6),
-          child: Row(
-            children: [
+        final targetAccent = _activeAccent(linkedVm.accounts);
+        return TweenAnimationBuilder<Color?>(
+          tween: ColorTween(end: targetAccent),
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOutCubic,
+          builder: (context, animatedAccent, _) {
+            final accent = animatedAccent ?? targetAccent;
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 8, 6),
+              child: Row(
+                children: [
               Builder(
                 builder: (context) => Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -430,6 +486,8 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
               ),
             ],
           ),
+        );
+          },
         );
       },
     );
