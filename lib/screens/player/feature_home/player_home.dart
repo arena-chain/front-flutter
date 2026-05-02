@@ -23,7 +23,8 @@ import 'package:arena_chain_flutter/core/api/training_api_service.dart';
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/arena_chain_animated_title.dart';
-import 'package:arena_chain_flutter/screens/player/feature_home/_common/game_poster_card.dart';
+import 'package:arena_chain_flutter/screens/player/feature_home/_common/game_poster_card.dart'
+    show GamePosterCard, gameAccentColor;
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/side_drawer.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_dialogs.dart';
@@ -302,9 +303,20 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
           const SizedBox(height: 20),
           _buildQuickActions(),
           const SizedBox(height: 24),
-          _buildTrainingModeCard(),
-          const SizedBox(height: 28),
-          _buildLivePreviewSection(),
+          Consumer<LinkedAccountsViewModel>(
+            builder: (context, linkedVm, _) {
+              final accent = _activeAccent(linkedVm.accounts);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildTrainingModeCard(accent),
+                  const SizedBox(height: 28),
+                  _buildLivePreviewSection(accent),
+                ],
+              );
+            },
+          ),
           const SizedBox(height: 32),
         ],
       ),
@@ -585,6 +597,16 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
+  /// Active accent color based on which carousel page is currently centered.
+  /// Falls back to the static neon green when the user is on the terminal
+  /// "Link Riot/Steam" / "All Accounts Linked" tile.
+  Color _activeAccent(List<LinkedGameAccount> accounts) {
+    if (_quickCardIndex >= 0 && _quickCardIndex < accounts.length) {
+      return gameAccentColor(accounts[_quickCardIndex].gameId);
+    }
+    return _neon;
+  }
+
   Widget _buildQuickActions() {
     return Consumer<LinkedAccountsViewModel>(
       builder: (context, linkedVM, child) {
@@ -639,128 +661,138 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       terminalTap = null;
     }
 
-    final activeAccent =
-        (_quickCardIndex >= 0 && _quickCardIndex < accounts.length)
-        ? gameAccentColor(accounts[_quickCardIndex].gameId)
-        : _neon;
-
     return AspectRatio(
       aspectRatio: 16 / 10,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 260),
-          curve: Curves.easeOut,
-          decoration: BoxDecoration(
-            color: const Color(0xFF0A0A0A),
-            border: Border.all(
-              color: activeAccent.withValues(alpha: 0.65),
-              width: 1.4,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: activeAccent.withValues(alpha: 0.22),
-                blurRadius: 18,
-                spreadRadius: 0.5,
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: PageView.builder(
-                  controller: _quickCardController,
-                  itemCount: totalPages,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _quickCardIndex = index;
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    if (index == accounts.length) {
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
-                        child: Center(
-                          child: GestureDetector(
-                            onTap: terminalDisabled ? null : terminalTap,
-                            child: Opacity(
-                              opacity: terminalDisabled ? 0.45 : 1,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 18,
-                                  vertical: 14,
-                                ),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: _neon.withValues(alpha: 0.78),
-                                    width: 1.2,
-                                  ),
-                                  color: Colors.black.withValues(alpha: 0.35),
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      terminalIcon,
-                                      color: _neon.withValues(alpha: 0.95),
-                                      size: 36,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      terminalTitle,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.88,
-                                        ),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      terminalSubtitle,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.45,
-                                        ),
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+      child: PageView.builder(
+        controller: _quickCardController,
+        itemCount: totalPages,
+        physics: const PageScrollPhysics(),
+        onPageChanged: (index) {
+          setState(() {
+            _quickCardIndex = index;
+          });
+        },
+        itemBuilder: (context, index) {
+          if (index == accounts.length) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0A0A0A),
+                    border: Border.all(
+                      color: _neon.withValues(alpha: 0.65),
+                      width: 1.4,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _neon.withValues(alpha: 0.22),
+                        blurRadius: 18,
+                        spreadRadius: 0.5,
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: terminalDisabled ? null : terminalTap,
+                        child: Opacity(
+                          opacity: terminalDisabled ? 0.45 : 1,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _neon.withValues(alpha: 0.78),
+                                width: 1.2,
                               ),
+                              color: Colors.black.withValues(alpha: 0.35),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  terminalIcon,
+                                  color: _neon.withValues(alpha: 0.95),
+                                  size: 36,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  terminalTitle,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.88),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  terminalSubtitle,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.45),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      );
-                    }
-
-                    final profile = accounts[index];
-                    return GamePosterCard(
-                      account: profile,
-                      totalPages: totalPages,
-                      activePage: _quickCardIndex,
-                      isLoading: linkedVm.isLoading,
-                      onPlayNow: () =>
-                          Navigator.pushNamed(context, AppRoutes.matchmaking),
-                      onOpenStats: () =>
-                          Navigator.pushNamed(context, profile.statsRoute),
-                    );
-                  },
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ],
-          ),
-        ),
+            );
+          }
+
+          final account = accounts[index];
+          final accent = gameAccentColor(account.gameId);
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A0A0A),
+                  border: Border.all(
+                    color: accent.withValues(alpha: 0.65),
+                    width: 1.4,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.22),
+                      blurRadius: 18,
+                      spreadRadius: 0.5,
+                    ),
+                  ],
+                ),
+                child: GamePosterCard(
+                  account: account,
+                  totalPages: totalPages,
+                  activePage: _quickCardIndex,
+                  isLoading: linkedVm.isLoading,
+                  onPlayNow: () =>
+                      Navigator.pushNamed(context, AppRoutes.matchmaking),
+                  onOpenStats: () =>
+                      Navigator.pushNamed(context, account.statsRoute),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildLivePreviewSection() {
+  Widget _buildLivePreviewSection(Color accent) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -790,7 +822,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                       Text(
                         'Watch all lives',
                         style: TextStyle(
-                          color: _neon.withValues(alpha: 0.92),
+                          color: accent.withValues(alpha: 0.92),
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.2,
@@ -800,7 +832,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                       Text(
                         '→',
                         style: TextStyle(
-                          color: _neon.withValues(alpha: 0.85),
+                          color: accent.withValues(alpha: 0.85),
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
                           height: 1,
@@ -814,14 +846,14 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
           ),
           const SizedBox(height: 12),
           if (_livePreviewLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 28),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 28),
               child: Center(
                 child: SizedBox(
                   width: 28,
                   height: 28,
                   child: CircularProgressIndicator(
-                    color: _neon,
+                    color: accent,
                     strokeWidth: 2,
                   ),
                 ),
@@ -835,7 +867,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                   if (i > 0) const SizedBox(height: 14),
                   ArenaLiveStreamCard(
                     stream: _livePreviewStreams[i],
-                    neon: _neon,
+                    neon: accent,
                     onTap: () => _openPreviewStream(_livePreviewStreams[i]),
                   ),
                 ],
@@ -846,7 +878,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
-  Widget _buildTrainingModeCard() {
+  Widget _buildTrainingModeCard(Color accent) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Material(
@@ -862,11 +894,11 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
               color: const Color(0xFF0A0A0A),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: _neon.withValues(alpha: 0.38),
+                color: accent.withValues(alpha: 0.38),
                 width: 1.1,
               ),
               boxShadow: [
-                BoxShadow(color: _neon.withValues(alpha: 0.1), blurRadius: 14),
+                BoxShadow(color: accent.withValues(alpha: 0.1), blurRadius: 14),
               ],
             ),
             child: Padding(
@@ -879,13 +911,13 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: _neon.withValues(alpha: 0.68),
+                        color: accent.withValues(alpha: 0.68),
                         width: 1.4,
                       ),
                     ),
                     child: Icon(
                       Icons.bolt_rounded,
-                      color: _neon.withValues(alpha: 0.95),
+                      color: accent.withValues(alpha: 0.95),
                       size: 30,
                     ),
                   ),
@@ -921,11 +953,11 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                     padding: const EdgeInsets.only(right: 4),
                     child: Icon(
                       Icons.gps_fixed,
-                      color: _neon,
+                      color: accent,
                       size: 32,
                       shadows: [
                         Shadow(
-                          color: _neon.withValues(alpha: 0.5),
+                          color: accent.withValues(alpha: 0.5),
                           blurRadius: 8,
                         ),
                       ],
