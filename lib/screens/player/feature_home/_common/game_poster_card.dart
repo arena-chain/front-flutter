@@ -162,7 +162,7 @@ class GamePosterCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Text(
+              child: const Text(
                 'PLAY NOW  >',
                 style: TextStyle(
                   color: Colors.white,
@@ -172,7 +172,7 @@ class GamePosterCard extends StatelessWidget {
                   shadows: [
                     Shadow(
                       blurRadius: 6,
-                      color: Colors.black.withValues(alpha: 0.7),
+                      color: Color(0xB3000000),
                     ),
                   ],
                 ),
@@ -200,57 +200,6 @@ class GamePosterCard extends StatelessWidget {
                 ),
               );
             }),
-          ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 0,
-          height: 50,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onOpenStats,
-          ),
-        ),
-        Positioned(
-          left: 12,
-          top: 12,
-          child: GestureDetector(
-            onTap: onOpenStats,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              constraints: const BoxConstraints(maxWidth: 200),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.55),
-                border: Border.all(
-                  color: accent.withValues(alpha: 0.85),
-                  width: 1,
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.remove_red_eye, size: 14, color: accent),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      account.displayName.isNotEmpty
-                          ? account.displayName.toUpperCase()
-                          : 'OPERATOR',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
         if (isLoading)

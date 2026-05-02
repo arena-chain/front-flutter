@@ -10,6 +10,13 @@ bool _riotVerified(Map<String, dynamic> s) {
   return v != null && v.toString().toLowerCase() == 'verified';
 }
 
+bool _steamVerified(Map<String, dynamic> s) {
+  final v = s['steamVerified'] ?? s['steam_verified'];
+  if (v == true) return true;
+  if (v == false || v == null) return false;
+  return v.toString().toLowerCase() == 'true';
+}
+
 String _rankGameLabel(dynamic game) {
   if (game == null) return '';
   if (game is String) return game;
@@ -51,6 +58,13 @@ String _winPct(Rank? r) {
   return '${((wins / t) * 100).round()}%';
 }
 
+String? _rankTierLabel(Rank? r) {
+  if (r == null) return null;
+  final t = r.tier.trim();
+  if (t.isEmpty || t.toLowerCase() == 'unranked') return null;
+  return t;
+}
+
 /// Parses `kda` like `2.41:1` from LoL-style rows or Val rows from our API.
 double? _parseKdaRatio(dynamic kdaField) {
   final s = kdaField?.toString();
@@ -74,7 +88,9 @@ double? _parseKdaRatio(dynamic kdaField) {
     if (raw['win'] == true) wins++;
   }
   final kd = n == 0 ? '--' : (sum / n).toStringAsFixed(2);
-  final win = matches.isEmpty ? '--' : '${((wins / matches.length) * 100).round()}%';
+  final win = matches.isEmpty
+      ? '--'
+      : '${((wins / matches.length) * 100).round()}%';
   return (kd: kd, win: win);
 }
 
@@ -93,10 +109,11 @@ class LinkedAccountsViewModel extends ChangeNotifier {
   bool get isLoading => _loading;
   String? get error => _error;
   Map<String, dynamic> get lastRiotStatus => Map.unmodifiable(_lastRiotStatus);
-  Map<String, dynamic> get lastSteamStatus => Map.unmodifiable(_lastSteamStatus);
+  Map<String, dynamic> get lastSteamStatus =>
+      Map.unmodifiable(_lastSteamStatus);
 
   bool get riotVerified => _riotVerified(_lastRiotStatus);
-  bool get steamVerified => _lastSteamStatus['steamVerified'] == true;
+  bool get steamVerified => _steamVerified(_lastSteamStatus);
 
   Future<void> refresh({List<Rank> platformRanks = const []}) async {
     _loading = true;
@@ -112,14 +129,26 @@ class LinkedAccountsViewModel extends ChangeNotifier {
         return;
       }
 
-      final riotStatus = await _riot.getLinkStatus(token: token);
-      final steamStatus = await _steam.getStatus(token: token);
+      Map<String, dynamic> riotStatus = {};
+      try {
+        riotStatus = await _riot.getLinkStatus(token: token);
+      } catch (e) {
+        debugPrint('[LinkedAccounts] Riot link-status failed: $e');
+      }
+
+      Map<String, dynamic> steamStatus = {};
+      try {
+        steamStatus = await _steam.getStatus(token: token);
+      } catch (e) {
+        debugPrint('[LinkedAccounts] Steam status failed: $e');
+      }
+
       _lastRiotStatus = riotStatus;
       _lastSteamStatus = steamStatus;
 
       final out = <LinkedGameAccount>[];
       final riotLinked = _riotVerified(riotStatus);
-      final steamOk = steamStatus['steamVerified'] == true;
+      final steamOk = _steamVerified(steamStatus);
 
       List<dynamic> lolMatches = const [];
       List<dynamic> valMatches = const [];
@@ -153,6 +182,10 @@ class LinkedAccountsViewModel extends ChangeNotifier {
             primaryStat: lolAgg.kd,
             secondaryStat: lolWin,
             fallbackName: 'RIOT',
+            rankTier: _rankTierLabel(rankLol),
+            matchesCount: lolMatches.isNotEmpty ? '${lolMatches.length}' : null,
+            mainRole: null,
+            streak: null,
           ),
         );
         out.add(
@@ -161,6 +194,10 @@ class LinkedAccountsViewModel extends ChangeNotifier {
             primaryStat: valAgg.kd,
             secondaryStat: valWin,
             fallbackName: 'RIOT',
+            rankTier: _rankTierLabel(rankVal),
+            matchesCount: valMatches.isNotEmpty ? '${valMatches.length}' : null,
+            mainRole: null,
+            streak: null,
           ),
         );
       }

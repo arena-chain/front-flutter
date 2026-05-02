@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Header logo: rotates a single full 360° turn once on first mount, then stops.
 class ArenaChainAnimatedTitle extends StatefulWidget {
-  const ArenaChainAnimatedTitle({super.key, this.size = 36});
+  const ArenaChainAnimatedTitle({super.key, this.size = 44});
 
   final double size;
 

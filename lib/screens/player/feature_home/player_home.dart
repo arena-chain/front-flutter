@@ -60,7 +60,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _quickCardController = PageController();
+    _quickCardController = PageController(viewportFraction: 0.92);
     _loadLivePreview();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
@@ -300,8 +300,12 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       child: Column(
         children: [
           _buildHeader(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+          _buildAccountStrip(),
+          const SizedBox(height: 14),
           _buildQuickActions(),
+          const SizedBox(height: 14),
+          _buildPerGameStatsStrip(),
           const SizedBox(height: 24),
           Consumer<LinkedAccountsViewModel>(
             builder: (context, linkedVm, _) {
@@ -323,32 +327,76 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
+  String _surnameForPill(BuildContext context) {
+    final user = context.watch<AuthViewModel>().currentUser;
+    final nick = user?.nickname.trim() ?? '';
+    return nick.isEmpty ? '' : nick;
+  }
+
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 8, 8, 6),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Row(
+    return Consumer<LinkedAccountsViewModel>(
+      builder: (context, linkedVm, _) {
+        final accent = _activeAccent(linkedVm.accounts);
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(4, 8, 8, 6),
+          child: Row(
             children: [
               Builder(
-                builder: (context) => IconButton(
-                  icon: Icon(
-                    Icons.menu_rounded,
-                    color: Colors.white.withValues(alpha: 0.9),
+                builder: (context) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => Scaffold.of(context).openDrawer(),
+                    child: const SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Center(child: ArenaChainAnimatedTitle()),
+                    ),
                   ),
-                  onPressed: () => Scaffold.of(context).openDrawer(),
                 ),
+              ),
+              Consumer<AuthViewModel>(
+                builder: (context, auth, child) {
+                  final nick = _surnameForPill(context);
+                  if (nick.isEmpty) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A1A),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        nick,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
               const Spacer(),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: Icon(
-                      Icons.search_rounded,
-                      color: _neon.withValues(alpha: 0.95),
+                    iconSize: 22,
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(
+                      minWidth: 44,
+                      minHeight: 44,
                     ),
+                    splashRadius: 24,
+                    icon: const Icon(Icons.search, color: Color(0xFF717171)),
                     onPressed: () {},
                   ),
                   Stack(
@@ -357,7 +405,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                       IconButton(
                         icon: Icon(
                           Icons.notifications_none_rounded,
-                          color: _neon.withValues(alpha: 0.95),
+                          color: accent.withValues(alpha: 0.95),
                         ),
                         onPressed: () => Navigator.pushNamed(
                           context,
@@ -382,10 +430,174 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
               ),
             ],
           ),
-          const ArenaChainAnimatedTitle(),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  String _connectionSubtitle(LinkedGameAccount account) {
+    switch (account.gameId) {
+      case LinkedGameId.lol:
+      case LinkedGameId.valorant:
+        return 'Riot ID • Connected';
+      case LinkedGameId.cs2:
+      case LinkedGameId.dota2:
+        return 'Steam • Connected';
+    }
+  }
+
+  Widget _buildAccountStrip() {
+    return Consumer<LinkedAccountsViewModel>(
+      builder: (context, linkedVm, _) {
+        final accounts = linkedVm.accounts;
+        final onTerminal =
+            accounts.isEmpty || _quickCardIndex >= accounts.length;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (onTerminal)
+                const CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Color(0xFF1A1A1A),
+                  child: Icon(Icons.person, color: Colors.white70, size: 22),
+                )
+              else
+                _buildAccountStripGameAvatar(accounts[_quickCardIndex]),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (onTerminal)
+                      const Text(
+                        'NO ACCOUNT',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      )
+                    else ...[
+                      Text(
+                        accounts[_quickCardIndex].displayName.toUpperCase(),
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.fade,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _connectionSubtitle(accounts[_quickCardIndex]),
+                        style: const TextStyle(
+                          color: Color(0xFFB3B3B3),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAccountStripGameAvatar(LinkedGameAccount account) {
+    final raw = account.avatarUrl?.trim() ?? '';
+    final hasUrl = raw.isNotEmpty;
+    return CircleAvatar(
+      radius: 22,
+      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundImage: hasUrl ? NetworkImage(raw) : null,
+      child: hasUrl
+          ? null
+          : const Icon(Icons.person, color: Colors.white70, size: 22),
+    );
+  }
+
+  Widget _buildPerGameStatsStrip() {
+    return Consumer<LinkedAccountsViewModel>(
+      builder: (context, linkedVm, _) {
+        final accounts = linkedVm.accounts;
+        if (_quickCardIndex < 0 || _quickCardIndex >= accounts.length) {
+          return const SizedBox.shrink();
+        }
+        final account = accounts[_quickCardIndex];
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0A0A0A),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF1A1A1A), width: 1),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _statColumn('KDA', account.primaryStat),
+                _statColumn('Win Rate', account.secondaryStat),
+                _statColumn('Matches', account.matchesCount ?? '--'),
+                _statColumn('Main Role', account.mainRole ?? '--'),
+                _statColumn('Streak', _formatStreak(account.streak)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _statColumn(String label, String value) {
+    final isStreakWins =
+        label == 'Streak' && value.toLowerCase().contains('win');
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFFB3B3B3),
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            if (isStreakWins) const SizedBox(width: 4),
+            if (isStreakWins) const Text('🔥', style: TextStyle(fontSize: 14)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _formatStreak(String? streak) {
+    if (streak == null || streak.isEmpty) return '--';
+    return streak;
   }
 
   // ignore: unused_element
@@ -611,7 +823,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     return Consumer<LinkedAccountsViewModel>(
       builder: (context, linkedVM, child) {
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: _buildPuzzleQuickActions(
             context: context,
             accounts: linkedVM.accounts,
@@ -662,7 +874,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     }
 
     return AspectRatio(
-      aspectRatio: 16 / 10,
+      aspectRatio: 16 / 9,
       child: PageView.builder(
         controller: _quickCardController,
         itemCount: totalPages,
@@ -676,23 +888,17 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
           if (index == accounts.length) {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0A0A0A),
-                    border: Border.all(
-                      color: _neon.withValues(alpha: 0.65),
-                      width: 1.4,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _neon.withValues(alpha: 0.22),
-                        blurRadius: 18,
-                        spreadRadius: 0.5,
-                      ),
-                    ],
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A0A0A),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: const Color(0xFF1F1F1F),
+                    width: 1,
                   ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(17),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
                     child: Center(
@@ -708,8 +914,8 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: _neon.withValues(alpha: 0.78),
-                                width: 1.2,
+                                color: const Color(0xFF2A2A2A),
+                                width: 1,
                               ),
                               color: Colors.black.withValues(alpha: 0.35),
                             ),
@@ -718,7 +924,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                               children: [
                                 Icon(
                                   terminalIcon,
-                                  color: _neon.withValues(alpha: 0.95),
+                                  color: const Color(0xFFB3B3B3),
                                   size: 36,
                                 ),
                                 const SizedBox(height: 8),
@@ -757,23 +963,20 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
           final accent = gameAccentColor(account.gameId);
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0A0A0A),
-                  border: Border.all(
-                    color: accent.withValues(alpha: 0.65),
-                    width: 1.4,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: accent, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.35),
+                    blurRadius: 24,
+                    spreadRadius: 1,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: accent.withValues(alpha: 0.22),
-                      blurRadius: 18,
-                      spreadRadius: 0.5,
-                    ),
-                  ],
-                ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
                 child: GamePosterCard(
                   account: account,
                   totalPages: totalPages,
