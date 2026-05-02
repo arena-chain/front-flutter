@@ -46,6 +46,15 @@ class SideDrawer extends StatelessWidget {
                 ),
                 _buildDrawerItem(
                   context,
+                  icon: Icons.confirmation_num,
+                  title: 'My Tickets',
+                  onTap: () {
+                    Navigator.pop(context); // Close drawer
+                    Navigator.pushNamed(context, AppRoutes.myTickets);
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
                   icon: Icons.newspaper_rounded,
                   title: 'News',
                   onTap: () {
@@ -60,6 +69,15 @@ class SideDrawer extends StatelessWidget {
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.pushNamed(context, AppRoutes.lolControl);
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.store_rounded,
+                  title: 'NFT Marketplace',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, AppRoutes.marketplace);
                   },
                 ),
                 const Divider(color: Color(0xFF1A1F36), height: 32),

@@ -1,3 +1,5 @@
+import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
+
 // Models for the player-facing leagues feature.
 
 class LeagueItem {
@@ -18,6 +20,14 @@ class LeagueItem {
   int get participantCount {
     if (raw['participants'] is List) return (raw['participants'] as List).length;
     return (raw['participantCount'] as num?)?.toInt() ?? 0;
+  }
+
+  List<TournamentTicketType> get ticketTypes {
+    final list = raw['ticketTypes'];
+    if (list is List) {
+      return list.map((e) => TournamentTicketType.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [];
   }
 
   factory LeagueItem.fromJson(Map<String, dynamic> json) => LeagueItem(

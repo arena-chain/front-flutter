@@ -24,9 +24,9 @@ class TournamentsApi {
     final candidates = <String>[
       if (_workingBaseUrl case final String working) working,
       baseUrl,
-      'http://10.0.2.2:3000',
-      'http://127.0.0.1:3000',
-      'http://localhost:3000',
+      'http://10.0.2.2:3000/api',
+      'http://127.0.0.1:3000/api',
+      'http://localhost:3000/api',
     ];
     final seen = <String>{};
     return candidates.where((b) => seen.add(b)).toList();
@@ -61,7 +61,7 @@ class TournamentsApi {
     final headers = await _getHeaders();
     final response = await _requestWithFallback(
       (candidateBase) => http.post(
-        Uri.parse('$candidateBase/api/tournements'),
+        Uri.parse('$candidateBase/tournements'),
         headers: headers,
         body: jsonEncode(jsonData),
       ),
@@ -97,7 +97,7 @@ class TournamentsApi {
     final headers = await _getHeaders();
     final response = await _requestWithFallback(
       (candidateBase) => http.get(
-        Uri.parse('$candidateBase/api/tournements/$id'),
+        Uri.parse('$candidateBase/tournements/$id'),
         headers: headers,
       ),
     );

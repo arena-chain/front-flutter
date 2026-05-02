@@ -32,6 +32,7 @@ class ArenaLiveStreamCard extends StatelessWidget {
           border: Border.all(color: neon.withValues(alpha: 0.45), width: 1.4),
           boxShadow: [
             BoxShadow(
+              color: neon.withValues(alpha: 0.12),
               color: neon.withValues(alpha: 0.18),
               blurRadius: 18,
               spreadRadius: 0.5,
@@ -42,7 +43,11 @@ class ArenaLiveStreamCard extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(13),
           child: Container(
-            color: const Color(0xFF0A0A0A),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: neon.withValues(alpha: 0.28)),
+              color: const Color(0xFF0A0A0A),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

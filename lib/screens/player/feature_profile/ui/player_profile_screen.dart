@@ -196,6 +196,8 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
                 const SizedBox(height: 24),
                 _buildMyLeagues(),
                 const SizedBox(height: 24),
+                _buildMyTickets(),
+                const SizedBox(height: 24),
                 _buildAchievements(),
                 const SizedBox(height: 32),
               ],
@@ -1293,6 +1295,70 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
             points: '1890 pts',
             rankBadge: 'Gold',
             rankColor: const Color(0xFFFFAA00),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildMyTickets() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.confirmation_num, color: Color(0xFF00FF00), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'My Ticket Wallet',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: () => Navigator.pushNamed(context, AppRoutes.myTickets),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1F2E),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF00FF00).withOpacity(0.3)),
+                gradient: LinearGradient(
+                  colors: [const Color(0xFF00FF00).withOpacity(0.05), Colors.transparent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.wallet, color: Color(0xFF00FF00), size: 32),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Digital Asset Wallet',
+                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'View your league & tournament passes',
+                          style: TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios, color: Color(0xFF00FF00), size: 16),
+                ],
+              ),
+            ),
           ),
         ],
       ),

@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:arena_chain_flutter/core/api/feature_leagues/leagues_api.dart';
-import 'package:arena_chain_flutter/core/models/feature_leagues/leagues_models.dart';
-import 'package:arena_chain_flutter/navigation.dart';
+import '../../core/api/feature_leagues/leagues_api.dart';
+import '../../core/models/feature_leagues/leagues_models.dart';
+import '../../core/models/feature_tournaments/tournament_model.dart';
+import '../../navigation.dart';
 import 'package:video_player/video_player.dart';
 
 // ── Design tokens ────────────────────────────────────────────────────────────
@@ -58,7 +59,7 @@ class _PlayerLeaguesScreenState extends State<PlayerLeaguesScreen> {
 
   Future<void> _load() async {
     try {
-      setState(() { _loading = true; _error = null; });
+      if (mounted) setState(() { _loading = true; _error = null; });
       final list = await _api.getLeagues();
       if (mounted) setState(() => _leagues = list);
     } catch (e) {
@@ -70,7 +71,7 @@ class _PlayerLeaguesScreenState extends State<PlayerLeaguesScreen> {
 
   Future<void> _loadSeasons(String leagueId) async {
     if (_seasonsCache.containsKey(leagueId)) return;
-    setState(() => _seasonsLoading[leagueId] = true);
+    if (mounted) setState(() => _seasonsLoading[leagueId] = true);
     try {
       final list = await _api.getSeasons(leagueId);
       if (mounted) setState(() => _seasonsCache[leagueId] = list);
@@ -81,15 +82,50 @@ class _PlayerLeaguesScreenState extends State<PlayerLeaguesScreen> {
     }
   }
 
-  void _toggle(String id) {
-    setState(() {
-      if (_expandedId == id) {
-        _expandedId = null;
-      } else {
-        _expandedId = id;
-        _loadSeasons(id);
+  Future<void> _joinLeague(String leagueId, String ticketType) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator(color: _accent)),
+      );
+
+      await _api.registerForLeague(leagueId, ticketType);
+
+      if (mounted) {
+        Navigator.pop(context); // close loader
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration successful!'),
+            backgroundColor: _accent,
+          ),
+        );
+        _load(); // refresh leagues
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // close loader
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Registration failed: $e'),
+            backgroundColor: _red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _toggle(String id) {
+    if (mounted) {
+      setState(() {
+        if (_expandedId == id) {
+          _expandedId = null;
+        } else {
+          _expandedId = id;
+          _loadSeasons(id);
+        }
+      });
+    }
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -127,6 +163,7 @@ class _PlayerLeaguesScreenState extends State<PlayerLeaguesScreen> {
                                 seasons: _seasonsCache[l.id],
                                 seasonsLoading: _seasonsLoading[l.id] ?? false,
                                 onToggle: () => _toggle(l.id),
+                                onJoin: (ticketType) => _joinLeague(l.id, ticketType),
                                 onSeasonTap: (season) => Navigator.push(
                                   ctx,
                                   MaterialPageRoute(
@@ -302,6 +339,7 @@ class _LeagueCard extends StatelessWidget {
   final List<SeasonItem>? seasons;
   final bool seasonsLoading;
   final VoidCallback onToggle;
+  final void Function(String) onJoin;
   final void Function(SeasonItem) onSeasonTap;
 
   const _LeagueCard({
@@ -310,6 +348,7 @@ class _LeagueCard extends StatelessWidget {
     required this.seasons,
     required this.seasonsLoading,
     required this.onToggle,
+    required this.onJoin,
     required this.onSeasonTap,
   });
 
@@ -411,19 +450,137 @@ class _LeagueCard extends StatelessWidget {
                 ),
               ),
             ),
-            // ── Seasons (expanded) ───────────────────────────────────────
+            // ── Tickets & Seasons (expanded) ─────────────────────────────
             AnimatedCrossFade(
               firstChild: const SizedBox.shrink(),
-              secondChild: _SeasonsSection(
-                seasons: seasons,
-                loading: seasonsLoading,
-                onSeasonTap: onSeasonTap,
+              secondChild: Column(
+                children: [
+                  _TicketsSection(
+                    tickets: league.ticketTypes,
+                    onBuy: onJoin,
+                  ),
+                  _SeasonsSection(
+                    seasons: seasons,
+                    loading: seasonsLoading,
+                    onSeasonTap: onSeasonTap,
+                  ),
+                ],
               ),
               crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
               duration: const Duration(milliseconds: 250),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Tickets Section ──────────────────────────────────────────────────────────
+
+class _TicketsSection extends StatelessWidget {
+  final List<TournamentTicketType> tickets;
+  final void Function(String) onBuy;
+
+  const _TicketsSection({
+    required this.tickets,
+    required this.onBuy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (tickets.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: _border)),
+      ),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'TICKETS',
+            style: TextStyle(
+              color: _textMuted,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...tickets.map((t) => _TicketPill(ticket: t, onBuy: () => onBuy(t.name))),
+        ],
+      ),
+    );
+  }
+}
+
+class _TicketPill extends StatelessWidget {
+  final TournamentTicketType ticket;
+  final VoidCallback onBuy;
+
+  const _TicketPill({required this.ticket, required this.onBuy});
+
+  @override
+  Widget build(BuildContext context) {
+    final isNFT = ticket.name.toUpperCase().contains('NFT');
+    final color = isNFT ? Colors.purpleAccent : _accent;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(isNFT ? Icons.token_outlined : Icons.confirmation_number_outlined,
+                color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ticket.name,
+                  style: const TextStyle(color: _textPrimary, fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  '${ticket.capacity} slots left',
+                  style: const TextStyle(color: _textSecondary, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '\$${ticket.price.toStringAsFixed(2)}',
+            style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(width: 12),
+          ElevatedButton(
+            onPressed: onBuy,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: color,
+              foregroundColor: Colors.black,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('JOIN', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+          ),
+        ],
       ),
     );
   }

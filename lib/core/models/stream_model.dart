@@ -14,6 +14,8 @@ class StreamModel {
   final String? thumbnailUrl;
   final DateTime? startedAt;
   final DateTime? endedAt;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
   final DateTime? scheduledStartTime;
   final DateTime? scheduledEndTime;
   final Map<String, dynamic>? streamer;
@@ -33,6 +35,8 @@ class StreamModel {
     this.thumbnailUrl,
     this.startedAt,
     this.endedAt,
+    this.createdAt,
+    this.updatedAt,
     this.scheduledStartTime,
     this.scheduledEndTime,
     this.streamer,
@@ -40,29 +44,57 @@ class StreamModel {
   });
 
   factory StreamModel.fromJson(Map<String, dynamic> json) {
+    final streamerJson = json['streamerId'];
+    final channelJson = json['channelId'];
+
     return StreamModel(
-      id: json['_id'] ?? json['id'] ?? '',
-      title: json['title'] ?? '',
-      description: json['description'],
-      streamerId: json['streamerId'] is Map ? (json['streamerId']['_id'] ?? '') : (json['streamerId'] ?? ''),
-      channelId: json['channelId'] is Map ? (json['channelId']['_id'] ?? '') : (json['channelId'] ?? ''),
-      streamUrl: json['streamUrl'],
-      playbackUrl: json['playbackUrl'],
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
+      description: json['description']?.toString(),
+      streamerId: streamerJson is Map
+          ? (streamerJson['_id'] ?? '').toString()
+          : (json['streamerId'] ?? '').toString(),
+      channelId: channelJson is Map
+          ? (channelJson['_id'] ?? '').toString()
+          : (json['channelId'] ?? '').toString(),
+      streamUrl: json['streamUrl']?.toString(),
+      playbackUrl: json['playbackUrl']?.toString(),
       isLive: json['isLive'] ?? false,
       viewerCount: json['viewerCount'] ?? 0,
       tags: List<String>.from(json['tags'] ?? []),
-      thumbnailUrl: json['thumbnailUrl'],
-      startedAt: json['startedAt'] != null ? DateTime.parse(json['startedAt']) : null,
-      endedAt: json['endedAt'] != null ? DateTime.parse(json['endedAt']) : null,
-      scheduledStartTime: json['scheduledStartTime'] != null ? DateTime.parse(json['scheduledStartTime']) : null,
-      scheduledEndTime: json['scheduledEndTime'] != null ? DateTime.parse(json['scheduledEndTime']) : null,
-      streamer: json['streamerId'] is Map ? json['streamerId'] as Map<String, dynamic> : null,
-      channel: json['channelId'] is Map ? Channel(
-        id: json['channelId']['_id'] ?? '',
-        name: json['channelId']['name'] ?? '',
-        ownerId: json['channelId']['ownerId'] ?? '',
-        avatarUrl: json['channelId']['avatarUrl'],
-      ) : null,
+      thumbnailUrl: json['thumbnailUrl']?.toString(),
+      startedAt: _parseDate(json['startedAt']),
+      endedAt: _parseDate(json['endedAt']),
+      createdAt: _parseDate(json['createdAt']),
+      updatedAt: _parseDate(json['updatedAt']),
+      scheduledStartTime: _parseDate(json['scheduledStartTime']),
+      scheduledEndTime: _parseDate(json['scheduledEndTime']),
+      streamer: streamerJson is Map<String, dynamic>
+          ? streamerJson
+          : streamerJson is Map
+              ? Map<String, dynamic>.from(streamerJson)
+              : null,
+      channel: channelJson is Map
+          ? Channel(
+              id: (channelJson['_id'] ?? '').toString(),
+              name: (channelJson['name'] ?? '').toString(),
+              ownerId: (channelJson['ownerId'] ?? '').toString(),
+              avatarUrl: channelJson['avatarUrl']?.toString(),
+            )
+          : null,
     );
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    final raw = value.toString().trim();
+    if (raw.isEmpty) {
+      return null;
+    }
+
+    return DateTime.tryParse(raw);
   }
 }

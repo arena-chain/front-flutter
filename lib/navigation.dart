@@ -11,6 +11,10 @@ import 'package:arena_chain_flutter/screens/player/feature_profile/ui/settings_s
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/my_channel_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/subscriptions_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_profile/ui/my_account_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_profile/ui/player_tickets_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_profile/ui/ticket_details_screen.dart';
+import 'package:arena_chain_flutter/core/models/ticket_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_leagues/ui/leagues_list_screen.dart';
 import 'package:arena_chain_flutter/screens/leagues/player_leagues_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/ui/add_friend_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/create_tournament_screen.dart';
@@ -50,6 +54,8 @@ class AppRoutes {
   static const String settings = '/settings';
   static const String adminHome = '/admin/home';
   static const String myAccount = '/player/my-account';
+  static const String myTickets = '/player/tickets';
+  static const String ticketDetails = '/player/ticket-details';
 
   static const String myChannel = '/player/channel';
   static const String subscriptions = '/player/subscriptions';
@@ -75,7 +81,9 @@ class AppRoutes {
   static const String liveStream = '/player/live-stream';
   static const String scheduledStreams = '/player/scheduled-streams';
   static const String scouterHome = '/scouter/home';
+  static const String checkInAgentHome = '/check-in-agent/home';
   static const String lolControl = '/lol-control';
+  static const String marketplace = '/player/marketplace';
 
   static const String lolStats = '/player/games/lol';
   static const String valorantStats = '/player/games/valorant';
@@ -94,6 +102,14 @@ class AppRoutes {
         settings: (context) => const SettingsScreen(),
         adminHome: (context) => const AdminHomeScreen(),
         myAccount: (context) => const MyAccountScreen(),
+        myTickets: (context) => const PlayerTicketsScreen(),
+        ticketDetails: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is! TicketModel) {
+            return const Scaffold(body: Center(child: Text('Error: Missing Ticket Data', style: TextStyle(color: Colors.white))));
+          }
+          return TicketDetailsScreen(ticket: args);
+        },
         myChannel: (context) => const MyChannelScreen(),
         subscriptions: (context) => const SubscriptionsScreen(),
         leagues: (context) => const PlayerLeaguesScreen(),
@@ -145,6 +161,7 @@ class AppRoutes {
         },
         scheduledStreams: (context) => const ScheduledStreamsScreen(),
         scouterHome: (context) => const ScouterHomeScreen(),
+        checkInAgentHome: (context) => const CheckInAgentHomeScreen(),
         lolControl: (context) => const LolControlPairingScreen(),
         lolStats: (context) => const LolStatsScreen(),
         valorantStats: (context) => const ValorantStatsScreen(),

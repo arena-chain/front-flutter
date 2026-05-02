@@ -77,7 +77,7 @@ class SettingsScreen extends StatelessWidget {
                 icon: Icons.notifications_outlined,
                 title: 'Notifications',
                 onTap: () {
-                  // TODO: Navigate to notification settings
+                  Navigator.pushNamed(context, AppRoutes.notifications);
                 },
               ),
               const SizedBox(height: 12),
@@ -94,14 +94,14 @@ class SettingsScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFF1A1F36),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFF0055).withOpacity(0.3)),
+                  border: Border.all(color: const Color(0xFFFF0055).withValues(alpha: 0.3)),
                 ),
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF0055).withOpacity(0.1),
+                      color: const Color(0xFFFF0055).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.logout, color: Color(0xFFFF0055), size: 20),
@@ -150,7 +150,7 @@ class SettingsScreen extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFF00FF00).withOpacity(0.1),
+            color: const Color(0xFF00FF00).withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: const Color(0xFF00FF00), size: 20),
@@ -182,3 +182,6 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 }
+
+
+

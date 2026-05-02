@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/core/api/stream_api.dart';
 import 'package:arena_chain_flutter/core/models/channel_model.dart';
 import 'package:arena_chain_flutter/core/models/stream_model.dart';
+import 'package:arena_chain_flutter/core/services/live_catalog_service.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/bottom_navbar.dart';
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/scheduled_streams_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/arena_live_stream_card.dart';
@@ -14,9 +15,11 @@ import 'package:arena_chain_flutter/screens/player/feature_news/viewmodel/news_v
 import 'package:arena_chain_flutter/screens/player/feature_rank/viewmodel/rank_viewmodel.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/linked_accounts_viewmodel.dart';
 import 'package:arena_chain_flutter/core/models/linked_accounts/linked_game_account.dart';
+import 'package:arena_chain_flutter/core/models/rank_model.dart';
 import 'package:arena_chain_flutter/core/models/news_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/level_viewmodel.dart';
 import 'package:arena_chain_flutter/navigation.dart';
+import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/notification_view_model.dart';
 
 import 'package:arena_chain_flutter/screens/training/training_dashboard_screen.dart';
 import 'package:arena_chain_flutter/core/api/training_api_service.dart';
@@ -42,6 +45,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
   static const Color _neon = Color(0xFF39FF14);
 
   int _currentIndex = 0;
+  _QuickActionSide? _activeQuickActionSide;
   late final PageController _quickCardController;
   int _quickCardIndex = 0;
 
@@ -53,10 +57,11 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
 
   late final TrainingApiService _trainingApi;
   final TokenStorage _tokenStorage = TokenStorage();
-  final StreamApi _streamApi = StreamApi();
+  final LiveCatalogService _liveCatalogService = LiveCatalogService();
 
   List<StreamModel> _livePreviewStreams = [];
   bool _livePreviewLoading = true;
+  String? _livePreviewErrorMessage;
 
   @override
   void initState() {
@@ -71,6 +76,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       final mmVm = context.read<MatchmakingViewModel>();
 
       context.read<NewsViewModel>().fetchNews();
+      context.read<RankViewModel>().fetchMyRanks();
       context.read<LevelViewModel>().fetchMyLevel();
 
       _trainingApi = TrainingApiService(
@@ -155,14 +161,13 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       live = _mergeLivePreview(live);
       if (!mounted) return;
       setState(() {
-        _livePreviewStreams = live;
         _livePreviewLoading = false;
+        _livePreviewErrorMessage = null;
       });
-    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _livePreviewStreams = _demoLiveStreamsForPreview();
         _livePreviewLoading = false;
+        _livePreviewErrorMessage = error.toString();
       });
     }
   }
@@ -184,11 +189,38 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     Navigator.pushNamed(context, AppRoutes.liveStream, arguments: stream.id);
   }
 
+  Future<void> _refreshLivePreviewSilently() async {
+    if (_livePreviewLoading) {
+      return;
+    }
+
+    try {
+      final snapshot = await _liveCatalogService.fetchSnapshot();
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _livePreviewStreams = snapshot.liveStreams.take(3).toList();
+        _livePreviewErrorMessage = null;
+      });
+    } catch (_) {
+      if (!mounted || _livePreviewStreams.isNotEmpty) {
+        return;
+      }
+
+      setState(() {
+        _livePreviewErrorMessage = 'Unable to refresh live streams.';
+      });
+    }
+  }
+
   @override
   void dispose() {
     _matchmakingVm?.removeListener(_onMatchmakingChanged);
     _quickCardController.removeListener(_onQuickCardScroll);
     _quickCardController.dispose();
+    _liveCatalogService.dispose();
     try {
       _trainingApi.dispose();
     } catch (_) {}
@@ -258,6 +290,42 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     setState(() {
       _currentIndex = index;
     });
+  }
+
+  bool _isLeftDiagonalHalf(Offset localPosition, Size size) {
+    if (size.width <= 0 || size.height <= 0) return true;
+    final yAtLeft = size.height * 0.62;
+    final yAtRight = size.height * 0.36;
+    final yOnDivider =
+        yAtLeft + ((yAtRight - yAtLeft) * (localPosition.dx / size.width));
+    return localPosition.dy <= yOnDivider;
+  }
+
+  void _handleQuickActionTap({
+    required TapDownDetails details,
+    required BoxConstraints constraints,
+    required double cardHeight,
+    required VoidCallback onLeftTap,
+    required VoidCallback onRightTap,
+  }) {
+    final size = Size(constraints.maxWidth, cardHeight);
+    final isLeft = _isLeftDiagonalHalf(details.localPosition, size);
+    setState(() {
+      _activeQuickActionSide = isLeft
+          ? _QuickActionSide.left
+          : _QuickActionSide.right;
+    });
+    Future.delayed(const Duration(milliseconds: 180), () {
+      if (!mounted) return;
+      setState(() {
+        _activeQuickActionSide = null;
+      });
+    });
+    if (isLeft) {
+      onLeftTap();
+    } else {
+      onRightTap();
+    }
   }
 
   @override
@@ -555,11 +623,14 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                             ),
                           ),
                           Positioned(
-                            right: 10,
-                            top: 10,
+                            right: 8,
+                            top: 8,
                             child: Container(
-                              width: 7,
-                              height: 7,
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
                               decoration: const BoxDecoration(
                                 color: Color(0xFFFF0055),
                                 shape: BoxShape.circle,
@@ -905,6 +976,21 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     );
   }
 
+  String _winRateLabel(Rank? primaryRank) {
+    if (primaryRank == null) return '--';
+    final wins = primaryRank.wins;
+    final losses = primaryRank.losses;
+    final total = wins + losses;
+    if (total == 0) return '--';
+    return '${((wins / total) * 100).round()}%';
+  }
+
+  String _primaryTierLabel(Rank? primaryRank) {
+    final tier = primaryRank?.tier;
+    if (tier == null || tier.isEmpty) return 'ELITE TIER III';
+    return tier.toUpperCase();
+  }
+
   Widget _buildPuzzleQuickActions({
     required BuildContext context,
     required List<LinkedGameAccount> accounts,
@@ -1236,6 +1322,15 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                         ),
                       ],
                     ),
+                    child: const Text(
+                      'OPEN',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 11,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1255,3 +1350,67 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     return 'Just now';
   }
 }
+
+enum _QuickActionSide { left, right }
+
+class _DiagonalDividerPainter extends CustomPainter {
+  final Color color;
+
+  _DiagonalDividerPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.6
+      ..style = PaintingStyle.stroke;
+
+    final start = Offset(0, size.height * 0.62);
+    final end = Offset(size.width, size.height * 0.36);
+    canvas.drawLine(start, end, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DiagonalDividerPainter oldDelegate) {
+    return oldDelegate.color != color;
+  }
+}
+
+class _DiagonalSplitHighlightPainter extends CustomPainter {
+  final _QuickActionSide? side;
+  final Color color;
+
+  _DiagonalSplitHighlightPainter({required this.side, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (side == null) return;
+    final yAtLeft = size.height * 0.62;
+    final yAtRight = size.height * 0.36;
+    final path = Path();
+    if (side == _QuickActionSide.left) {
+      path
+        ..moveTo(0, 0)
+        ..lineTo(size.width, 0)
+        ..lineTo(size.width, yAtRight)
+        ..lineTo(0, yAtLeft)
+        ..close();
+    } else {
+      path
+        ..moveTo(0, yAtLeft)
+        ..lineTo(size.width, yAtRight)
+        ..lineTo(size.width, size.height)
+        ..lineTo(0, size.height)
+        ..close();
+    }
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DiagonalSplitHighlightPainter oldDelegate) {
+    return oldDelegate.side != side || oldDelegate.color != color;
+  }
+}
+
+
+

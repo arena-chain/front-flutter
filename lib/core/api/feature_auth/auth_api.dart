@@ -34,10 +34,15 @@ class AuthApi {
       );
     }
     if (body.isEmpty) {
-      throw const FormatException('Empty response body from server.');
+      throw FormatException(
+        'Server returned an empty response (HTTP ${response.statusCode}).',
+      );
     }
     return jsonDecode(body);
   }
+
+  static String _authPath(String path) =>
+      path.startsWith('/auth/') ? path : '/auth/$path';
 
   List<String> _candidateBaseUrls() {
     final candidates = <String>[
@@ -45,6 +50,24 @@ class AuthApi {
       baseUrl,
     ];
     if (kIsWeb) {
+      candidates.addAll([
+        '/api',
+        'http://127.0.0.1:3000/api',
+        'http://localhost:3000/api',
+      ]);
+    } else if (defaultTargetPlatform == TargetPlatform.android) {
+      // Android emulator accesses host machine via 10.0.2.2.
+      candidates.addAll([
+        'http://10.0.2.2:3000/api',
+        'http://127.0.0.1:3000/api',
+        'http://localhost:3000/api',
+      ]);
+    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+      // iOS simulator can typically reach host via localhost/127.0.0.1.
+      candidates.addAll([
+        'http://127.0.0.1:3000/api',
+        'http://localhost:3000/api',
+      ]);
       candidates.addAll(['http://127.0.0.1:3000', 'http://localhost:3000']);
     }
     final seen = <String>{};
@@ -125,11 +148,22 @@ class AuthApi {
 
   Future<AuthResponse> login(LoginDto dto) async {
     try {
-      final response = await _postWithFallback(
-        path: '/api/auth/login',
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(dto.toJson()),
+      final headers = {'Content-Type': 'application/json'};
+      final body = jsonEncode(dto.toJson());
+      http.Response response = await _postWithFallback(
+        path: _authPath('/auth/login'),
+        headers: headers,
+        body: body,
       );
+
+      // Some backend deployments still expose legacy auth routes.
+      if (response.statusCode == 404) {
+        response = await _postWithFallback(
+          path: '/feature_auth/login',
+          headers: headers,
+          body: body,
+        );
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = _decodeResponseBody(response);
@@ -140,6 +174,11 @@ class AuthApi {
         );
         return authResponse;
       } else {
+        if (response.body.trim().isEmpty) {
+          throw Exception(
+            'Login failed with HTTP ${response.statusCode} and an empty response body.',
+          );
+        }
         final error = _decodeResponseBody(response);
         throw Exception(error['message'] ?? 'Login failed');
       }
@@ -153,7 +192,7 @@ class AuthApi {
   }
 
   Future<AuthResponse> verifyEmail(VerifyEmailDto dto) async {
-    final url = Uri.parse('$baseUrl/api/auth/verify-email');
+    final url = Uri.parse('$baseUrl/auth/verify-email');
 
     try {
       final response = await http
@@ -185,6 +224,7 @@ class AuthApi {
   }
 
   Future<void> resendOtp(String email) async {
+    final url = Uri.parse('$baseUrl/auth/resend-otp');
     final url = Uri.parse('$baseUrl/api/auth/resend-otp');
 
     try {
@@ -227,7 +267,7 @@ class AuthApi {
   }
 
   Future<void> resetPassword(ResetPasswordDto dto) async {
-    final url = Uri.parse('$baseUrl/api/auth/reset-password');
+    final url = Uri.parse('$baseUrl/auth/reset-password');
 
     try {
       final response = await http
@@ -302,23 +342,37 @@ class AuthApi {
     final token = await _tokenStorage.getAccessToken();
 
     try {
-      final response = await http
-          .get(
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
-          )
-          .timeout(_timeout);
+      Exception? lastError;
+      for (final candidate in _candidateBaseUrls()) {
+        try {
+          final response = await http
+              .get(
+                Uri.parse('$candidate/auth/profile'),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer $token',
+                },
+              )
+              .timeout(_timeout);
 
-      if (response.statusCode == 200) {
-        final data = _decodeResponseBody(response);
-        return User.fromJson(data);
-      } else {
-        final error = _decodeResponseBody(response);
-        throw Exception(error['message'] ?? 'Failed to fetch profile');
+          if (response.statusCode == 200) {
+            _workingBaseUrl = candidate;
+            final data = _decodeResponseBody(response);
+            final dynamic userJson =
+                data is Map<String, dynamic> && data['user'] != null
+                ? data['user']
+                : data;
+            return User.fromJson(userJson as Map<String, dynamic>);
+          }
+
+          final error = _decodeResponseBody(response);
+          lastError = Exception(error['message'] ?? 'Failed to fetch profile');
+        } catch (e) {
+          lastError = Exception('Failed on $candidate: $e');
+        }
       }
+
+      throw lastError ?? Exception('Failed to fetch profile');
     } catch (e) {
       throw Exception('Failed to fetch profile: $e');
     }

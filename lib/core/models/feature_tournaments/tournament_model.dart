@@ -80,6 +80,12 @@ class TournamentModel {
       return null;
     }
 
+    final status = (json['status'] as String? ?? 'PENDING').toString();
+    final registrationOpenValue = json['registrationOpen'];
+    final registrationOpen =
+        registrationOpenValue == true ||
+        status.toUpperCase() == 'OPEN_REGISTRATION';
+
     return TournamentModel(
       id: getId(json['_id'] ?? json['id']),
       name: (json['name'] ?? 'Tournament').toString(),
@@ -96,7 +102,7 @@ class TournamentModel {
       prizePool: json['prizePool']?.toString(),
       bannerImageUrl: json['bannerImageUrl']?.toString(),
       streamUrl: json['streamUrl']?.toString(),
-      registrationOpen: json['registrationOpen'] == true,
+      registrationOpen: registrationOpen,
       rulesText: json['rules']?.toString(),
       phases: (json['phases'] as List<dynamic>?)
               ?.whereType<Map<String, dynamic>>()
@@ -161,8 +167,10 @@ class TournamentModel {
   int get currentTeams => participants.length;
 
   bool get canRegisterNow {
-    if (!registrationOpen) return false;
-    if (status != 'OPEN_REGISTRATION') return false;
+    if (!registrationOpen && status.toUpperCase() != 'OPEN_REGISTRATION') {
+      return false;
+    }
+    if (status.toUpperCase() != 'OPEN_REGISTRATION') return false;
     if (maxTeams > 0 && currentTeams >= maxTeams) return false;
     final now = DateTime.now();
     if (registrationStart != null && now.isBefore(registrationStart!)) return false;
@@ -215,19 +223,26 @@ class TournamentPhase {
 
 class TournamentTicketType {
   final String name;
-  final String? price;
+  final double price;
+  final int capacity;
 
-  const TournamentTicketType({required this.name, this.price});
+  const TournamentTicketType({
+    required this.name,
+    required this.price,
+    required this.capacity,
+  });
 
   factory TournamentTicketType.fromJson(Map<String, dynamic> json) {
     return TournamentTicketType(
-      name: (json['name'] ?? 'Ticket').toString(),
-      price: json['price']?.toString(),
+      name: (json['name'] ?? json['type'] ?? 'Ticket').toString(),
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      capacity: (json['capacity'] as num?)?.toInt() ?? 0,
     );
   }
 
   Map<String, dynamic> toJson() => {
         'name': name,
         'price': price,
+        'capacity': capacity,
       };
 }

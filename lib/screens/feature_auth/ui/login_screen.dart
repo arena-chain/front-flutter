@@ -4,6 +4,8 @@ import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmode
 import 'package:arena_chain_flutter/core/models/feature_auth/auth_state.dart';
 import 'package:arena_chain_flutter/navigation.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/ui/forgot_password_screen.dart';
+import 'package:arena_chain_flutter/core/utils/role_utils.dart';
+import 'package:arena_chain_flutter/screens/Team_Manager/team_manager_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,10 +28,26 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   String _homeRouteFor(AuthViewModel vm) {
-    final role = vm.currentUser?.role.toLowerCase() ?? '';
-    if (role == 'scouter') return AppRoutes.scouterHome;
-    if (role == 'admin') return AppRoutes.adminHome;
+    final role = vm.effectiveRole;
+    if (isScouterRole(role)) return AppRoutes.scouterHome;
+    if (isAdminRole(role)) return AppRoutes.adminHome;
+    if (isCheckInAgentRole(role)) return AppRoutes.checkInAgentHome;
+    if (isTeamManagerRole(role)) return AppRoutes.managerDashboard;
     return AppRoutes.playerHome;
+  }
+
+  void _navigateByRole(AuthViewModel vm) {
+    final role = vm.effectiveRole;
+    if (isTeamManagerRole(role)) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ManagerDashboardScreen(teamId: vm.currentUser?.teamId ?? ''),
+        ),
+      );
+      return;
+    }
+    Navigator.pushReplacementNamed(context, _homeRouteFor(vm));
   }
 
   Future<void> _login(AuthViewModel authViewModel) async {
@@ -41,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (mounted && authViewModel.authState == AuthState.authenticated) {
-      Navigator.pushReplacementNamed(context, _homeRouteFor(authViewModel));
+      _navigateByRole(authViewModel);
     }
   }
 
@@ -49,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
     await authViewModel.signInWithGoogle();
 
     if (mounted && authViewModel.authState == AuthState.authenticated) {
-      Navigator.pushReplacementNamed(context, _homeRouteFor(authViewModel));
+      _navigateByRole(authViewModel);
     }
   }
 

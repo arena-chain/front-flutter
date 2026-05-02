@@ -3,6 +3,9 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:arena_chain_flutter/core/api/stream_api.dart';
 import 'package:arena_chain_flutter/core/config/api_config.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
 
 class LiveStreamService {
   final StreamApi _streamApi = StreamApi();
@@ -26,10 +29,13 @@ class LiveStreamService {
 
   void connect(String channelId, {String? token}) {
     _currentChannelId = channelId;
-    _socket = IO.io(ApiConfig.baseUrl, IO.OptionBuilder()
-      .setTransports(['websocket'])
-      .setAuth({'token': token})
-      .build());
+    _socket = io.io(
+      ApiConfig.socketOrigin,
+      io.OptionBuilder()
+          .setTransports(['websocket', 'polling'])
+          .setAuth(token != null && token.isNotEmpty ? {'token': token} : {})
+          .build(),
+    );
 
     _socket!.onConnect((_) {
       print('Socket connected');

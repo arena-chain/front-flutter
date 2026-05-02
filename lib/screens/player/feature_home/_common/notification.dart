@@ -1,6 +1,11 @@
 import 'dart:math' as math;
 
+import 'package:arena_chain_flutter/core/models/feature_notifications/app_notification.dart';
+import 'package:arena_chain_flutter/screens/player/feature_home/viewmodel/notification_view_model.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -27,6 +32,9 @@ class _NotificationScreenState extends State<NotificationScreen>
       vsync: this,
       duration: const Duration(milliseconds: 2400),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationViewModel>().refresh();
+    });
   }
 
   @override
@@ -45,6 +53,40 @@ class _NotificationScreenState extends State<NotificationScreen>
   void dispose() {
     _pulse.dispose();
     super.dispose();
+  }
+
+  Future<void> _openNotification(
+    BuildContext context,
+    NotificationViewModel vm,
+    AppNotification notification,
+  ) async {
+    if (!notification.isRead) {
+      await vm.markRead(notification.id);
+    }
+
+    if (!context.mounted) return;
+
+    if (notification.resourceDeleted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This content no longer exists.')),
+      );
+      return;
+    }
+
+    final link = notification.link;
+    if (link == null || link.isEmpty) {
+      return;
+    }
+
+    if (link.startsWith('/')) {
+      Navigator.pushNamed(context, link);
+      return;
+    }
+
+    final uri = Uri.tryParse(link);
+    if (uri != null) {
+      await launchUrl(uri);
+    }
   }
 
   @override
@@ -72,49 +114,103 @@ class _NotificationScreenState extends State<NotificationScreen>
             color: Colors.white,
             fontWeight: FontWeight.w800,
             fontSize: 20,
-            shadows: [
-              Shadow(color: _neon.withValues(alpha: 0.22), blurRadius: 10),
-            ],
           ),
         ),
+        actions: [
+          Consumer<NotificationViewModel>(
+            builder: (context, vm, _) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (vm.unreadCount > 0)
+                  IconButton(
+                    tooltip: 'Mark all read',
+                    onPressed: () => vm.markAllRead(),
+                    icon: Icon(Icons.done_all_rounded, color: _neon.withValues(alpha: 0.9)),
+                  ),
+                if (vm.notifications.isNotEmpty)
+                  IconButton(
+                    tooltip: 'Clear all',
+                    onPressed: () => vm.clearAll(),
+                    icon: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
-      body: AnimatedBuilder(
-        animation: _pulse,
-        builder: (context, _) {
-          final breathe = 0.62 + 0.38 * math.sin(_pulse.value * math.pi * 2);
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              _buildNotificationItem(
-                breathe: breathe,
-                icon: Icons.sports_esports_rounded,
-                iconColor: _neon,
-                title: 'New Match Found',
-                subtitle: 'Ranked • Valorant',
-                time: '2m ago',
-                isUnread: true,
+      body: Consumer<NotificationViewModel>(
+        builder: (context, vm, _) {
+          if (vm.isLoading && !vm.isInitialized) {
+            return const Center(
+              child: CircularProgressIndicator(color: _neon),
+            );
+          }
+
+          if (vm.error != null && vm.notifications.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 40),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Unable to load notifications',
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      vm.error!,
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.55)),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: vm.refresh,
+                      style: ElevatedButton.styleFrom(backgroundColor: _neon, foregroundColor: Colors.black),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              _buildNotificationItem(
-                breathe: breathe,
-                icon: Icons.emoji_events_rounded,
-                iconColor: const Color(0xFFFFB020),
-                title: 'Tournament Starting',
-                subtitle: 'Check-in required',
-                time: '1h ago',
-                isUnread: true,
-              ),
-              const SizedBox(height: 12),
-              _buildNotificationItem(
-                breathe: 1.0,
-                icon: Icons.group_add_rounded,
-                iconColor: const Color(0xFF4FD1FF),
-                title: 'Team Invitation',
-                subtitle: 'Team Liquid invited you to join',
-                time: '3h ago',
-                isUnread: false,
-              ),
-            ],
+            );
+          }
+
+          return AnimatedBuilder(
+            animation: _pulse,
+            builder: (context, _) {
+              final breathe = 0.62 + 0.38 * math.sin(_pulse.value * math.pi * 2);
+              final notifications = vm.notifications;
+              if (notifications.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'All caught up!',
+                    style: TextStyle(color: Colors.white54, fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                color: _neon,
+                onRefresh: vm.refresh,
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  itemCount: notifications.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final notification = notifications[index];
+                    return _buildNotificationItem(
+                      context: context,
+                      vm: vm,
+                      breathe: breathe,
+                      notification: notification,
+                    );
+                  },
+                ),
+              );
+            },
           );
         },
       ),
@@ -122,7 +218,10 @@ class _NotificationScreenState extends State<NotificationScreen>
   }
 
   Widget _buildNotificationItem({
+    required BuildContext context,
+    required NotificationViewModel vm,
     required double breathe,
+    required AppNotification notification,
     required IconData icon,
     required Color iconColor,
     required String title,
@@ -130,6 +229,9 @@ class _NotificationScreenState extends State<NotificationScreen>
     required String time,
     required bool isUnread,
   }) {
+    final isUnread = !notification.isRead;
+    final iconColor = _categoryColor(notification.category);
+    final icon = _categoryIcon(notification.category, notification.resourceDeleted);
     final double unreadBorderAlpha = isUnread
         ? (0.28 + 0.18 * breathe).clamp(0.0, 1.0).toDouble()
         : 0;
@@ -209,29 +311,99 @@ class _NotificationScreenState extends State<NotificationScreen>
                     fontSize: 14,
                     height: 1.25,
                   ),
-                ),
-              ],
-            ),
-          ),
-          if (isUnread) ...[
-            const SizedBox(width: 10),
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: _neon,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: _neon.withValues(alpha: 0.65 * breathe),
-                    blurRadius: 8 * breathe,
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Text(
+                        notification.category.toUpperCase(),
+                        style: TextStyle(
+                          color: iconColor.withValues(alpha: 0.85),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        onPressed: () => vm.deleteOne(notification.id),
+                        icon: const Icon(Icons.close_rounded, color: Colors.white38, size: 18),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
+            if (isUnread) ...[
+              const SizedBox(width: 8),
+              Container(
+                width: 8,
+                height: 8,
+                margin: const EdgeInsets.only(top: 8),
+                decoration: BoxDecoration(
+                  color: _neon,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: _neon.withValues(alpha: 0.65 * breathe),
+                      blurRadius: 8 * breathe,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
+
+  IconData _categoryIcon(String category, bool resourceDeleted) {
+    if (resourceDeleted) return Icons.warning_amber_rounded;
+    switch (category) {
+      case 'matches':
+        return Icons.sports_esports_rounded;
+      case 'leagues':
+        return Icons.shield_outlined;
+      case 'social':
+        return Icons.group_add_rounded;
+      case 'achievements':
+        return Icons.emoji_events_rounded;
+      case 'streams':
+        return Icons.live_tv_rounded;
+      case 'security':
+        return Icons.lock_outline_rounded;
+      default:
+        return Icons.notifications_active_rounded;
+    }
+  }
+
+  Color _categoryColor(String category) {
+    switch (category) {
+      case 'matches':
+        return const Color(0xFF39FF14);
+      case 'leagues':
+        return const Color(0xFF9C6BFF);
+      case 'social':
+        return const Color(0xFF4FD1FF);
+      case 'achievements':
+        return const Color(0xFFFFB020);
+      case 'streams':
+        return const Color(0xFFFF004D);
+      case 'security':
+        return const Color(0xFFFF5C7A);
+      default:
+        return Colors.white70;
+    }
+  }
+
+  String _timeAgo(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 1) return 'Now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}d';
+    return DateFormat('MMM d').format(date);
+  }
 }
+

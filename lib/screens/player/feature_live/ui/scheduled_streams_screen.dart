@@ -1,11 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:arena_chain_flutter/core/api/stream_api.dart';
 import 'package:arena_chain_flutter/core/models/stream_model.dart';
-import 'package:arena_chain_flutter/core/models/channel_model.dart';
+import 'package:arena_chain_flutter/core/services/live_catalog_service.dart';
 import 'package:arena_chain_flutter/navigation.dart';
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/arena_live_stream_card.dart';
+import 'package:flutter/material.dart';
 
-/// ARENA LIVE — same visual language as [PlayerHomeScreen] (black, neon #39FF14, soft glow).
+// ── Sort options ─────────────────────────────────────────────────────────────
+
+enum _StreamSort {
+  mostViewed,
+  recent,
+  alphabetical;
+
+  String get label {
+    switch (this) {
+      case _StreamSort.mostViewed:
+        return 'Plus regardés';
+      case _StreamSort.recent:
+        return 'Récents';
+      case _StreamSort.alphabetical:
+        return 'A → Z';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case _StreamSort.mostViewed:
+        return Icons.trending_up_rounded;
+      case _StreamSort.recent:
+        return Icons.access_time_rounded;
+      case _StreamSort.alphabetical:
+        return Icons.sort_by_alpha_rounded;
+    }
+  }
+}
+
+/// ARENA LIVE â€” same visual language as [PlayerHomeScreen] (black, neon #39FF14, soft glow).
 class ScheduledStreamsScreen extends StatefulWidget {
   const ScheduledStreamsScreen({super.key});
 
@@ -16,50 +47,94 @@ class ScheduledStreamsScreen extends StatefulWidget {
 }
 
 class _ScheduledStreamsScreenState extends State<ScheduledStreamsScreen> {
-  final StreamApi _streamApi = StreamApi();
+  final LiveCatalogService _liveCatalogService = LiveCatalogService();
+
   List<StreamModel> _liveStreams = [];
   List<StreamModel> _scheduledStreams = [];
   bool _isLoading = true;
-  bool _usingDemoData = false;
+  String? _errorMessage;
+
+  // ── Search & Sort ─────────────────────────────────────────────────────
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  _StreamSort _sortOrder = _StreamSort.mostViewed;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _liveCatalogService.startRealtimeSync(
+      onCatalogChanged: _refreshSilently,
+    );
+    _searchCtrl.addListener(() {
+      setState(() => _searchQuery = _searchCtrl.text);
+    });
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _usingDemoData = false;
-    });
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _liveCatalogService.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load({bool showLoader = true}) async {
+    if (showLoader) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+
     try {
-      final fromLiveEndpoint = await _streamApi.getLiveStreams();
-      final all = await _streamApi.getAllStreams();
-
-      var live = fromLiveEndpoint.isNotEmpty
-          ? fromLiveEndpoint
-          : all.where((s) => s.isLive).toList();
-      final scheduled = all.where((s) => !s.isLive).toList();
-
-      var usingDemo = false;
-      if (live.isEmpty && scheduled.isEmpty) {
-        live = _demoLiveStreams();
-        usingDemo = true;
+      final snapshot = await _liveCatalogService.fetchSnapshot();
+      if (!mounted) {
+        return;
       }
 
       setState(() {
-        _liveStreams = live;
-        _scheduledStreams = scheduled;
-        _usingDemoData = usingDemo;
+        _liveStreams = snapshot.liveStreams;
+        _scheduledStreams = snapshot.scheduledStreams;
+        _errorMessage = null;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
       setState(() {
-        _liveStreams = _demoLiveStreams();
-        _scheduledStreams = _demoScheduledStreams();
-        _usingDemoData = true;
+        _liveStreams = [];
+        _scheduledStreams = [];
+        _errorMessage = error.toString();
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _refreshSilently() async {
+    if (_isLoading) {
+      return;
+    }
+
+    try {
+      final snapshot = await _liveCatalogService.fetchSnapshot();
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _liveStreams = snapshot.liveStreams;
+        _scheduledStreams = snapshot.scheduledStreams;
+        _errorMessage = null;
+      });
+    } catch (_) {
+      if (!mounted || _liveStreams.isNotEmpty || _scheduledStreams.isNotEmpty) {
+        return;
+      }
+
+      setState(() {
+        _errorMessage = 'Unable to refresh live streams.';
       });
     }
   }
@@ -141,9 +216,165 @@ class _ScheduledStreamsScreenState extends State<ScheduledStreamsScreen> {
     Navigator.pushNamed(context, AppRoutes.liveStream, arguments: stream.id);
   }
 
+  // ── Filtered & sorted lists ───────────────────────────────────────────
+
+  List<StreamModel> get _filteredLive => _applyFilter(_liveStreams);
+  List<StreamModel> get _filteredScheduled => _applyFilter(_scheduledStreams);
+
+  List<StreamModel> _applyFilter(List<StreamModel> source) {
+    var list = source.where((s) {
+      if (_searchQuery.isEmpty) return true;
+      final q = _searchQuery.toLowerCase();
+      return s.title.toLowerCase().contains(q) ||
+          (s.description?.toLowerCase().contains(q) ?? false) ||
+          s.tags.any((t) => t.toLowerCase().contains(q));
+    }).toList();
+
+    switch (_sortOrder) {
+      case _StreamSort.mostViewed:
+        list.sort((a, b) => b.viewerCount.compareTo(a.viewerCount));
+      case _StreamSort.recent:
+        list.sort((a, b) {
+          final aTime = a.startedAt ?? a.scheduledStartTime ?? DateTime(0);
+          final bTime = b.startedAt ?? b.scheduledStartTime ?? DateTime(0);
+          return bTime.compareTo(aTime);
+        });
+      case _StreamSort.alphabetical:
+        list.sort((a, b) => a.title.compareTo(b.title));
+    }
+    return list;
+  }
+
+  // ── Search + Sort bar ────────────────────────────────────────────────
+
+  Widget _buildSearchAndSort(Color neon) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Column(
+        children: [
+          // Search bar
+          Container(
+            height: 42,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F0F0F),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: neon.withValues(alpha: 0.18)),
+            ),
+            child: Row(
+              children: [
+                const SizedBox(width: 12),
+                Icon(Icons.search_rounded,
+                    size: 18, color: neon.withValues(alpha: 0.6)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _searchCtrl,
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 13, height: 1.2),
+                    decoration: InputDecoration(
+                      hintText: 'Rechercher un live, un tag…',
+                      hintStyle: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          fontSize: 13),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                if (_searchQuery.isNotEmpty)
+                  GestureDetector(
+                    onTap: () => _searchCtrl.clear(),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Icon(Icons.close_rounded,
+                          size: 16,
+                          color: Colors.white.withValues(alpha: 0.4)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Sort pills
+          SizedBox(
+            height: 32,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: _StreamSort.values
+                  .map((sort) => _sortPill(sort, neon))
+                  .toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sortPill(_StreamSort sort, Color neon) {
+    final selected = _sortOrder == sort;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: () => setState(() => _sortOrder = sort),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected
+                ? neon.withValues(alpha: 0.12)
+                : const Color(0xFF0F0F0F),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected
+                  ? neon.withValues(alpha: 0.5)
+                  : Colors.white.withValues(alpha: 0.1),
+            ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: neon.withValues(alpha: 0.12),
+                      blurRadius: 8,
+                    )
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                sort.icon,
+                size: 13,
+                color:
+                    selected ? neon : Colors.white.withValues(alpha: 0.45),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                sort.label,
+                style: TextStyle(
+                  color: selected
+                      ? neon
+                      : Colors.white.withValues(alpha: 0.45),
+                  fontSize: 11,
+                  fontWeight:
+                      selected ? FontWeight.w800 : FontWeight.w500,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const neon = ScheduledStreamsScreen.neon;
+    final filteredLive = _filteredLive;
+    final filteredScheduled = _filteredScheduled;
+    final hasContent = filteredLive.isNotEmpty || filteredScheduled.isNotEmpty;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -153,7 +384,7 @@ class _ScheduledStreamsScreenState extends State<ScheduledStreamsScreen> {
             : RefreshIndicator(
                 color: neon,
                 backgroundColor: const Color(0xFF0A0A0A),
-                onRefresh: _load,
+                onRefresh: () => _load(showLoader: false),
                 child: CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
@@ -171,29 +402,39 @@ class _ScheduledStreamsScreenState extends State<ScheduledStreamsScreen> {
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: 1.2,
                                   shadows: [
-                                    Shadow(color: neon.withValues(alpha: 0.45), blurRadius: 12),
+                                    Shadow(
+                                      color: neon.withValues(alpha: 0.45),
+                                      blurRadius: 12,
+                                    ),
                                   ],
                                 ),
                               ),
                             ),
                             IconButton(
-                              icon: Icon(Icons.refresh_rounded, color: neon.withValues(alpha: 0.95)),
-                              onPressed: _load,
+                              icon: Icon(
+                                Icons.refresh_rounded,
+                                color: neon.withValues(alpha: 0.95),
+                              ),
+                              onPressed: () => _load(),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    if (_usingDemoData)
+                    // ── Search & Sort bar ─────────────────────────────
+                    SliverToBoxAdapter(
+                      child: _buildSearchAndSort(neon),
+                    ),
+                    if (_errorMessage != null && hasContent)
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         sliver: SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: Text(
-                              'Sample streams — your API returned no rows.',
+                              _errorMessage!,
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.4),
+                                color: Colors.white.withValues(alpha: 0.5),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -201,54 +442,116 @@ class _ScheduledStreamsScreenState extends State<ScheduledStreamsScreen> {
                           ),
                         ),
                       ),
-                    if (_liveStreams.isNotEmpty) ...[
-                      _sectionTitleSliver('LIVE NOW', neon),
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, i) => Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
-                              child: ArenaLiveStreamCard(
-                                stream: _liveStreams[i],
-                                neon: neon,
-                                onTap: () => _openStream(_liveStreams[i]),
-                              ),
-                            ),
-                            childCount: _liveStreams.length,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (_scheduledStreams.isNotEmpty) ...[
-                      _sectionTitleSliver('UPCOMING', neon),
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, i) => Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
-                              child: ArenaLiveStreamCard(
-                                stream: _scheduledStreams[i],
-                                neon: neon,
-                                onTap: () => _openStream(_scheduledStreams[i]),
-                              ),
-                            ),
-                            childCount: _scheduledStreams.length,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (_liveStreams.isEmpty && _scheduledStreams.isEmpty)
+                    if (_errorMessage != null && !hasContent)
                       SliverFillRemaining(
                         hasScrollBody: false,
                         child: Center(
-                          child: Text(
-                            'No streams scheduled.',
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.45)),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Unable to load live streams.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.45),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () => _load(),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: neon,
+                                    foregroundColor: Colors.black,
+                                  ),
+                                  child: const Text('Retry'),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+                      )
+                    else ...[
+                      if (filteredLive.isNotEmpty) ...[
+                        _sectionTitleSliver('LIVE NOW', neon),
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) => Padding(
+                                padding: const EdgeInsets.only(bottom: 14),
+                                child: ArenaLiveStreamCard(
+                                  stream: filteredLive[index],
+                                  neon: neon,
+                                  onTap: () => _openStream(filteredLive[index]),
+                                ),
+                              ),
+                              childCount: filteredLive.length,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (filteredScheduled.isNotEmpty) ...[
+                        _sectionTitleSliver('UPCOMING', neon),
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) => Padding(
+                                padding: const EdgeInsets.only(bottom: 14),
+                                child: ArenaLiveStreamCard(
+                                  stream: filteredScheduled[index],
+                                  neon: neon,
+                                  onTap: () =>
+                                      _openStream(filteredScheduled[index]),
+                                ),
+                              ),
+                              childCount: filteredScheduled.length,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (!hasContent)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _searchQuery.isNotEmpty
+                                      ? Icons.search_off_rounded
+                                      : Icons.live_tv_rounded,
+                                  size: 48,
+                                  color: neon.withValues(alpha: 0.2),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  _searchQuery.isNotEmpty
+                                      ? 'Aucun résultat pour "$_searchQuery"'
+                                      : 'Aucun live en ce moment.',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.45),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
                   ],
                 ),
               ),

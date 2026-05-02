@@ -20,6 +20,14 @@ class ApiConfig {
   // Set to true when running on an Android emulator, false for a physical device.
   static const bool _isEmulator = false;
 
+  static String _normalizeBaseUrl(String value) =>
+      value.replaceAll(RegExp(r'/$'), '');
+
+  static String _ensureApiSuffix(String value) {
+    final normalized = _normalizeBaseUrl(value);
+    return normalized.endsWith('/api') ? normalized : '$normalized/api';
+  }
+
   static String get baseUrl {
     final override = _apiBaseUrlOverride.trim();
     if (override.isNotEmpty) {
@@ -37,14 +45,21 @@ class ApiConfig {
       return normalized;
     }
     if (kIsWeb) {
-      return 'http://localhost:3000';
+      return 'http://localhost:3000/api';
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
       // Emulators reach the host machine via 10.0.2.2; physical devices use the LAN IP.
-      return _isEmulator ? 'http://10.0.2.2:3000' : 'http://$_lanIp:3000';
+      return _isEmulator ? 'http://10.0.2.2:3000/api' : 'http://$_lanIp:3000/api';
     }
     // iOS/other mobile targets on a physical device also need LAN IP.
-    return 'http://$_lanIp:3000';
+    return 'http://$_lanIp:3000/api';
+  }
+
+  static String get socketOrigin {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    return normalized.endsWith('/api')
+        ? normalized.substring(0, normalized.length - 4)
+        : normalized;
   }
 
   static void printDebugInfo() {

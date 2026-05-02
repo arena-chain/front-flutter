@@ -11,6 +11,7 @@ class User {
   final String? country;
   final PlayerProfile? profile;
   final TeamManagerProfile? teamManagerProfile;
+  final String teamIdValue;
 
   User({
     required this.id,
@@ -22,11 +23,20 @@ class User {
     this.country,
     this.profile,
     this.teamManagerProfile,
+    this.teamIdValue = '',
   });
 
-  String get teamId => teamManagerProfile?.teamId ?? '';
+  String get teamId => teamManagerProfile?.teamId ?? teamIdValue;
 
   factory User.fromJson(Map<String, dynamic> json) {
+    String normalizeRole(String input) {
+      return input
+          .trim()
+          .toLowerCase()
+          .replaceAll('-', '_')
+          .replaceAll(' ', '_');
+    }
+
     // Handle backend response structure mismatch
     String role = 'unknown';
     if (json['roles'] != null && (json['roles'] as List).isNotEmpty) {
@@ -34,6 +44,7 @@ class User {
     } else if (json['role'] != null) {
       role = json['role'] as String;
     }
+    role = normalizeRole(role);
 
     // Handle profiles map vs single profile
     Map<String, dynamic>? profileData;
@@ -45,6 +56,17 @@ class User {
 
     PlayerProfile? playerProfile;
     TeamManagerProfile? teamManagerProfile;
+    final profiles = json['profiles'];
+    final Map<String, dynamic>? playerProfileData =
+        profiles is Map<String, dynamic> && profiles['player'] is Map<String, dynamic>
+        ? profiles['player'] as Map<String, dynamic>
+        : (json['profile'] is Map<String, dynamic> ? json['profile'] as Map<String, dynamic> : null);
+    final Map<String, dynamic>? teamManagerProfileData =
+        profiles is Map<String, dynamic> && profiles['team_manager'] is Map<String, dynamic>
+        ? profiles['team_manager'] as Map<String, dynamic>
+        : (json['teamManagerProfile'] is Map<String, dynamic>
+              ? json['teamManagerProfile'] as Map<String, dynamic>
+              : null);
 
     if (role == 'player' && profileData != null) {
       playerProfile = PlayerProfile.fromJson(profileData);
@@ -62,6 +84,7 @@ class User {
       country: json['country'] as String?,
       profile: playerProfile,
       teamManagerProfile: teamManagerProfile,
+      teamIdValue: (json['teamId'] ?? json['team_id'] ?? '').toString(),
     );
   }
 
@@ -76,6 +99,7 @@ class User {
       'country': country,
       'profile': profile?.toJson(),
       'teamManagerProfile': teamManagerProfile?.toJson(),
+      'teamId': teamIdValue,
     };
   }
 }

@@ -272,7 +272,13 @@ class _TicketsTab extends StatelessWidget {
         final t = tournament.ticketTypes[i];
         return _InfoCard(
           title: t.name,
-          child: _kv('Price', t.price ?? 'Free'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _kv('Price', '\$${t.price.toStringAsFixed(2)}'),
+              _kv('Capacity', '${t.capacity}'),
+            ],
+          ),
         );
       },
     );
