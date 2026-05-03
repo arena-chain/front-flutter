@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:arena_chain_flutter/services/rift_service.dart';
 import 'package:arena_chain_flutter/features/lol_control/lol_control_pairing_screen.dart';
+import 'package:arena_chain_flutter/features/lol_control/lol_lobby_screen.dart';
 
 const _kBg = Color(0xFF0A0E1A);
 const _kGold = Color(0xFF14452F);
@@ -422,6 +423,17 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LolControlPairingScreen()),
+      (route) => route.isFirst,
+    );
+  }
+
+  /// "Back to Lobby" — navigates to the lobby without tearing down the Rift
+  /// WS tunnel. The mobile session stays alive so the player can immediately
+  /// queue / receive invites again.
+  void _navigateToLobby() {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LolLobbyScreen()),
       (route) => route.isFirst,
     );
   }
@@ -1110,7 +1122,7 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: _disconnectToPairing,
+                    onPressed: _navigateToLobby,
                     style: FilledButton.styleFrom(
                       backgroundColor: _kGold,
                       foregroundColor: Colors.black,

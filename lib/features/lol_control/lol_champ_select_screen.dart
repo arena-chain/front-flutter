@@ -33,6 +33,17 @@ class _LolChampSelectScreenState extends State<LolChampSelectScreen> with Single
   bool _champsLoading = true;
   String _patch = '14.10.1';
 
+  String _localSummonerName = '';
+  // ignore: unused_field — reserved for owned-spells / collections APIs.
+  int _localSummonerId = 0;
+
+  Set<int> _pickableChampIds = <int>{};
+
+  List<Map<String, dynamic>> _runePages = const [];
+
+  int _spell1Id = 4;
+  int _spell2Id = 7;
+
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
 
@@ -194,17 +205,72 @@ class _LolChampSelectScreenState extends State<LolChampSelectScreen> with Single
     _pulseController.repeat(reverse: true);
     _sub = context.read<RiftService>().lcuEvents.listen(_onLcuEvent);
     _loadChampions();
+
+    final rift = context.read<RiftService>();
+    rift.sendLcuRequest('GET', '/lol-champ-select/v1/session');
+    rift.sendLcuRequest('GET', '/lol-summoner/v1/current-summoner');
+    rift.sendLcuRequest('GET', '/lol-champ-select/v1/all-grid-champions');
+    rift.sendLcuRequest('GET', '/lol-perks/v1/pages');
   }
 
   void _onLcuEvent(LcuEvent event) {
-    if (event.uri.contains('/lol-champ-select/v1/session')) {
-      if (event.data is Map<String, dynamic>) {
-        setState(() => _session = event.data);
+    if (event.uri == '/lol-champ-select/v1/session' ||
+        event.uri.contains('/lol-champ-select/v1/session')) {
+      if (event.data is Map) {
+        setState(() => _session = Map<String, dynamic>.from(event.data as Map));
       }
     }
+
+    if (event.uri == '/lol-summoner/v1/current-summoner') {
+      if (event.data is Map) {
+        final m = Map<String, dynamic>.from(event.data as Map);
+        setState(() {
+          _localSummonerName = (m['gameName']?.toString().isNotEmpty == true
+                  ? m['gameName']
+                  : (m['displayName'] ?? m['internalName'] ?? ''))
+              .toString();
+          _localSummonerId = (m['summonerId'] as num?)?.toInt() ?? 0;
+        });
+      }
+    }
+
+    if (event.uri == '/lol-champ-select/v1/all-grid-champions') {
+      if (event.data is List) {
+        final pickable = <int>{};
+        for (final c in (event.data as List)) {
+          if (c is! Map) continue;
+          final cm = Map<String, dynamic>.from(c);
+          final rawId = cm['id'] ?? cm['championId'];
+          final id = rawId is int ? rawId : (rawId as num?)?.toInt() ?? 0;
+          if (id <= 0) continue;
+          final disabled = cm['disabled'] == true ||
+              (cm['selectionStatus'] is Map &&
+                  (cm['selectionStatus'] as Map)['disabled'] == true);
+          if (disabled) continue;
+          pickable.add(id);
+        }
+        setState(() => _pickableChampIds = pickable);
+      }
+    }
+
+    if (event.uri == '/lol-perks/v1/pages') {
+      if (event.data is List) {
+        final pages = <Map<String, dynamic>>[];
+        for (final p in (event.data as List)) {
+          if (p is Map) {
+            pages.add(Map<String, dynamic>.from(p));
+          }
+        }
+        setState(() => _runePages = pages);
+      }
+    }
+
     if (event.uri.contains('/lol-gameflow/v1/gameflow-phase') ||
         event.uri.contains('/lol-gameflow/v1/session')) {
-      final phase = event.data is String ? event.data : (event.data?['phase'] ?? '');
+      final raw = event.data;
+      final phase = raw is String
+          ? raw
+          : (raw is Map ? (raw['phase'] ?? raw['gameflowPhase'] ?? '').toString() : '');
       if (phase == 'InProgress' || phase == 'GameStart') {
         Navigator.pushReplacement(
           context,
@@ -353,11 +419,10 @@ class _LolChampSelectScreenState extends State<LolChampSelectScreen> with Single
     final actionId = _myActionId ?? _activeActionId;
     if (actionId == null || _selectedChampId == null) return;
 
-    final type = _currentPhase;
     context.read<RiftService>().sendLcuRequest(
       'PATCH',
       '/lol-champ-select/v1/session/actions/$actionId',
-      {'championId': _selectedChampId, 'completed': true, 'type': type},
+      {'championId': _selectedChampId, 'completed': true},
     );
   }
 
@@ -461,12 +526,86 @@ class _LolChampSelectScreenState extends State<LolChampSelectScreen> with Single
       ),
       body: Column(
         children: [
+          _buildLocalPlayerHeader(),
           _buildAllyStrip(),
           _buildEnemyStrip(),
           _buildPhaseBar(),
           _buildSearchBar(),
           Expanded(child: _buildChampGrid()),
           _buildActionBar(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocalPlayerHeader() {
+    final id = _localAssignedChampId();
+    final champName = id > 0 ? _displayNameForChampId(id) : '—';
+    final localCell = _localPlayerCellId;
+    final positionRaw = _localAllyMember()?['assignedPosition']?.toString() ?? '';
+    final position = positionRaw.isEmpty
+        ? ''
+        : positionRaw[0].toUpperCase() + positionRaw.substring(1).toLowerCase();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _kGold.withValues(alpha: 0.4), width: 1),
+      ),
+      child: Row(
+        children: [
+          _championPortrait(champId: id, size: 44),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _kGold.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'YOU',
+                        style: TextStyle(
+                          color: _kGold,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _localSummonerName.isEmpty ? '…' : _localSummonerName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$champName${position.isNotEmpty ? '  ·  $position' : ''}'
+                  '${localCell >= 0 ? '  ·  Cell $localCell' : ''}',
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -644,6 +783,9 @@ class _LolChampSelectScreenState extends State<LolChampSelectScreen> with Single
     }
 
     final filtered = _championsById.entries.where((e) {
+      if (_pickableChampIds.isNotEmpty && !_pickableChampIds.contains(e.key)) {
+        return false;
+      }
       return _searchQuery.isEmpty || e.value.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList()
       ..sort((a, b) => a.value.compareTo(b.value));
@@ -732,6 +874,260 @@ class _LolChampSelectScreenState extends State<LolChampSelectScreen> with Single
     );
   }
 
+  static const Map<int, (String, String)> _kSpellsById = {
+    4: ('Flash', 'SummonerFlash'),
+    7: ('Heal', 'SummonerHeal'),
+    14: ('Ignite', 'SummonerDot'),
+    12: ('Teleport', 'SummonerTeleport'),
+    11: ('Smite', 'SummonerSmite'),
+    3: ('Exhaust', 'SummonerExhaust'),
+    21: ('Barrier', 'SummonerBarrier'),
+    1: ('Cleanse', 'SummonerBoost'),
+    6: ('Ghost', 'SummonerHaste'),
+    32: ('Mark', 'SummonerSnowball'),
+  };
+
+  String _spellIconUrl(String ddKey) =>
+      'https://ddragon.leagueoflegends.com/cdn/$_patch/img/spell/$ddKey.png';
+
+  String _spellDdKey(int id) => _kSpellsById[id]?.$2 ?? '';
+
+  void _commitSpells() {
+    context.read<RiftService>().sendLcuRequest(
+      'PATCH',
+      '/lol-champ-select/v1/session/my-selection',
+      {'spell1Id': _spell1Id, 'spell2Id': _spell2Id},
+    );
+  }
+
+  Future<void> _openSpellPicker(int slot) async {
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: _kSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        final entries = _kSpellsById.entries.toList();
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Pick Summoner ${slot == 1 ? 'D' : 'F'}',
+                  style: const TextStyle(
+                    color: _kGold,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: entries.map((e) {
+                    final id = e.key;
+                    final disabled = (slot == 1 && id == _spell2Id) || (slot == 2 && id == _spell1Id);
+                    return Opacity(
+                      opacity: disabled ? 0.35 : 1,
+                      child: GestureDetector(
+                        onTap: disabled ? null : () => Navigator.pop(ctx, id),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Image.network(
+                                _spellIconUrl(e.value.$2),
+                                width: 48,
+                                height: 48,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => Container(
+                                  width: 48,
+                                  height: 48,
+                                  color: const Color(0xFF1A1F2E),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            SizedBox(
+                              width: 60,
+                              child: Text(
+                                e.value.$1,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (picked == null) return;
+    setState(() {
+      if (slot == 1) {
+        _spell1Id = picked;
+      } else {
+        _spell2Id = picked;
+      }
+    });
+    _commitSpells();
+  }
+
+  Widget _buildSpellSlot(int slot) {
+    final id = slot == 1 ? _spell1Id : _spell2Id;
+    final dd = _spellDdKey(id);
+    return GestureDetector(
+      onTap: () => _openSpellPicker(slot),
+      child: Container(
+        width: 36,
+        height: 36,
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: _kGold.withValues(alpha: 0.5)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(5),
+          child: dd.isEmpty
+              ? const Center(
+                  child: Icon(Icons.add, color: Colors.white38, size: 18),
+                )
+              : Image.network(
+                  _spellIconUrl(dd),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const Icon(Icons.add, color: Colors.white38),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openRunesPicker() async {
+    final rift = context.read<RiftService>();
+    if (_runePages.isEmpty) {
+      rift.sendLcuRequest('GET', '/lol-perks/v1/pages');
+    }
+
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: _kSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        final maxH = MediaQuery.of(ctx).size.height * 0.55;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Choose Rune Page',
+                  style: TextStyle(
+                    color: _kGold,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (_runePages.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      'No saved rune pages found.\nCreate one in the LoL client.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: maxH,
+                    child: ListView.separated(
+                      itemCount: _runePages.length,
+                      separatorBuilder: (context, index) => const Divider(
+                        color: Colors.white10,
+                        height: 1,
+                      ),
+                      itemBuilder: (context, i) {
+                        final p = _runePages[i];
+                        final pid = (p['id'] as num?)?.toInt() ?? 0;
+                        final name = p['name']?.toString() ?? 'Page #$pid';
+                        final current = p['current'] == true;
+                        return ListTile(
+                          dense: true,
+                          title: Text(
+                            name,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          trailing: current ? const Icon(Icons.check, color: _kGold) : null,
+                          onTap: pid > 0 ? () => Navigator.pop(ctx, pid) : null,
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (picked == null || picked <= 0) return;
+    rift.sendLcuRequest(
+      'PUT',
+      '/lol-perks/v1/currentpage',
+      {'id': picked},
+    );
+    Future.delayed(const Duration(milliseconds: 600), () {
+      rift.sendLcuRequest('GET', '/lol-perks/v1/pages');
+    });
+  }
+
+  Widget _buildRunesButton() {
+    return GestureDetector(
+      onTap: _openRunesPicker,
+      child: Container(
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: _kGold.withValues(alpha: 0.5)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.bubble_chart, color: _kGold, size: 16),
+            SizedBox(width: 4),
+            Text(
+              'Runes',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildActionBar() {
     final phase = _currentPhase;
     final selectedId = _selectedChampId;
@@ -753,64 +1149,81 @@ class _LolChampSelectScreenState extends State<LolChampSelectScreen> with Single
                 ),
               ),
             )
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: Image.network(
-                    _champImageUrl(_ddKeyForChampId(selectedId)),
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                      width: 60,
-                      height: 60,
-                      color: const Color(0xFF1A1F2E),
-                      child: const Icon(Icons.person, color: Colors.white38),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _displayNameForChampId(selectedId),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Image.network(
+                        _champImageUrl(_ddKeyForChampId(selectedId)),
+                        width: 52,
+                        height: 52,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 52,
+                          height: 52,
+                          color: const Color(0xFF1A1F2E),
+                          child: const Icon(Icons.person, color: Colors.white38),
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        phase == 'ban' ? 'Ready to ban' : (phase == 'pick' ? 'Ready to pick' : 'Waiting...'),
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _displayNameForChampId(selectedId),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            phase == 'ban'
+                                ? 'Ready to ban'
+                                : (phase == 'pick' ? 'Ready to pick' : 'Waiting...'),
+                            style: const TextStyle(color: Colors.white54, fontSize: 11),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      height: 44,
+                      child: ElevatedButton(
+                        onPressed: canCommit ? _commitAction : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: phase == 'ban' ? _kRed : _kGold,
+                          foregroundColor: Colors.black,
+                          disabledBackgroundColor: Colors.grey[800],
+                          disabledForegroundColor: Colors.white38,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                        ),
+                        child: Text(
+                          phase == 'ban' ? 'BAN' : 'LOCK IN',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  height: 44,
-                  child: ElevatedButton(
-                    onPressed: canCommit ? _commitAction : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: phase == 'ban' ? _kRed : _kGold,
-                      foregroundColor: Colors.black,
-                      disabledBackgroundColor: Colors.grey[800],
-                      disabledForegroundColor: Colors.white38,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                    child: Text(
-                      phase == 'ban' ? 'BAN' : 'LOCK IN',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                  ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _buildSpellSlot(1),
+                    _buildSpellSlot(2),
+                    const SizedBox(width: 8),
+                    _buildRunesButton(),
+                  ],
                 ),
               ],
             ),
