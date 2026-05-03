@@ -54,6 +54,20 @@ class RiftService extends ChangeNotifier {
   final _lcuController = StreamController<LcuEvent>.broadcast();
   Stream<LcuEvent> get lcuEvents => _lcuController.stream;
 
+  // ─── Cached LCU state for global UI (invite popup, ongoing-game popup) ──
+  String _gameflowPhase = '';
+  String get gameflowPhase => _gameflowPhase;
+
+  /// Invitations received in `/lol-lobby/v2/received-invitations`. Each entry is
+  /// the raw LCU JSON (we read `invitationId`, `fromSummonerName`, `state`).
+  List<Map<String, dynamic>> _receivedInvites = const [];
+  List<Map<String, dynamic>> get receivedInvites =>
+      List.unmodifiable(_receivedInvites);
+
+  /// Has there ever been a "live game" popup shown for the current `InProgress`
+  /// phase? Reset whenever phase leaves `InProgress`/`GameStart`.
+  bool liveGamePromptShownThisGame = false;
+
   /// Host/IP last used in [connect] (Rift relay). Use for Nest/Socket.io on the same machine.
   String? _lastRelayHostIp;
   String? get lastRelayHostIp => _lastRelayHostIp;
@@ -388,6 +402,7 @@ class RiftService extends ChangeNotifier {
             eventType: statusCode == 200 ? 'Update' : 'Delete',
           ));
           _notifyNestGameflowPhaseIfNeeded(uri, decodedData);
+          _updateCachedLcuStateFromUri(uri, decodedData);
           return;
         }
         _log('Inner JSON map not handled as LCU push: keys=${m.keys.toList()}');
@@ -468,6 +483,51 @@ class RiftService extends ChangeNotifier {
     return null;
   }
 
+  /// Update cached LCU state from any inbound payload (push opcode 9, response
+  /// opcode 8, or local refetch). Notifies listeners only when something
+  /// actually changes.
+  void _updateCachedLcuStateFromUri(String uri, dynamic data) {
+    bool changed = false;
+
+    if (uri.contains('/lol-gameflow/v1/gameflow-phase') ||
+        uri.contains('/lol-gameflow/v1/session')) {
+      final phase = _phaseStringFromGameflowData(data) ?? '';
+      if (phase != _gameflowPhase) {
+        _gameflowPhase = phase;
+        if (phase != 'InProgress' && phase != 'GameStart') {
+          liveGamePromptShownThisGame = false;
+        }
+        changed = true;
+      }
+    }
+
+    if (uri.contains('/lol-lobby/v2/received-invitations')) {
+      List<Map<String, dynamic>> parsed = const [];
+      if (data is List) {
+        parsed = data
+            .whereType<Map>()
+            .map((m) => Map<String, dynamic>.from(m))
+            .toList(growable: false);
+      }
+      // Ignore declined / kicked entries — we only care about pending invites.
+      final pending = parsed
+          .where((inv) => (inv['state']?.toString() ?? 'Pending') == 'Pending')
+          .toList(growable: false);
+      final prevIds = _receivedInvites
+          .map((m) => m['invitationId']?.toString() ?? '')
+          .toSet();
+      final newIds = pending
+          .map((m) => m['invitationId']?.toString() ?? '')
+          .toSet();
+      if (prevIds.length != newIds.length || !prevIds.containsAll(newIds)) {
+        _receivedInvites = pending;
+        changed = true;
+      }
+    }
+
+    if (changed) notifyListeners();
+  }
+
   void _notifyNestGameflowPhaseIfNeeded(String uri, dynamic data) {
     if (uri != _kGameflowPhaseUri) return;
     final phase = _phaseStringFromGameflowData(data);
@@ -535,6 +595,7 @@ class RiftService extends ChangeNotifier {
       eventType: statusCode == 200 ? 'Update' : 'Delete',
     ));
     _notifyNestGameflowPhaseIfNeeded(uri, data);
+    _updateCachedLcuStateFromUri(uri, data);
   }
 
   // ── LCU Response [8, id, statusCode, data] ──────────────────
@@ -563,6 +624,7 @@ class RiftService extends ChangeNotifier {
         httpStatus: statusCode,
       ));
       _notifyNestGameflowPhaseIfNeeded(pending, data);
+      _updateCachedLcuStateFromUri(pending, data);
     } else {
       _log('LCU Response [8]: no pending entry for id=$requestId — reply dropped');
     }
@@ -590,6 +652,7 @@ class RiftService extends ChangeNotifier {
       eventType: eventType,
     ));
     _notifyNestGameflowPhaseIfNeeded(uri, data);
+    _updateCachedLcuStateFromUri(uri, data);
   }
 
   // ── Subscribe to LCU endpoints ──────────────────────────────
@@ -794,8 +857,14 @@ class RiftService extends ChangeNotifier {
     _pendingRequests.clear();
     _status = RiftConnectionStatus.disconnected;
     _errorMessage = '';
+    _gameflowPhase = '';
+    _receivedInvites = const [];
+    liveGamePromptShownThisGame = false;
     notifyListeners();
   }
+
+  /// True if LoL Control is currently paired+approved.
+  bool get isLolControlConnected => _status == RiftConnectionStatus.connected;
 
   @override
   void dispose() {

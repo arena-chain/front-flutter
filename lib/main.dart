@@ -21,6 +21,7 @@ import 'package:arena_chain_flutter/screens/admin/ui/admin_home_screen.dart';
 import 'package:arena_chain_flutter/screens/check_in_agent/ui/check_in_agent_home_screen.dart';
 import 'package:arena_chain_flutter/screens/Team_Manager/team_manager_dashboard.dart';
 import 'package:arena_chain_flutter/services/rift_service.dart';
+import 'package:arena_chain_flutter/features/lol_control/widgets/lol_global_popups.dart';
 import 'package:arena_chain_flutter/core/config/api_config.dart';
 import 'package:arena_chain_flutter/screens/player/feature_marketplace/viewmodel/marketplace_viewmodel.dart';
 import 'package:arena_chain_flutter/core/utils/role_utils.dart';
@@ -93,6 +94,8 @@ class MyApp extends StatelessWidget {
           ),
           useMaterial3: true,
         ),
+        builder: (context, child) =>
+            LolGlobalPopups(child: child ?? const SizedBox.shrink()),
         home: Consumer<AuthViewModel>(
           builder: (context, authViewModel, child) {
             switch (authViewModel.authState) {
