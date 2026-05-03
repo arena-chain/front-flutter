@@ -675,11 +675,11 @@ class _ReelPageState extends State<_ReelPage> {
         ColoredBox(
           color: Colors.black,
           child: (widget.isActive && v != null && widget.videoReady)
-              ? FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: v.value.size.width,
-                    height: v.value.size.height,
+              ? Center(
+                  child: AspectRatio(
+                    aspectRatio: v.value.aspectRatio == 0
+                        ? 9 / 16
+                        : v.value.aspectRatio,
                     child: VideoPlayer(v),
                   ),
                 )
