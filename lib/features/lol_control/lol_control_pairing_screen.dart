@@ -21,6 +21,57 @@ class _LolControlPairingScreenState extends State<LolControlPairingScreen> {
   final _codeController = TextEditingController();
   bool _navigated = false;
 
+  bool _autoResuming = false;
+  bool _hasSavedPairing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrapAutoResume());
+  }
+
+  Future<void> _bootstrapAutoResume() async {
+    if (!mounted) return;
+    final rift = context.read<RiftService>();
+
+    if (rift.status == RiftConnectionStatus.connected) return;
+
+    final saved = await rift.pairingStorage.load();
+    if (!mounted) return;
+    if (saved == null) {
+      setState(() => _hasSavedPairing = false);
+      return;
+    }
+
+    setState(() {
+      _hasSavedPairing = true;
+      _autoResuming = true;
+      _ipController.text = saved.ip;
+      _portController.text = saved.port;
+      _codeController.text = saved.code;
+    });
+
+    await rift.connect(saved.ip, saved.port, saved.code);
+    Future.delayed(const Duration(seconds: 5), () {
+      if (!mounted) return;
+      if (context.read<RiftService>().status != RiftConnectionStatus.connected) {
+        setState(() => _autoResuming = false);
+      }
+    });
+  }
+
+  Future<void> _forgetPaired() async {
+    await context.read<RiftService>().forgetPairing();
+    if (!mounted) return;
+    setState(() {
+      _hasSavedPairing = false;
+      _autoResuming = false;
+      _ipController.text = '192.168.1.145';
+      _portController.text = '51001';
+      _codeController.text = '';
+    });
+  }
+
   @override
   void dispose() {
     _ipController.dispose();
@@ -91,11 +142,16 @@ class _LolControlPairingScreenState extends State<LolControlPairingScreen> {
           final busy = rift.status == RiftConnectionStatus.connecting ||
               rift.status == RiftConnectionStatus.waitingForApproval;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+          final showAutoResumeOverlay =
+              _autoResuming && rift.status != RiftConnectionStatus.connected;
+
+          return Stack(
+            children: [
+              SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                 const Icon(Icons.sports_esports, size: 64, color: _kGold),
                 const SizedBox(height: 16),
                 const Text(
@@ -222,8 +278,53 @@ class _LolControlPairingScreenState extends State<LolControlPairingScreen> {
                     ),
                   ),
                 ),
+                if (_hasSavedPairing && !_autoResuming) ...[
+                  const SizedBox(height: 24),
+                  TextButton.icon(
+                    onPressed: _forgetPaired,
+                    icon: const Icon(Icons.link_off, size: 16, color: Colors.redAccent),
+                    label: const Text(
+                      'Forget paired PC',
+                      style: TextStyle(color: Colors.redAccent, fontSize: 13),
+                    ),
+                  ),
+                ],
               ],
             ),
+          ),
+              if (showAutoResumeOverlay)
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: const Color(0xCC000000),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(color: _kGold),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Reconnecting to your PC…',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Make sure Arena Chain Conduit is running.',
+                            style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                          ),
+                          const SizedBox(height: 24),
+                          TextButton(
+                            onPressed: () => setState(() => _autoResuming = false),
+                            child: const Text(
+                              'Use a different PC',
+                              style: TextStyle(color: _kGold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           );
         },
       ),

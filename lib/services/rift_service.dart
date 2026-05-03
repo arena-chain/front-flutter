@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:arena_chain_flutter/services/rift_pairing_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:pointycastle/export.dart';
 import 'package:pointycastle/asn1.dart';
@@ -62,6 +63,14 @@ class RiftService extends ChangeNotifier {
 
   final _random = Random.secure();
   int _nextRequestId = 1;
+
+  final RiftPairingStorage _pairingStorage = RiftPairingStorage();
+  RiftPairingStorage get pairingStorage => _pairingStorage;
+
+  String? _lastPairingPort;
+  String? _lastPairingCode;
+  String? get lastPairingCode => _lastPairingCode;
+  String? get lastPairingPort => _lastPairingPort;
 
   // Rift-level opcodes (mobile <-> Rift relay)
   static const int _riftConnect = 4;
@@ -137,6 +146,8 @@ class RiftService extends ChangeNotifier {
 
   Future<void> connect(String ip, String port, String code) async {
     _lastRelayHostIp = ip;
+    _lastPairingPort = port.isEmpty ? '51001' : port;
+    _lastPairingCode = code;
     _closeSocketOnly();
     _conduitPublicKey = null;
     _aesKey = null;
@@ -315,6 +326,7 @@ class RiftService extends ChangeNotifier {
         _status = RiftConnectionStatus.connected;
         _errorMessage = '';
         notifyListeners();
+        _persistPairingCreds();
         _log('Status → connected. Subscribing to endpoints...');
 
         // Small delay before sending encrypted messages to ensure
@@ -404,6 +416,7 @@ class RiftService extends ChangeNotifier {
             _status = RiftConnectionStatus.connected;
             _errorMessage = '';
             notifyListeners();
+            _persistPairingCreds();
             Future.delayed(const Duration(milliseconds: 300), () {
               if (_status == RiftConnectionStatus.connected) {
                 _subscribeToEndpoints();
@@ -745,6 +758,32 @@ class RiftService extends ChangeNotifier {
     _subscription = null;
     _channel?.sink.close();
     _channel = null;
+  }
+
+  void _persistPairingCreds() {
+    final ip = _lastRelayHostIp;
+    final port = _lastPairingPort;
+    final code = _lastPairingCode;
+    if (ip == null || port == null || code == null) return;
+    if (code.length != 6) return;
+    _pairingStorage.save(ip: ip, port: port, code: code).catchError((e) {
+      _log('Failed to persist pairing creds: $e');
+    });
+  }
+
+  Future<void> forgetPairing() async {
+    await _pairingStorage.clear();
+    _lastPairingPort = null;
+    _lastPairingCode = null;
+    notifyListeners();
+  }
+
+  Future<bool> tryResumeFromSavedCreds() async {
+    final saved = await _pairingStorage.load();
+    if (saved == null) return false;
+    _log('tryResumeFromSavedCreds: ip=${saved.ip} port=${saved.port}');
+    await connect(saved.ip, saved.port, saved.code);
+    return true;
   }
 
   void disconnect() {

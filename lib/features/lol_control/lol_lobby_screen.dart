@@ -28,7 +28,7 @@ class LolLobbyScreen extends StatefulWidget {
   State<LolLobbyScreen> createState() => _LolLobbyScreenState();
 }
 
-class _LolLobbyScreenState extends State<LolLobbyScreen> {
+class _LolLobbyScreenState extends State<LolLobbyScreen> with WidgetsBindingObserver {
   StreamSubscription<LcuEvent>? _sub;
   RiftService? _rift;
   bool _hadRiftConnection = false;
@@ -80,28 +80,45 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     _rift = context.read<RiftService>();
     _hadRiftConnection = _rift!.status == RiftConnectionStatus.connected;
     _rift!.addListener(_onRiftConnectionChanged);
+    _rift!.addListener(_onRiftStatusForRefetch);
 
-    final rift = _rift!;
-    _sub = rift.lcuEvents.listen(_onLcuEvent);
+    _sub = _rift!.lcuEvents.listen(_onLcuEvent);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final r = context.read<RiftService>();
-      if (r.status == RiftConnectionStatus.connected) {
-        r.sendLcuRequest('GET', '/lol-lobby/v2/lobby');
-        r.sendLcuRequest('GET', '/lol-gameflow/v1/gameflow-phase');
-        r.sendLcuRequest('GET', '/lol-lobby/v2/received-invitations');
-      }
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _issueInitialFetches());
 
-    Future.delayed(const Duration(seconds: 3), () {
+    Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted && !_initialFetchDone) {
         setState(() => _initialFetchDone = true);
       }
     });
+  }
+
+  void _onRiftStatusForRefetch() {
+    final r = _rift;
+    if (r == null || !mounted) return;
+    if (r.status != RiftConnectionStatus.connected) return;
+    if (_lobbyState != null) return;
+    _issueInitialFetches();
+  }
+
+  void _issueInitialFetches() {
+    if (!mounted) return;
+    final r = context.read<RiftService>();
+    if (r.status != RiftConnectionStatus.connected) return;
+    r.sendLcuRequest('GET', '/lol-lobby/v2/lobby');
+    r.sendLcuRequest('GET', '/lol-gameflow/v1/gameflow-phase');
+    r.sendLcuRequest('GET', '/lol-lobby/v2/received-invitations');
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) _issueInitialFetches();
   }
 
   // ── URI matchers ────────────────────────────────────────────
@@ -155,13 +172,15 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
   // ── event routing ───────────────────────────────────────────
 
   void _onLcuEvent(LcuEvent event) {
+    if (!_initialFetchDone && mounted) {
+      setState(() => _initialFetchDone = true);
+    }
     if (_isLobbyUri(event.uri)) _onLobbyLcuEvent(event);
     if (_isGameflowPhaseUri(event.uri)) _onGameflowLcuEvent(event);
     if (_isReceivedInvitesUri(event.uri)) _onReceivedInvitesLcuEvent(event);
   }
 
   void _onLobbyLcuEvent(LcuEvent event) {
-    _initialFetchDone = true;
     final status = event.httpStatus;
     final data = event.data;
 
@@ -307,7 +326,9 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _rift?.removeListener(_onRiftConnectionChanged);
+    _rift?.removeListener(_onRiftStatusForRefetch);
     _sub?.cancel();
     super.dispose();
   }

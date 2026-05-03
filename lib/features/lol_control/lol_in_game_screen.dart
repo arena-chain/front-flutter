@@ -412,9 +412,27 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
-    _riftSub?.cancel();
-    _socket?.dispose();
+    try {
+      _audioPlayer.dispose();
+    } catch (e) {
+      debugPrint('[InGame] _audioPlayer.dispose: $e');
+    }
+    try {
+      _riftSub?.cancel();
+    } catch (e) {
+      debugPrint('[InGame] _riftSub.cancel: $e');
+    }
+    try {
+      final s = _socket;
+      if (s != null) {
+        s.clearListeners();
+        if (s.connected) s.disconnect();
+        s.dispose();
+      }
+    } catch (e) {
+      debugPrint('[InGame] _socket dispose: $e');
+    }
+    _socket = null;
     super.dispose();
   }
 
