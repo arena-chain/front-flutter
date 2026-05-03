@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:arena_chain_flutter/core/models/linked_accounts/linked_game_account.dart';
 import 'package:arena_chain_flutter/core/repositories/feature_matchmaking/matchmaking_repository.dart';
 import 'package:arena_chain_flutter/core/models/feature_matchmaking/ticket_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_matchmaking/game_match_model.dart';
@@ -112,6 +113,14 @@ class MatchmakingViewModel extends ChangeNotifier {
   String selectedServer = 'EUW';
   String selectedPlayerRegion = 'ALL';
 
+  // Set when the user lands on this screen via "Play Now" on a game card.
+  // While true, the game/account row is render-only — cannot be toggled off.
+  bool _lockedFromPlayNow = false;
+  bool get lockedFromPlayNow => _lockedFromPlayNow;
+
+  // Currently-selected map. One of the entries in `mapsForGame(selectedGame)`.
+  String selectedMap = 'Summoner\'s Rift';
+
   bool _isScheduleMode = false;
   bool get isScheduleMode => _isScheduleMode;
 
@@ -155,6 +164,80 @@ class MatchmakingViewModel extends ChangeNotifier {
     'MRT',
   ];
 
+  // ── Per-game map catalogue ─────────────────────────────────────────────
+  static const Map<String, List<String>> mapsByGame = {
+    'LOL': ['Summoner\'s Rift', 'Howling Abyss'],
+    'VALORANT': [
+      'Bind',
+      'Haven',
+      'Split',
+      'Ascent',
+      'Icebox',
+      'Breeze',
+      'Fracture',
+      'Pearl',
+      'Lotus',
+      'Sunset',
+    ],
+    'CS2': [
+      'Dust II',
+      'Mirage',
+      'Inferno',
+      'Nuke',
+      'Overpass',
+      'Ancient',
+      'Anubis',
+      'Vertigo',
+    ],
+    'DOTA2': [
+      'Dota Auto Chess',
+      'Overthrow',
+      'Pudge Wars',
+      'Custom Hero Chaos',
+    ],
+  };
+
+  static List<String> mapsForGame(String game) =>
+      mapsByGame[game.toUpperCase()] ?? const ['Default'];
+
+  /// Clears the Play Now lock when opening Matchmaking without a preselected game.
+  void releasePlayNowLock() {
+    if (!_lockedFromPlayNow) return;
+    _lockedFromPlayNow = false;
+    notifyListeners();
+  }
+
+  // Apply preselected game from a "Play Now" navigation.
+  // Sets selectedGame, default map, and locks the row.
+  // Auto-selects the connected account once link status resolves.
+  void applyPreselectedGame(LinkedGameId gameId) {
+    final code = switch (gameId) {
+      LinkedGameId.lol => 'LOL',
+      LinkedGameId.valorant => 'VALORANT',
+      LinkedGameId.cs2 => 'CS2',
+      LinkedGameId.dota2 => 'DOTA2',
+    };
+    selectedGame = code;
+    selectedMap = mapsForGame(code).first;
+    _lockedFromPlayNow = true;
+
+    // Auto-select the Riot account if it's already loaded.
+    if (linkStatus == 'verified' && _connectedAccount != null) {
+      _isAccountSelected = true;
+    }
+    notifyListeners();
+  }
+
+  // Called after fetchLinkStatus() completes, to honor the lock.
+  // Safe to call multiple times.
+  void _autoSelectIfLocked() {
+    if (_lockedFromPlayNow &&
+        _linkStatus == 'verified' &&
+        _connectedAccount != null) {
+      _isAccountSelected = true;
+    }
+  }
+
   // ── Persistence keys ───────────────────────────────────────────────────
 
   static const String _activeGameIdKey = 'mm_active_game_id';
@@ -186,6 +269,7 @@ class MatchmakingViewModel extends ChangeNotifier {
       _isAccountSelected = false;
       _linkStatus = 'unlinked';
       _isLoadingLinkStatus = true;
+      _lockedFromPlayNow = false;
       notifyListeners();
     }
   }
@@ -215,6 +299,7 @@ class MatchmakingViewModel extends ChangeNotifier {
           riotPuuid: result['riotPuuid'] ?? '',
           riotLinkStatus: _linkStatus,
         );
+        _autoSelectIfLocked();
       } else {
         _connectedAccount = null;
       }
@@ -234,6 +319,7 @@ class MatchmakingViewModel extends ChangeNotifier {
   }
 
   void deselectAccount() {
+    if (_lockedFromPlayNow) return; // locked from Play Now — no deselect
     _isAccountSelected = false;
     notifyListeners();
   }
@@ -437,6 +523,7 @@ class MatchmakingViewModel extends ChangeNotifier {
           mode: selectedMode,
           server: selectedServer,
           region: selectedPlayerRegion,
+          map: selectedMap,
           scheduledAt: _scheduledTime,
           riotAccountInfo: _connectedAccount?.toMatchmakingPayload(),
         );
@@ -459,6 +546,7 @@ class MatchmakingViewModel extends ChangeNotifier {
           mode: selectedMode,
           server: selectedServer,
           region: selectedPlayerRegion,
+          map: selectedMap,
           riotAccountInfo: _connectedAccount?.toMatchmakingPayload(),
         );
         _ticket = ticket;

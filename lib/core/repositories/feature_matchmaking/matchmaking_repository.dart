@@ -13,6 +13,7 @@ class MatchmakingRepository {
     required String mode,
     required String server,
     required String region,
+    required String map,
     DateTime? scheduledAt,
     Map<String, dynamic>? riotAccountInfo,
   }) async {
@@ -22,6 +23,7 @@ class MatchmakingRepository {
         mode: mode,
         server: server,
         region: region,
+        map: map,
         scheduledAt: scheduledAt,
         riotAccountInfo: riotAccountInfo,
       );

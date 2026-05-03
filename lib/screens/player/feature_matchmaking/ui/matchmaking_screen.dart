@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:arena_chain_flutter/core/models/feature_matchmaking/ticket_model.dart';
+import 'package:arena_chain_flutter/core/models/linked_accounts/linked_game_account.dart';
+import 'package:arena_chain_flutter/screens/player/feature_home/_common/game_poster_card.dart'
+    show gameAccentColor;
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_dialogs.dart';
 import 'package:arena_chain_flutter/navigation.dart';
@@ -24,12 +27,102 @@ class _MatchmakingScreenBody extends StatefulWidget {
 }
 
 class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
+  bool _appliedPreselect = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MatchmakingViewModel>().fetchScheduledTickets();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_appliedPreselect) return;
+    _appliedPreselect = true;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final vm = context.read<MatchmakingViewModel>();
+    if (args is LinkedGameId) {
+      vm.applyPreselectedGame(args);
+    } else {
+      vm.releasePlayNowLock();
+    }
+  }
+
+  LinkedGameId _gameIdForCode(String code) {
+    switch (code.toUpperCase()) {
+      case 'VALORANT':
+        return LinkedGameId.valorant;
+      case 'CS2':
+        return LinkedGameId.cs2;
+      case 'DOTA2':
+        return LinkedGameId.dota2;
+      case 'LOL':
+      default:
+        return LinkedGameId.lol;
+    }
+  }
+
+  Color _accentForActiveGame(MatchmakingViewModel vm) =>
+      gameAccentColor(_gameIdForCode(vm.selectedGame));
+
+  String _findMatchLabel(MatchmakingViewModel vm) {
+    if (vm.isScheduleMode && vm.scheduledTime != null) {
+      return 'Schedule Match';
+    }
+    switch (vm.selectedMode) {
+      case 'CUSTOM_5V5':
+        return 'Play Ranked';
+      case 'CUSTOM_1V1':
+      case 'CUSTOM_2V2':
+      default:
+        return 'Play Draft';
+    }
+  }
+
+  // Per-game logo asset shown in the 56×56 box on the connected-account row.
+  String _logoAssetForGame(String code) {
+    switch (code.toUpperCase()) {
+      case 'VALORANT':
+        return 'assets/images/logogames/valologo.png';
+      case 'CS2':
+        return 'assets/images/logogames/cslogo.png';
+      case 'DOTA2':
+        return 'assets/images/logogames/dotatwologo.png';
+      case 'LOL':
+      default:
+        return 'assets/images/logogames/lologoo.png';
+    }
+  }
+
+  String _shortLabelForGame(String code) {
+    switch (code.toUpperCase()) {
+      case 'VALORANT':
+        return 'VAL';
+      case 'CS2':
+        return 'CS2';
+      case 'DOTA2':
+        return 'D2';
+      case 'LOL':
+      default:
+        return 'LoL';
+    }
+  }
+
+  String _titleForGame(String code) {
+    switch (code.toUpperCase()) {
+      case 'VALORANT':
+        return 'Valorant';
+      case 'CS2':
+        return 'Counter-Strike 2';
+      case 'DOTA2':
+        return 'Dota 2';
+      case 'LOL':
+      default:
+        return 'League of Legends';
+    }
   }
 
   @override
@@ -92,6 +185,8 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
           _buildServerSelector(vm),
           const SizedBox(height: 24),
           _buildRegionSelector(vm),
+          const SizedBox(height: 24),
+          _buildMapSelector(vm),
           if (vm.isScheduleMode &&
               (vm.status == MatchmakingStatus.idle ||
                   vm.status == MatchmakingStatus.error ||
@@ -131,15 +226,6 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Select Game',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
         if (vm.isLoadingLinkStatus)
           Container(
             padding: const EdgeInsets.all(24),
@@ -173,7 +259,7 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
     final isSelected = vm.isAccountSelected;
 
     return GestureDetector(
-      onTap: vm.status == MatchmakingStatus.idle
+      onTap: (vm.status == MatchmakingStatus.idle && !vm.lockedFromPlayNow)
           ? () {
               if (isSelected) {
                 vm.deselectAccount();
@@ -181,7 +267,17 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
                 vm.selectAccount(account);
               }
             }
-          : null,
+          : (vm.lockedFromPlayNow
+              ? () {
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(const SnackBar(
+                      content: Text(
+                          'Game is locked — return to Home to switch games.'),
+                      duration: Duration(seconds: 2),
+                    ));
+                }
+              : null),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
@@ -190,7 +286,7 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
-                ? const Color(0xFF00FF00)
+                ? _accentForActiveGame(vm)
                 : const Color(0xFF1A1F36),
             width: isSelected ? 2 : 1,
           ),
@@ -201,49 +297,26 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: const Color(0xFF0F1221),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFF00FF00)
-                      : const Color(0xFFC89B3C),
-                  width: 2,
-                ),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: account.originalIconId != null &&
-                        account.originalIconId! > 0
-                    ? Image.network(
-                        'https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/${account.originalIconId}.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Center(
-                          child: Text(
-                            'LoL',
-                            style: TextStyle(
-                              color: Color(0xFFC89B3C),
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
-                      )
-                    : const Center(
-                        child: Text(
-                          'LoL',
-                          style: TextStyle(
-                            color: Color(0xFFC89B3C),
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1,
-                          ),
-                        ),
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  _logoAssetForGame(vm.selectedGame),
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Center(
+                    child: Text(
+                      _shortLabelForGame(vm.selectedGame),
+                      style: TextStyle(
+                        color: _accentForActiveGame(vm),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
                       ),
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 16),
@@ -251,9 +324,9 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'League of Legends',
-                    style: TextStyle(
+                  Text(
+                    _titleForGame(vm.selectedGame),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -265,7 +338,7 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
                       Icon(
                         Icons.verified,
                         color: isSelected
-                            ? const Color(0xFF00FF00)
+                            ? _accentForActiveGame(vm)
                             : const Color(0xFF7A86AC),
                         size: 14,
                       ),
@@ -274,7 +347,7 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
                         '${account.riotGameName}#${account.riotTagLine}',
                         style: TextStyle(
                           color: isSelected
-                              ? const Color(0xFF00FF00)
+                              ? _accentForActiveGame(vm)
                               : const Color(0xFF7A86AC),
                           fontSize: 13,
                         ),
@@ -292,8 +365,8 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
                 ],
               ),
             ),
-            if (isSelected)
-              const Icon(Icons.check_circle, color: Color(0xFF00FF00))
+            if (isSelected || vm.lockedFromPlayNow)
+              Icon(Icons.check_circle, color: _accentForActiveGame(vm))
             else
               const Icon(Icons.radio_button_unchecked,
                   color: Color(0xFF7A86AC)),
@@ -333,14 +406,14 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFF00FF00).withOpacity(0.1),
+                color: const Color(0xFF7A86AC).withOpacity(0.12),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF00FF00)),
+                border: Border.all(color: const Color(0xFF7A86AC)),
               ),
               child: const Text(
                 'Connect Now',
                 style: TextStyle(
-                  color: Color(0xFF00FF00),
+                  color: Color(0xFF7A86AC),
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -393,12 +466,12 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? const Color(0xFF00FF00).withOpacity(0.1)
+                          ? _accentForActiveGame(vm).withOpacity(0.12)
                           : const Color(0xFF0F1221),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected
-                            ? const Color(0xFF00FF00)
+                            ? _accentForActiveGame(vm)
                             : const Color(0xFF1A1F36),
                         width: isSelected ? 2 : 1,
                       ),
@@ -409,7 +482,7 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
                           mode['label']!,
                           style: TextStyle(
                             color: isSelected
-                                ? const Color(0xFF00FF00)
+                                ? _accentForActiveGame(vm)
                                 : Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -528,6 +601,63 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
                   ? (value) {
                       if (value != null) {
                         vm.selectedPlayerRegion = value;
+                        vm.notifyListeners();
+                      }
+                    }
+                  : null,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Map selector ──────────────────────────────────────────────────────
+
+  Widget _buildMapSelector(MatchmakingViewModel vm) {
+    final maps = MatchmakingViewModel.mapsForGame(vm.selectedGame);
+    // Guard against stale value when game changes.
+    final value = maps.contains(vm.selectedMap) ? vm.selectedMap : maps.first;
+    if (value != vm.selectedMap) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        vm.selectedMap = value;
+        vm.notifyListeners();
+      });
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Map',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F1221),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF1A1F36)),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: value,
+              isExpanded: true,
+              dropdownColor: const Color(0xFF0F1221),
+              icon: const Icon(Icons.keyboard_arrow_down,
+                  color: Color(0xFF7A86AC)),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              items: maps
+                  .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                  .toList(),
+              onChanged: vm.status == MatchmakingStatus.idle
+                  ? (v) {
+                      if (v != null) {
+                        vm.selectedMap = v;
                         vm.notifyListeners();
                       }
                     }
@@ -755,7 +885,7 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
             style: ElevatedButton.styleFrom(
               backgroundColor: isScheduled
                   ? const Color(0xFF00CCFF)
-                  : const Color(0xFF00FF00),
+                  : _accentForActiveGame(vm),
               foregroundColor: Colors.black,
               disabledBackgroundColor: const Color(0xFF1A1F36),
               disabledForegroundColor: const Color(0xFF7A86AC),
@@ -773,20 +903,14 @@ class _MatchmakingScreenBodyState extends State<_MatchmakingScreenBody> {
                       color: Colors.black,
                     ),
                   )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(isScheduled ? Icons.schedule : Icons.search,
-                          size: 24),
-                      const SizedBox(width: 8),
-                      Text(
-                        isScheduled ? 'Schedule Match' : 'Find Match',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                : Center(
+                    child: Text(
+                      _findMatchLabel(vm),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
+                    ),
                   ),
           ),
         ),

@@ -1157,8 +1157,11 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                   totalPages: totalPages,
                   activePage: _quickCardIndex,
                   isLoading: linkedVm.isLoading,
-                  onPlayNow: () =>
-                      Navigator.pushNamed(context, AppRoutes.matchmaking),
+                  onPlayNow: () => Navigator.pushNamed(
+                    context,
+                    AppRoutes.matchmaking,
+                    arguments: account.gameId, // LinkedGameId enum
+                  ),
                   onOpenStats: () =>
                       Navigator.pushNamed(context, account.statsRoute),
                 ),

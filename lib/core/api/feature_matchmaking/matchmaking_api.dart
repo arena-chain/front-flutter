@@ -13,6 +13,7 @@ class MatchmakingApi {
     required String mode,
     required String server,
     required String region,
+    required String map,
     DateTime? scheduledAt,
     Map<String, dynamic>? riotAccountInfo,
   }) async {
@@ -22,6 +23,7 @@ class MatchmakingApi {
       'mode': mode,
       'server': server,
       'region': region,
+      'map': map,
     };
     if (scheduledAt != null) {
       body['scheduledAt'] = scheduledAt.toUtc().toIso8601String();
