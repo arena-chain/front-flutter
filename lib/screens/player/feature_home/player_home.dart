@@ -345,10 +345,12 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
           : const Color(0xFF0A0E1A),
       drawer: const SideDrawer(),
       body: SafeArea(bottom: false, child: _buildCurrentScreen()),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: _onNavTap,
-      ),
+      bottomNavigationBar: _currentIndex == 1
+          ? null
+          : BottomNavBar(
+              currentIndex: _currentIndex,
+              onTap: _onNavTap,
+            ),
     );
   }
 
@@ -357,7 +359,9 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
       case 0:
         return _buildHomeContent();
       case 1:
-        return const PlayerHighlightsFeedScreen();
+        return PlayerHighlightsFeedScreen(
+          onBack: () => _onNavTap(0),
+        );
       case 2:
         return const PlayerLeaguesScreen(embeddedInPlayerShell: true);
       case 3:
@@ -510,14 +514,20 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
               child: Row(
                 children: [
                   Builder(
-                    builder: (context) => Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => Scaffold.of(context).openDrawer(),
-                        child: _buildTopLeftIcon(context, linkedVm.accounts),
+                    builder: (context) => IconButton(
+                      icon: const Icon(
+                        Icons.menu,
+                        color: Colors.white,
+                        size: 28,
                       ),
+                      tooltip: 'Menu',
+                      splashRadius: 22,
+                      onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: _buildTopLeftIcon(context, linkedVm.accounts),
                   ),
                   Consumer2<AuthViewModel, LevelViewModel>(
                     builder: (context, auth, levelVm, _) {

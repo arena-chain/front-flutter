@@ -7,7 +7,7 @@ class SteamApi {
 
   Future<Map<String, dynamic>> getStatus({required String token}) async {
     final res = await http.get(
-      Uri.parse('$baseUrl/api/steam-verification/status'),
+      Uri.parse('$baseUrl/steam-verification/status'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (res.statusCode == 200) {
@@ -21,7 +21,7 @@ class SteamApi {
     required String token,
   }) async {
     final res = await http.post(
-      Uri.parse('$baseUrl/api/steam-verification/link'),
+      Uri.parse('$baseUrl/steam-verification/link'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -39,7 +39,7 @@ class SteamApi {
     required String token,
   }) async {
     final res = await http.post(
-      Uri.parse('$baseUrl/api/steam-verification/verify'),
+      Uri.parse('$baseUrl/steam-verification/verify'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -54,7 +54,7 @@ class SteamApi {
 
   Future<void> unlink({required String token}) async {
     final res = await http.delete(
-      Uri.parse('$baseUrl/api/steam-verification/unlink'),
+      Uri.parse('$baseUrl/steam-verification/unlink'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (res.statusCode != 200 && res.statusCode != 204) {
