@@ -31,6 +31,7 @@ import 'package:arena_chain_flutter/screens/player/feature_home/_common/game_pos
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/hero_card_light_streak.dart';
 import 'package:arena_chain_flutter/screens/player/feature_home/_common/side_drawer.dart';
 import 'package:arena_chain_flutter/features/lol_control/widgets/queue_selector_dialog.dart';
+import 'package:arena_chain_flutter/services/rift_service.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/view_model/matchmaking_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_matchmaking/ui/matchmaking_dialogs.dart';
 import 'package:arena_chain_flutter/screens/player/feature_messages/ui/messages_screen.dart';
@@ -1016,6 +1017,7 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     required LinkedAccountsViewModel linkedVm,
   }) {
     final totalPages = accounts.length + 1;
+    final lolControlConnected = context.watch<RiftService>().isLolControlConnected;
     final rv = linkedVm.riotVerified;
     final sv = linkedVm.steamVerified;
     late final String terminalTitle;
@@ -1158,6 +1160,9 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                   totalPages: totalPages,
                   activePage: _quickCardIndex,
                   isLoading: linkedVm.isLoading,
+                  onLive: (account.gameId == LinkedGameId.lol && lolControlConnected)
+                      ? () => Navigator.pushNamed(context, AppRoutes.lolControl)
+                      : null,
                   onPlayNow: () {
                     if (account.gameId == LinkedGameId.lol) {
                       showQueueSelectorDialog(context);

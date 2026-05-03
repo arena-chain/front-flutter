@@ -173,3 +173,8 @@ class AppRoutes {
         linkSteam: (context) => const LinkSteamScreen(),
       };
 }
+
+/// Global key on the root [Navigator]. Used by widgets that live ABOVE the
+/// Navigator (e.g. [LolGlobalPopups] mounted via [MaterialApp.builder]) to
+/// open dialogs / push routes without needing an ancestor Navigator.
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();

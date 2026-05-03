@@ -24,6 +24,9 @@ class _GameModeOption {
 class LolLobbyScreen extends StatefulWidget {
   const LolLobbyScreen({super.key});
 
+  static int _aliveInstances = 0;
+  static bool get isAliveAnywhere => _aliveInstances > 0;
+
   @override
   State<LolLobbyScreen> createState() => _LolLobbyScreenState();
 }
@@ -80,6 +83,7 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> with WidgetsBindingObse
   @override
   void initState() {
     super.initState();
+    LolLobbyScreen._aliveInstances++;
     WidgetsBinding.instance.addObserver(this);
 
     _rift = context.read<RiftService>();
@@ -326,6 +330,8 @@ class _LolLobbyScreenState extends State<LolLobbyScreen> with WidgetsBindingObse
 
   @override
   void dispose() {
+    LolLobbyScreen._aliveInstances =
+        (LolLobbyScreen._aliveInstances - 1).clamp(0, 1 << 30);
     WidgetsBinding.instance.removeObserver(this);
     _rift?.removeListener(_onRiftConnectionChanged);
     _rift?.removeListener(_onRiftStatusForRefetch);

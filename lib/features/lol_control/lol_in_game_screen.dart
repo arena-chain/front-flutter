@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:arena_chain_flutter/services/rift_service.dart';
+import 'package:arena_chain_flutter/navigation.dart';
 import 'package:arena_chain_flutter/features/lol_control/lol_control_pairing_screen.dart';
 import 'package:arena_chain_flutter/features/lol_control/lol_lobby_screen.dart';
 
@@ -474,7 +475,7 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
                 slivers: [
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                      padding: const EdgeInsets.fromLTRB(16, 36, 16, 0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -566,6 +567,20 @@ class _LolInGameScreenState extends State<LolInGameScreen> {
               ),
             ),
             if (_gameEnded) _buildGameOverOverlay(gs),
+            Positioned(
+              top: 4,
+              left: 4,
+              child: IconButton(
+                tooltip: 'Back to home',
+                icon: const Icon(Icons.arrow_back, color: Colors.white70),
+                onPressed: () {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    AppRoutes.playerHome,
+                    (route) => false,
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),

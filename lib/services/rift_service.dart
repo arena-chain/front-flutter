@@ -64,10 +64,6 @@ class RiftService extends ChangeNotifier {
   List<Map<String, dynamic>> get receivedInvites =>
       List.unmodifiable(_receivedInvites);
 
-  /// Has there ever been a "live game" popup shown for the current `InProgress`
-  /// phase? Reset whenever phase leaves `InProgress`/`GameStart`.
-  bool liveGamePromptShownThisGame = false;
-
   /// Host/IP last used in [connect] (Rift relay). Use for Nest/Socket.io on the same machine.
   String? _lastRelayHostIp;
   String? get lastRelayHostIp => _lastRelayHostIp;
@@ -494,9 +490,6 @@ class RiftService extends ChangeNotifier {
       final phase = _phaseStringFromGameflowData(data) ?? '';
       if (phase != _gameflowPhase) {
         _gameflowPhase = phase;
-        if (phase != 'InProgress' && phase != 'GameStart') {
-          liveGamePromptShownThisGame = false;
-        }
         changed = true;
       }
     }
@@ -859,7 +852,6 @@ class RiftService extends ChangeNotifier {
     _errorMessage = '';
     _gameflowPhase = '';
     _receivedInvites = const [];
-    liveGamePromptShownThisGame = false;
     notifyListeners();
   }
 

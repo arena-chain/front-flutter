@@ -94,6 +94,7 @@ class GamePosterCard extends StatelessWidget {
     required this.isLoading,
     required this.onPlayNow,
     required this.onOpenStats,
+    this.onLive,
   });
 
   final LinkedGameAccount account;
@@ -102,6 +103,7 @@ class GamePosterCard extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onPlayNow;
   final VoidCallback onOpenStats;
+  final VoidCallback? onLive;
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +145,45 @@ class GamePosterCard extends StatelessWidget {
             onTap: onOpenStats,
           ),
         ),
+        if (onLive != null)
+          Positioned(
+            right: 14,
+            bottom: 56,
+            child: GestureDetector(
+              onTap: onLive,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFC84B4B),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x66C84B4B),
+                      blurRadius: 12,
+                      spreadRadius: 0.5,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.fiber_manual_record, size: 10, color: Colors.white),
+                    SizedBox(width: 6),
+                    Text(
+                      'LIVE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 11,
+                        letterSpacing: 1.6,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         Positioned(
           right: 14,
           bottom: 14,

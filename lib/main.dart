@@ -81,6 +81,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MarketplaceViewModel()),
       ],
       child: MaterialApp(
+        navigatorKey: rootNavigatorKey,
         title: 'Arena-Chain',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
