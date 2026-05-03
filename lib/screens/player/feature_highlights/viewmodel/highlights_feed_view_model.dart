@@ -12,12 +12,18 @@ class HighlightsFeedViewModel extends ChangeNotifier {
   String? error;
   List<HighlightItem> items = [];
 
-  bool _inFlight = false;
+  /// Serializes [load] so a tab-triggered `load(refresh: true)` and the reels
+  /// screen bootstrap never skip each other while `_inFlight` would have
+  /// short-circuited the second call.
+  Future<void> _loadSerial = Future<void>.value();
 
   /// [refresh] true: pull-to-refresh — does not show full-screen blocking spinner if we already have rows.
   Future<void> load({bool refresh = false}) async {
-    if (_inFlight) return;
-    _inFlight = true;
+    _loadSerial = _loadSerial.then((_) => _performLoad(refresh: refresh));
+    await _loadSerial;
+  }
+
+  Future<void> _performLoad({required bool refresh}) async {
     final showBlockingSpinner = !refresh && items.isEmpty;
     if (showBlockingSpinner) {
       isLoading = true;
@@ -33,7 +39,6 @@ class HighlightsFeedViewModel extends ChangeNotifier {
       error = e.toString().replaceFirst('Exception: ', '');
     } finally {
       isLoading = false;
-      _inFlight = false;
       notifyListeners();
     }
   }

@@ -7,6 +7,7 @@ import 'package:arena_chain_flutter/screens/player/feature_home/_common/bottom_n
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/scheduled_streams_screen.dart';
 import 'package:arena_chain_flutter/screens/player/feature_live/ui/arena_live_stream_card.dart';
 import 'package:arena_chain_flutter/screens/player/feature_highlights/ui/player_highlights_feed_screen.dart';
+import 'package:arena_chain_flutter/screens/player/feature_highlights/viewmodel/highlights_feed_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_tournemets/ui/tournaments_list_screen.dart';
 import 'package:arena_chain_flutter/screens/leagues/player_leagues_screen.dart';
 import 'package:arena_chain_flutter/screens/feature_auth/viewmodel/auth_viewmodel.dart';
@@ -288,6 +289,15 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
     setState(() {
       _currentIndex = index;
     });
+    if (index == 1) {
+      // Reels: ensure latest public highlights are loaded.
+      try {
+        context.read<HighlightsFeedViewModel>().load(refresh: true);
+      } catch (_) {
+        // Provider not in scope yet (e.g. first build) — bootstrap below
+        // will load() anyway.
+      }
+    }
   }
 
   bool _isLeftDiagonalHalf(Offset localPosition, Size size) {
