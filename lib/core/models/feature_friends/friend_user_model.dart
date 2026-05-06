@@ -10,10 +10,11 @@ class FriendUser {
   });
 
   factory FriendUser.fromJson(Map<String, dynamic> json) {
+    final idRaw = json['_id'] ?? json['id'];
     return FriendUser(
-      id: json['_id'] as String,
-      nickname: json['nickname'] as String,
-      email: json['email'] as String,
+      id: idRaw?.toString() ?? '',
+      nickname: (json['nickname'] ?? json['username'] ?? 'Player').toString(),
+      email: (json['email'] ?? '').toString(),
     );
   }
 

@@ -71,8 +71,17 @@ class TicketModel {
   }
 
   static TicketStatus _parseStatus(dynamic stat) {
-    if (stat == 'USED') return TicketStatus.USED;
-    if (stat == 'CANCELLED') return TicketStatus.CANCELLED;
+    if (stat == null) return TicketStatus.VALID;
+    final s = stat.toString().trim().toUpperCase();
+    if (s == 'USED' ||
+        s == 'CHECKED_IN' ||
+        s == 'CHECKEDIN' ||
+        s == 'REDEEMED') {
+      return TicketStatus.USED;
+    }
+    if (s == 'CANCELLED' || s == 'CANCELED') {
+      return TicketStatus.CANCELLED;
+    }
     return TicketStatus.VALID;
   }
 }

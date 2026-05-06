@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 
 class FriendsViewModel extends ChangeNotifier {
   final FriendsRepository _repository;
-  final String currentUserId; // We need the current user ID for context
+  String _currentUserId;
+
+  /// Authenticated account id used for friendship APIs.
+  String get currentUserId => _currentUserId;
 
   List<FriendshipModel> _friends = [];
   List<FriendshipModel> _pendingRequests = [];
@@ -22,14 +25,37 @@ class FriendsViewModel extends ChangeNotifier {
   String? get error => _error;
 
   FriendsViewModel({
-    required this.currentUserId,
+    String currentUserId = '',
     FriendsRepository? repository,
-  }) : _repository = repository ?? FriendsRepository();
+  })  : _currentUserId = currentUserId,
+        _repository = repository ?? FriendsRepository();
+
+  /// Keeps the same [FriendsViewModel] instance when auth updates (ProxyProvider).
+  void syncUserId(String userId) {
+    final next = userId.trim();
+    if (_currentUserId == next) return;
+    _currentUserId = next;
+    _friends = [];
+    _pendingRequests = [];
+    _sentRequests = [];
+    _searchResults = [];
+    _error = null;
+    notifyListeners();
+    if (_currentUserId.isNotEmpty) {
+      loadFriends();
+      loadPendingRequests();
+    }
+  }
 
   Future<void> loadFriends() async {
+    if (_currentUserId.isEmpty) {
+      _friends = [];
+      notifyListeners();
+      return;
+    }
     _setLoading(true);
     try {
-      _friends = await _repository.getFriends(currentUserId);
+      _friends = await _repository.getFriends(_currentUserId);
       _error = null;
     } catch (e) {
       _error = e.toString();
@@ -39,9 +65,14 @@ class FriendsViewModel extends ChangeNotifier {
   }
 
   Future<void> loadPendingRequests() async {
+    if (_currentUserId.isEmpty) {
+      _pendingRequests = [];
+      notifyListeners();
+      return;
+    }
     // Note: Don't set global loading here to avoid blocking UI if done in background
     try {
-      _pendingRequests = await _repository.getPendingRequests(currentUserId);
+      _pendingRequests = await _repository.getPendingRequests(_currentUserId);
       notifyListeners();
     } catch (e, st) {
       _pendingRequests = [];
@@ -51,8 +82,13 @@ class FriendsViewModel extends ChangeNotifier {
   }
 
   Future<void> loadSentRequests() async {
+    if (_currentUserId.isEmpty) {
+      _sentRequests = [];
+      notifyListeners();
+      return;
+    }
     try {
-      _sentRequests = await _repository.getSentRequests(currentUserId);
+      _sentRequests = await _repository.getSentRequests(_currentUserId);
       notifyListeners();
     } catch (e, st) {
       _sentRequests = [];
@@ -70,7 +106,8 @@ class FriendsViewModel extends ChangeNotifier {
 
     _setLoading(true);
     try {
-      _searchResults = await _repository.searchUsers(query, excludeUserId: currentUserId);
+      _searchResults =
+          await _repository.searchUsers(query, excludeUserId: _currentUserId);
       _error = null;
     } catch (e) {
       _error = e.toString();
@@ -81,7 +118,7 @@ class FriendsViewModel extends ChangeNotifier {
 
   Future<void> sendFriendRequest(String recipientId) async {
     try {
-      await _repository.sendFriendRequest(currentUserId, recipientId);
+      await _repository.sendFriendRequest(_currentUserId, recipientId);
       // Optionally update some state or show success message
       // We might want to remove the user from search results or change their status UI
     } catch (e) {
@@ -104,7 +141,7 @@ class FriendsViewModel extends ChangeNotifier {
 
     try {
       // 2. Make API Call
-      await _repository.acceptRequest(friendshipId, currentUserId);
+      await _repository.acceptRequest(friendshipId, _currentUserId);
       
       // 3. Refresh Data to ensure sync (especially for the friends list)
       await Future.wait([
@@ -124,7 +161,7 @@ class FriendsViewModel extends ChangeNotifier {
 
   Future<void> rejectRequest(String friendshipId) async {
     try {
-      await _repository.rejectRequest(friendshipId, currentUserId);
+      await _repository.rejectRequest(friendshipId, _currentUserId);
       await loadPendingRequests();
     } catch (e) {
       _error = e.toString();

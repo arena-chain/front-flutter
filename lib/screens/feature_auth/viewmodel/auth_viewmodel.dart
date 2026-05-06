@@ -230,10 +230,11 @@ class AuthViewModel extends ChangeNotifier {
 
     try {
       await _authRepository.logout();
-      
+
       _currentUser = null;
+      _token = null;
       _authState = AuthState.unauthenticated;
-      
+
       notifyListeners();
     } catch (e) {
       _setError(_extractErrorMessage(e.toString()));

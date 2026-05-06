@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/view_model/friends_view_model.dart';
 import 'package:arena_chain_flutter/navigation.dart';
-import 'package:arena_chain_flutter/core/models/feature_friends/friendship_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_friends/friend_user_model.dart';
+import 'package:arena_chain_flutter/screens/player/feature_messages/ui/live_room_screen.dart';
 
 class FriendsListScreen extends StatefulWidget {
   const FriendsListScreen({super.key});
@@ -128,21 +128,17 @@ class _FriendsListScreenState extends State<FriendsListScreen>
           itemBuilder: (context, index) {
             final friendship = viewModel.friends[index];
             final myId = viewModel.currentUserId;
-
-            dynamic friendData;
-            if (friendship.requester is FriendUser &&
-                (friendship.requester as FriendUser).id != myId) {
-              friendData = friendship.requester;
-            } else if (friendship.recipient is FriendUser &&
-                (friendship.recipient as FriendUser).id != myId) {
-              friendData = friendship.recipient;
-            }
-
-            final nickname =
-                friendData is FriendUser ? friendData.nickname : 'Unknown';
+            final friendUser = friendship.counterpartFor(myId);
+            final nickname = friendUser?.nickname ?? 'Unknown';
             const statusText = 'Friend';
 
-            return _buildFriendItem(nickname, statusText);
+            return _buildFriendItem(
+              context,
+              nickname: nickname,
+              statusText: statusText,
+              friendUser: friendUser,
+              myUserId: myId,
+            );
           },
         );
       },
@@ -234,58 +230,98 @@ class _FriendsListScreenState extends State<FriendsListScreen>
     );
   }
 
-  Widget _buildFriendItem(String nickname, String statusText) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F1221),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF1A1F36)),
+  void _openFriendChat(
+    BuildContext context, {
+    required String myUserId,
+    required FriendUser? friend,
+    required String title,
+  }) {
+    final friendId = friend?.id.trim() ?? '';
+    if (friendId.isEmpty) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => LiveRoomScreen(
+          channelId: LiveRoomScreen.directMessageChannelId(myUserId, friendId),
+          title: title,
+        ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1F36),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFF00FF00).withOpacity(0.5),
+    );
+  }
+
+  Widget _buildFriendItem(
+    BuildContext context, {
+    required String nickname,
+    required String statusText,
+    required FriendUser? friendUser,
+    required String myUserId,
+  }) {
+    void open() => _openFriendChat(
+          context,
+          myUserId: myUserId,
+          friend: friendUser,
+          title: nickname,
+        );
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: open,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F1221),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF1A1F36)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1F36),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFF00FF00).withOpacity(0.5),
+                  ),
+                ),
+                child: const Icon(Icons.person, color: Colors.white),
               ),
-            ),
-            child: const Icon(Icons.person, color: Colors.white),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  nickname,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      nickname,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      statusText,
+                      style: const TextStyle(
+                        color: Color(0xFF00FF00),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  statusText,
-                  style: const TextStyle(
-                    color: Color(0xFF00FF00),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.message_outlined,
+                    color: Color(0xFF7A86AC)),
+                onPressed: open,
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.message_outlined, color: Color(0xFF7A86AC)),
-            onPressed: () {},
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -22,6 +22,9 @@ class LiveRoomService {
   final _presenceController =
       StreamController<List<Map<String, dynamic>>>.broadcast();
   final _connectionController = StreamController<bool>.broadcast();
+  final _messageDeletedIdController = StreamController<String>.broadcast();
+  final _messageUpdatedController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   Stream<Map<String, dynamic>> get onChatMessage => _chatController.stream;
   Stream<Map<String, int>> get onReactionSummary =>
@@ -30,16 +33,30 @@ class LiveRoomService {
   Stream<List<Map<String, dynamic>>> get onPresenceReady =>
       _presenceController.stream;
   Stream<bool> get onConnectionChanged => _connectionController.stream;
+  Stream<String> get onMessageDeletedId => _messageDeletedIdController.stream;
+  Stream<Map<String, dynamic>> get onMessageUpdated =>
+      _messageUpdatedController.stream;
 
   String? _channelId;
+  String? _connectedUserId;
 
-  String get _baseUrl => ApiConfig.baseUrl;
-  String? _workingBaseUrl;
+  /// Socket.IO is mounted on the server root; [ApiConfig.baseUrl] often ends with `/api`.
+  String _socketOrigin(String url) {
+    var s = url.trim().replaceAll(RegExp(r'/$'), '');
+    if (s.endsWith('/api')) {
+      s = s.substring(0, s.length - 4);
+    }
+    return s;
+  }
 
-  List<String> _candidateBaseUrls() {
+  /// Host roots to try for WebSocket + `GET .../api/chat/...` (never `.../api/api/...`).
+  String? _workingOrigin;
+
+  List<String> _candidateOrigins() {
     final candidates = <String>[
-      if (_workingBaseUrl case final String working) working,
-      _baseUrl,
+      if (_workingOrigin case final String working) working,
+      _socketOrigin(ApiConfig.baseUrl),
+      _socketOrigin(ApiConfig.socketOrigin),
       'http://10.0.2.2:3000',
       'http://127.0.0.1:3000',
       'http://localhost:3000',
@@ -51,16 +68,21 @@ class LiveRoomService {
   Future<List<Map<String, dynamic>>> fetchChatHistory(
     String channelId, {
     int limit = 50,
+    String? bearerToken,
   }) async {
-    for (final candidate in _candidateBaseUrls()) {
+    final headers = <String, String>{
+      if (bearerToken != null && bearerToken.trim().isNotEmpty)
+        'Authorization': 'Bearer ${bearerToken.trim()}',
+    };
+    for (final origin in _candidateOrigins()) {
       final uri = Uri.parse(
-        '$candidate/api/chat/channel/$channelId?limit=$limit',
+        '$origin/api/chat/channel/$channelId?limit=$limit',
       );
       try {
         final response =
-            await http.get(uri).timeout(const Duration(seconds: 6));
+            await http.get(uri, headers: headers).timeout(const Duration(seconds: 6));
         if (response.statusCode != 200) continue;
-        _workingBaseUrl = candidate;
+        _workingOrigin = origin;
         final data = jsonDecode(response.body);
         if (data is List) {
           return data.whereType<Map<String, dynamic>>().toList();
@@ -87,6 +109,7 @@ class LiveRoomService {
     String? token,
   }) {
     _channelId = channelId;
+    _connectedUserId = userId.trim().isEmpty ? null : userId.trim();
     _token = token;
     _candidateIdx = 0;
     _connectUsingCandidate();
@@ -94,7 +117,7 @@ class LiveRoomService {
 
   void _connectUsingCandidate() {
     if (_isDisposed || _isConnecting) return;
-    final candidates = _candidateBaseUrls();
+    final candidates = _candidateOrigins();
     if (candidates.isEmpty) return;
     if (_candidateIdx >= candidates.length) _candidateIdx = 0;
 
@@ -108,30 +131,40 @@ class LiveRoomService {
       io.OptionBuilder()
           .setTransports(['websocket'])
           .disableAutoConnect()
+          // New login must not reuse the previous user's socket session.
+          .enableForceNew()
           .setAuth(_token != null ? {'token': _token} : {})
           .build(),
     );
     _liveGameSocket = io.io(
       '$base/live-game',
-      io.OptionBuilder().setTransports(['websocket']).disableAutoConnect().build(),
+      io.OptionBuilder()
+          .setTransports(['websocket'])
+          .disableAutoConnect()
+          .enableForceNew()
+          .build(),
     );
     _presenceSocket = io.io(
       '$base/presence',
       io.OptionBuilder()
           .setTransports(['websocket'])
           .disableAutoConnect()
+          .enableForceNew()
           .setAuth(_token != null ? {'token': _token} : {})
           .build(),
     );
 
     _streamSocket!.onConnect((_) {
-      _workingBaseUrl = base;
+      _workingOrigin = base;
       _isConnecting = false;
       _connectionController.add(true);
-      _streamSocket!.emit(
-        'join-channel',
-        {'channelId': _channelId, 'role': 'viewer'},
-      );
+      final joinPayload = <String, dynamic>{
+        'channelId': _channelId,
+        'role': 'viewer',
+        if (_connectedUserId != null && _connectedUserId!.isNotEmpty)
+          'userId': _connectedUserId,
+      };
+      _streamSocket!.emit('join-channel', joinPayload);
       _presenceSocket?.emit('get-friends');
       _presenceSocket?.emit(
         'update-status',
@@ -159,6 +192,34 @@ class LiveRoomService {
         _chatController.add(Map<String, dynamic>.from(payload));
       }
     });
+
+    void onDeleted(dynamic payload) {
+      if (_isDisposed) return;
+      String? id;
+      if (payload is String) {
+        id = payload.trim();
+      } else if (payload is Map) {
+        final m = Map<String, dynamic>.from(payload);
+        id = m['messageId']?.toString() ??
+            m['_id']?.toString() ??
+            m['id']?.toString();
+      }
+      if (id != null && id.isNotEmpty) {
+        _messageDeletedIdController.add(id);
+      }
+    }
+
+    _streamSocket!.on('messageDeleted', onDeleted);
+    _streamSocket!.on('chat-message-deleted', onDeleted);
+
+    void onUpdated(dynamic payload) {
+      if (_isDisposed || payload is! Map) return;
+      _messageUpdatedController.add(Map<String, dynamic>.from(payload));
+    }
+
+    _streamSocket!.on('messageUpdated', onUpdated);
+    _streamSocket!.on('chat-message-updated', onUpdated);
+
     _streamSocket!.on('reaction-summary', (payload) {
       if (payload is Map && payload['counts'] is Map) {
         final raw = Map<String, dynamic>.from(payload['counts'] as Map);
@@ -231,12 +292,66 @@ class LiveRoomService {
     _presenceController.add(List<Map<String, dynamic>>.from(_presenceCache));
   }
 
-  void sendMessage(String message) {
+  void sendMessage(
+    String message, {
+    String? senderId,
+    String? senderNickname,
+  }) {
     final channel = _channelId;
     if (channel == null) return;
     final text = message.trim();
     if (text.isEmpty) return;
-    _streamSocket?.emit('chat-message', {'channelId': channel, 'message': text});
+    final payload = <String, dynamic>{
+      'channelId': channel,
+      'message': text,
+    };
+    final uid = senderId?.trim();
+    final nick = senderNickname?.trim();
+    if (uid != null && uid.isNotEmpty) {
+      payload['senderId'] = uid;
+      payload['userId'] = uid;
+    }
+    if (nick != null && nick.isNotEmpty) {
+      payload['senderNickname'] = nick;
+      payload['nickname'] = nick;
+    }
+    final t = _token?.trim();
+    if (t != null && t.isNotEmpty) {
+      payload['token'] = t;
+      payload['auth'] = {'token': t};
+    }
+    _streamSocket?.emit('chat-message', payload);
+  }
+
+  /// DM / private thread — see `CHAT_FRONTEND_INTEGRATION.md` (`deleteMessage`).
+  void deleteMessage({
+    required String messageId,
+    required String receiverId,
+  }) {
+    final mid = messageId.trim();
+    final rid = receiverId.trim();
+    if (mid.isEmpty || rid.isEmpty) return;
+    _streamSocket?.emit('deleteMessage', {
+      'messageId': mid,
+      'receiverId': rid,
+    });
+  }
+
+  /// Optional gateway event (not in doc table); aligns with `deleteMessage`.
+  void updateMessage({
+    required String messageId,
+    required String newText,
+    required String receiverId,
+  }) {
+    final mid = messageId.trim();
+    final rid = receiverId.trim();
+    final text = newText.trim();
+    if (mid.isEmpty || rid.isEmpty || text.isEmpty) return;
+    _streamSocket?.emit('updateMessage', {
+      'messageId': mid,
+      'message': text,
+      'receiverId': rid,
+    });
   }
 
   void sendReaction(String emoji) {
@@ -253,6 +368,7 @@ class LiveRoomService {
     _liveGameSocket = null;
     _presenceSocket = null;
     _channelId = null;
+    _connectedUserId = null;
     _presenceCache = [];
     _isConnecting = false;
   }
@@ -274,6 +390,8 @@ class LiveRoomService {
     _gameEventController.close();
     _presenceController.close();
     _connectionController.close();
+    _messageDeletedIdController.close();
+    _messageUpdatedController.close();
   }
 }
 

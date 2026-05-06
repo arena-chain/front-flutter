@@ -6,7 +6,7 @@ import '../config/api_config.dart';
 import '../models/training_models.dart';
 
 // ─── ADJUST THESE TO MATCH YOUR PROJECT ───────────────────────────────────────
-String get _kBaseUrl => '${ApiConfig.baseUrl}/api';
+String get _kBaseUrl => ApiConfig.restApiRoot;
 
 class TrainingApiException implements Exception {
   final String message;

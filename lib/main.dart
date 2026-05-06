@@ -43,9 +43,12 @@ class MyApp extends StatelessWidget {
           create: (_) => AuthViewModel()..checkAuthStatus(),
         ),
         ChangeNotifierProxyProvider<AuthViewModel, FriendsViewModel>(
-          create: (context) => FriendsViewModel(currentUserId: ''),
-          update: (context, auth, previous) =>
-              FriendsViewModel(currentUserId: auth.currentUser?.id ?? ''),
+          create: (context) => FriendsViewModel(),
+          update: (context, auth, previous) {
+            final vm = previous ?? FriendsViewModel();
+            vm.syncUserId(auth.currentUser?.id ?? '');
+            return vm;
+          },
         ),
         ChangeNotifierProxyProvider<AuthViewModel, TournamentsViewModel>(
           create: (context) => TournamentsViewModel(currentUserId: ''),

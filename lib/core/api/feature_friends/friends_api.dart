@@ -7,8 +7,23 @@ import 'package:arena_chain_flutter/core/models/feature_friends/friend_user_mode
 import 'package:arena_chain_flutter/core/models/feature_friends/friendship_model.dart';
 import 'package:arena_chain_flutter/core/config/api_config.dart';
 
+List<dynamic> _decodeFriendsListBody(String body) {
+  final dynamic decoded = json.decode(body);
+  if (decoded is List) return decoded;
+  if (decoded is Map) {
+    final map = Map<String, dynamic>.from(decoded);
+    for (final key in ['data', 'friends', 'friendships', 'results']) {
+      final v = map[key];
+      if (v is List) return List<dynamic>.from(v);
+    }
+  }
+  throw const FormatException(
+    'Friends API: expected JSON array or object with a list field',
+  );
+}
+
 class FriendsApi {
-  static String get baseUrl => ApiConfig.baseUrl;
+  static String get baseUrl => ApiConfig.restApiRoot;
   final TokenStorage _tokenStorage = TokenStorage();
   String? _workingBaseUrl;
 
@@ -68,8 +83,10 @@ class FriendsApi {
     });
 
     if (response.statusCode == 200) {
-      final List data = json.decode(response.body);
-      return data.map((json) => FriendUser.fromJson(json)).toList();
+      final data = _decodeFriendsListBody(response.body);
+      return data
+          .map((e) => FriendUser.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
     } else {
       throw Exception('Failed to search users');
     }
@@ -89,7 +106,8 @@ class FriendsApi {
     );
 
     if (response.statusCode == 201) {
-      return FriendshipModel.fromJson(json.decode(response.body));
+      final map = Map<String, dynamic>.from(json.decode(response.body) as Map);
+      return FriendshipModel.fromJson(map);
     } else {
       final error = json.decode(response.body);
       throw Exception(error['message'] ?? 'Failed to send friend request');
@@ -106,8 +124,11 @@ class FriendsApi {
     );
 
     if (response.statusCode == 200) {
-      final List data = json.decode(response.body);
-      return data.map((json) => FriendshipModel.fromJson(json)).toList();
+      final data = _decodeFriendsListBody(response.body);
+      return data
+          .map((e) =>
+              FriendshipModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
     } else {
       throw Exception('Failed to load friends');
     }
@@ -123,8 +144,11 @@ class FriendsApi {
     );
 
     if (response.statusCode == 200) {
-      final List data = json.decode(response.body);
-      return data.map((json) => FriendshipModel.fromJson(json)).toList();
+      final data = _decodeFriendsListBody(response.body);
+      return data
+          .map((e) =>
+              FriendshipModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
     } else {
       throw Exception('Failed to load pending requests');
     }
@@ -140,8 +164,11 @@ class FriendsApi {
     );
 
     if (response.statusCode == 200) {
-      final List data = json.decode(response.body);
-      return data.map((json) => FriendshipModel.fromJson(json)).toList();
+      final data = _decodeFriendsListBody(response.body);
+      return data
+          .map((e) =>
+              FriendshipModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
     } else {
       throw Exception('Failed to load sent requests');
     }
@@ -158,7 +185,8 @@ class FriendsApi {
     );
 
     if (response.statusCode == 200) {
-      return FriendshipModel.fromJson(json.decode(response.body));
+      final map = Map<String, dynamic>.from(json.decode(response.body) as Map);
+      return FriendshipModel.fromJson(map);
     } else {
         final error = json.decode(response.body);
         throw Exception(error['message'] ?? 'Failed to accept request');

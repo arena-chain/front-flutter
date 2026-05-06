@@ -4,7 +4,7 @@ class ApiConfig {
   /// Optional override for every platform (especially Flutter Web).
   ///
   /// Run with:
-  /// `flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:4000`
+  /// `flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3000`
   ///
   /// Use this when port 3000 is used by another process (e.g. a WebSocket relay)
   /// or when your REST API listens on a different host/port.
@@ -15,7 +15,7 @@ class ApiConfig {
 
   // Set to your machine's Wi-Fi IP for physical device testing.
   // Use 'ipconfig' (Windows) or 'ifconfig' (Mac/Linux) to find it.
-  static const String _lanIp = '192.168.1.156';
+  static const String _lanIp = '192.168.1.119';
 
   // Set to true when running on an Android emulator, false for a physical device.
   static const bool _isEmulator = false;
@@ -54,6 +54,11 @@ class ApiConfig {
     // iOS/other mobile targets on a physical device also need LAN IP.
     return 'http://$_lanIp:3000/api';
   }
+
+  /// Root URL for REST paths like `/tickets/validate` (one `/api` segment only).
+  ///
+  /// [baseUrl] already ends with `/api` for built-in defaults; some overrides do not.
+  static String get restApiRoot => _ensureApiSuffix(baseUrl);
 
   static String get socketOrigin {
     final normalized = _normalizeBaseUrl(baseUrl);

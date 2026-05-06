@@ -1,6 +1,5 @@
 import 'package:arena_chain_flutter/core/dto/tournaments/create_tournament_dto.dart';
 import 'package:arena_chain_flutter/core/models/feature_friends/friend_user_model.dart';
-import 'package:arena_chain_flutter/core/models/feature_friends/friendship_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_tournaments/tournament_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_catalog/catalog_model.dart';
 import 'package:arena_chain_flutter/core/repositories/feature_friends/friends_repository.dart';
@@ -65,17 +64,7 @@ class TournamentsViewModel extends ChangeNotifier {
       
       // Extract friend users from friendships
       _availableFriends = friendships
-          .map((friendship) {
-            // Get the friend (the user who is NOT currentUserId)
-            if (friendship.requester is FriendUser &&
-                (friendship.requester as FriendUser).id != currentUserId) {
-              return friendship.requester as FriendUser;
-            } else if (friendship.recipient is FriendUser &&
-                (friendship.recipient as FriendUser).id != currentUserId) {
-              return friendship.recipient as FriendUser;
-            }
-            return null;
-          })
+          .map((friendship) => friendship.counterpartFor(currentUserId))
           .whereType<FriendUser>()
           .toList();
       

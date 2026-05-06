@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:arena_chain_flutter/navigation.dart';
 import 'package:arena_chain_flutter/screens/player/feature_friends/view_model/friends_view_model.dart';
 import 'package:arena_chain_flutter/screens/player/feature_messages/ui/live_room_screen.dart';
-import 'package:arena_chain_flutter/core/models/feature_friends/friend_user_model.dart';
 import 'package:arena_chain_flutter/core/models/feature_friends/friendship_model.dart';
 
 /// Player DMs / threads — UI shell until a messages API is wired.
@@ -64,7 +63,9 @@ class _MessagesScreenState extends State<MessagesScreen>
               controller: _tabController,
               children: [
                 _tabBody(bottomInset: bottomInset, children: _buildChatsTab(context)),
-                _tabBody(bottomInset: bottomInset, children: _buildFriendsTab(vm)),
+                _tabBody(
+                    bottomInset: bottomInset,
+                    children: _buildFriendsTab(context, vm)),
                 _tabBody(bottomInset: bottomInset, children: _buildReceivedTab(vm)),
                 _tabBody(bottomInset: bottomInset, children: _buildSentTab(vm)),
               ],
@@ -338,13 +339,35 @@ class _MessagesScreenState extends State<MessagesScreen>
         ),
       ];
 
-  List<Widget> _buildFriendsTab(FriendsViewModel vm) {
+  List<Widget> _buildFriendsTab(BuildContext context, FriendsViewModel vm) {
     if (vm.friends.isEmpty) return [_emptyText('No friends yet')];
     return vm.friends
-        .map((f) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _relationTile(_friendLabelFromFriendship(f, vm.currentUserId), 'Friend'),
-            ))
+        .map((f) {
+          final counterpart = f.counterpartFor(vm.currentUserId);
+          final name = _friendLabelFromFriendship(f, vm.currentUserId);
+          final friendId = counterpart?.id.trim() ?? '';
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _relationTile(
+              name: name,
+              status: 'Friend',
+              onTap: friendId.isEmpty
+                  ? null
+                  : () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => LiveRoomScreen(
+                            channelId: LiveRoomScreen.directMessageChannelId(
+                              vm.currentUserId,
+                              friendId,
+                            ),
+                            title: name,
+                          ),
+                        ),
+                      ),
+            ),
+          );
+        })
         .toList();
   }
 
@@ -417,36 +440,56 @@ class _MessagesScreenState extends State<MessagesScreen>
         ),
       );
 
-  Widget _relationTile(String name, String status) => Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: _card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _neon.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: _surface,
-              child: Text(
-                name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: const TextStyle(color: _neon, fontWeight: FontWeight.bold),
-              ),
+  Widget _relationTile({
+    required String name,
+    required String status,
+    VoidCallback? onTap,
+  }) {
+    final child = Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _neon.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: _surface,
+            child: Text(
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
+              style: const TextStyle(color: _neon, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                  Text(status, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
-                ],
-              ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name,
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w700)),
+                Text(status,
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        fontSize: 12)),
+              ],
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+    if (onTap == null) return child;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: child,
+      ),
+    );
+  }
 
   Widget _requestTile({
     required String name,
@@ -486,15 +529,6 @@ class _MessagesScreenState extends State<MessagesScreen>
       );
 
   String _friendLabelFromFriendship(FriendshipModel f, String myUserId) {
-    dynamic pick;
-    if (f.requester is FriendUser && (f.requester as FriendUser).id != myUserId) {
-      pick = f.requester;
-    } else if (f.recipient is FriendUser && (f.recipient as FriendUser).id != myUserId) {
-      pick = f.recipient;
-    } else {
-      pick = f.requester is FriendUser ? f.requester : f.recipient;
-    }
-    if (pick is FriendUser) return pick.nickname;
-    return 'Unknown';
+    return f.counterpartFor(myUserId)?.nickname ?? 'Unknown';
   }
 }

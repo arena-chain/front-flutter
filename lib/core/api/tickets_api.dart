@@ -7,7 +7,7 @@ import 'package:arena_chain_flutter/core/models/ticket_model.dart';
 import 'package:arena_chain_flutter/core/api/feature_auth/token_storage.dart';
 
 class TicketsApi {
-  String get _base => '${ApiConfig.baseUrl}/api';
+  String get _base => ApiConfig.restApiRoot;
   String? _workingBase;
   static const Duration _timeout = Duration(seconds: 8);
   final TokenStorage _tokenStorage = TokenStorage();

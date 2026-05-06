@@ -58,8 +58,12 @@ class _CheckInAgentDashboardScreenState
     final user = context.watch<AuthViewModel>().currentUser;
 
     final pages = <Widget>[
-      _HomeTab(tickets: _tickets, onRefresh: _loadTickets),
-      const _ScannerTab(),
+      _HomeTab(
+        tickets: _tickets,
+        onRefresh: _loadTickets,
+        onOpenScanner: () => setState(() => _currentIndex = 1),
+      ),
+      _ScannerTab(onTicketsChanged: _loadTickets),
       _AccountTab(
         nickname: user?.nickname ?? 'Agent',
         email: user?.email ?? '',
@@ -444,7 +448,12 @@ class _DrawerItem extends StatelessWidget {
 class _HomeTab extends StatefulWidget {
   final List<TicketModel>? tickets;
   final Future<void> Function() onRefresh;
-  const _HomeTab({required this.tickets, required this.onRefresh});
+  final VoidCallback onOpenScanner;
+  const _HomeTab({
+    required this.tickets,
+    required this.onRefresh,
+    required this.onOpenScanner,
+  });
 
   @override
   State<_HomeTab> createState() => _HomeTabState();
@@ -511,9 +520,7 @@ class _HomeTabState extends State<_HomeTab> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   GestureDetector(
-                    onTap: () {
-                      // navigate to scanner tab
-                    },
+                    onTap: widget.onOpenScanner,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8),
@@ -960,7 +967,8 @@ class _TicketRow extends StatelessWidget {
 
 // ─── Scanner tab ─────────────────────────────────────────────────────
 class _ScannerTab extends StatefulWidget {
-  const _ScannerTab();
+  final Future<void> Function() onTicketsChanged;
+  const _ScannerTab({required this.onTicketsChanged});
 
   @override
   State<_ScannerTab> createState() => _ScannerTabState();
@@ -993,6 +1001,9 @@ class _ScannerTabState extends State<_ScannerTab> {
     setState(() => _isProcessing = true);
     try {
       final response = await _api.validateTicket(ticketNumber);
+      try {
+        await widget.onTicketsChanged();
+      } catch (_) {}
       if (!mounted) return;
       setState(() {
         _scanResult = response;

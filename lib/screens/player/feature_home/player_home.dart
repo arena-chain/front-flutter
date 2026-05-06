@@ -541,79 +541,91 @@ class _PlayerHomeScreenState extends State<PlayerHomeScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: _buildTopLeftIcon(context, linkedVm.accounts),
                   ),
-                  Consumer2<AuthViewModel, LevelViewModel>(
-                    builder: (context, auth, levelVm, _) {
-                      final nick =
-                          (auth.currentUser?.nickname.trim() ?? '').toUpperCase();
-                      final level = levelVm.currentLevel?.level ?? 1;
-                      if (nick.isEmpty) return const SizedBox.shrink();
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Consumer2<AuthViewModel, LevelViewModel>(
+                        builder: (context, auth, levelVm, _) {
+                          final nick =
+                              (auth.currentUser?.nickname.trim() ?? '')
+                                  .toUpperCase();
+                          final level = levelVm.currentLevel?.level ?? 1;
+                          if (nick.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
 
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: TweenAnimationBuilder<Color?>(
-                          tween: ColorTween(end: accent),
-                          duration: const Duration(milliseconds: 500),
-                          curve: Curves.easeInOutCubic,
-                          builder: (context, animatedLevelTint, _) {
-                            final levelTint =
-                                animatedLevelTint ?? accent;
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF1A1A1A),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: const Color(0xFF2A2A2A),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    nick,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.6,
+                          return Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: TweenAnimationBuilder<Color?>(
+                              tween: ColorTween(end: accent),
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeInOutCubic,
+                              builder: (context, animatedLevelTint, _) {
+                                final levelTint =
+                                    animatedLevelTint ?? accent;
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1A1A1A),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: const Color(0xFF2A2A2A),
+                                      width: 1,
                                     ),
                                   ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 7,
-                                    ),
-                                    child: Text(
-                                      '·',
-                                      style: TextStyle(
-                                        color: const Color(0xFFB3B3B3),
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w900,
-                                        height: 1,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          nick,
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 0.6,
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                        ),
+                                        child: Text(
+                                          '·',
+                                          style: TextStyle(
+                                            color: const Color(0xFFB3B3B3),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w900,
+                                            height: 1,
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        'LVL $level',
+                                        style: TextStyle(
+                                          color: levelTint,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.4,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  Text(
-                                    'LVL $level',
-                                    style: TextStyle(
-                                      color: levelTint,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 0.4,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                  const Spacer(),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
